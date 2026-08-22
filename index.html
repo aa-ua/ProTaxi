@@ -343,7 +343,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <div class="chips">
       <button class="chip active" data-mm="rate">₴/год</button>
       <button class="chip" data-mm="avg">Чек</button>
-      <button class="chip" data-mm="idle">Простій</button>
+      <button class="chip" data-mm="freq">Частота</button>
       <button class="chip" id="chip-path">Шлях</button>
     </div>
     <div class="chips" style="margin-top:-4px">
@@ -355,7 +355,10 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <div class="card" style="padding:8px">
       <div id="map"></div>
     </div>
-    <p class="hint" style="margin:-4px 2px 12px">Кружки — місця прийняття замовлень: більший = частіше, зеленіший = вигідніше. Шлях пишеться, поки застосунок відкритий на екрані — iOS не дає вебу геолокацію у фоні.</p>
+    <p class="hint" style="margin:-4px 2px 12px">Вулиці пофарбовані за твоєю статистикою: зелена — вигідна, червона — ні. Рахується із завершених замовлень, де є точка початку й кінця. Тапни лінію — покаже назву вулиці й цифри.</p>
+    <div id="rt-status" class="hint" style="margin:-6px 2px 12px"></div>
+    <div id="geo-diag" class="hint" style="margin:-6px 2px 10px"></div>
+    <button class="btn btn-ghost" id="geo-check" style="margin:0 2px 14px;width:auto;padding:9px 18px">Перевірити геолокацію</button>
     <div class="card">
       <div class="card-title">Коли і де бути</div>
       <div id="time-advice"></div>
@@ -364,6 +367,11 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <div class="card">
       <div class="card-title">Маршрути: звідки → куди</div>
       <div id="routes-list"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Найвигідніші вулиці</div>
+      <div id="streets-list"></div>
     </div>
 
     <div class="card">
@@ -676,7 +684,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='1.6';
+const APP_VER='1.7';
 /* УВАГА: ключі не змінюються ніколи, інакше записи "загубляться" при оновленні */
 const KEY='uklon-driver-finance-v2';
 const BAK=KEY+'-bak';
@@ -718,7 +726,7 @@ const store={
 };
 
 const DEFAULTS={commissionPct:20,fundPct:20,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'nav'};
-let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{}};
+let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
 
@@ -892,6 +900,7 @@ async function load(){
     data.fundOps=best.fundOps||[];
     data.refuels=best.refuels||[];
     data.raionCache=best.raionCache||{};
+    data.streets=best.streets||{};
     data.active=best.active||null;
     data.savedAt=best.savedAt||0;
     lastBak=best.bakAt||0;
@@ -922,6 +931,9 @@ async function load(){
   });
   if(!Array.isArray(data.refuels))data.refuels=[];
   if(!data.raionCache||typeof data.raionCache!=='object')data.raionCache={};
+  if(!data.streets||typeof data.streets!=='object')data.streets={};
+  /* 1.7: мапа стала мапою даних — на «Навігації» кольорові вулиці не читаються */
+  if(!data.settings.stMig17){data.settings.stMig17=1;if(data.settings.mapStyle==='nav')data.settings.mapStyle='light';}
   if(data.active){
     if(!Array.isArray(data.active.orders))data.active.orders=[];
     if(typeof data.active.odoStart==='undefined')data.active.odoStart=0;
@@ -950,7 +962,7 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
   b.classList.add('active');
   $('screen-'+b.dataset.screen).classList.add('active');
   window.scrollTo(0,0);
-  if(b.dataset.screen==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();}
+  if(b.dataset.screen==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();setTimeout(buildStreetMap,400);}
 }));
 
 function openM(id){$(id).classList.add('open');}
@@ -1561,29 +1573,195 @@ function colorFor(t){ /* 0 → червоний, 1 → мʼятний */
   const r=Math.round(255-(255-59)*t),g=Math.round(107+(224-107)*t),b=Math.round(99+(166-99)*t);
   return 'rgb('+r+','+g+','+b+')';
 }
+/* ══ Мапа вулиць ══════════════════════════════════════════════════════════
+   Для кожного завершеного замовлення, де є точка початку й точка кінця,
+   питаємо у безкоштовного маршрутизатора OSRM реальний шлях по дорогах.
+   Гроші й час замовлення розкладаємо по вулицях пропорційно часу проїзду
+   кожним відрізком. Далі фарбуємо вулиці за ₴/год: зелена — вигідна.
+   Геолокація у фоні не потрібна — обидві точки пишуться, коли ти в застосунку. */
+const OSRM_URL='https://router.project-osrm.org/route/v1/driving/';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let rtBusy=false,rtStat={done:0,total:0,fail:0};
+
+/* прибираємо зайві точки: лишаємо ті, що далі ~12 м одна від одної */
+function thinLine(p){
+  if(p.length<3)return p;
+  const out=[p[0]];
+  for(let i=1;i<p.length-1;i++){
+    const l=out[out.length-1];
+    if(distKm(l[0],l[1],p[i][0],p[i][1])>0.012)out.push(p[i]);
+  }
+  out.push(p[p.length-1]);
+  return out;
+}
+/* замовлення, які ще не розкладені по вулицях */
+function ordersForRoutes(){
+  const out=[];
+  data.entries.forEach(e=>(e.orders||[]).forEach(o=>{
+    if(o.rtDone)return;
+    if(!o.lat||!o.lon||!o.lat2||!o.lon2)return;
+    if(!o.endT||!o.amount)return;
+    out.push(o);
+  }));
+  return out;
+}
+function ingestRoute(o,route){
+  const tot=+route.duration||0;
+  if(tot<=0)return;
+  const mins=oMin(o),amount=+o.amount||0,seen={};
+  (route.legs||[]).forEach(leg=>(leg.steps||[]).forEach(st=>{
+    const c=st.geometry&&st.geometry.coordinates;
+    const d=+st.duration||0;
+    if(!c||c.length<2||d<=0)return;
+    const pts=thinLine(c.map(x=>[+(+x[1]).toFixed(5),+(+x[0]).toFixed(5)]));
+    if(pts.length<2)return;
+    const mid=pts[Math.floor(pts.length/2)];
+    const name=(st.name||'').trim()||'Без назви';
+    const k=name+'@'+gridKey(mid[0],mid[1]);
+    const s=data.streets[k]||(data.streets[k]={name:name,pts:pts,n:0,gross:0,money:0,min:0});
+    if(pts.length>s.pts.length)s.pts=pts;
+    const w=d/tot;
+    s.money+=amount*w; s.min+=mins*w;
+    if(!seen[k]){seen[k]=1;s.n++;s.gross+=amount;}
+  }));
+}
+function streetStats(){
+  const out=[];
+  Object.keys(data.streets||{}).forEach(k=>{
+    const s=data.streets[k];
+    if(!s||!Array.isArray(s.pts)||s.pts.length<2)return;
+    out.push({name:s.name||'Без назви',pts:s.pts,n:s.n||0,
+      rate:s.min>0?s.money/(s.min/60):0,
+      avg:s.n>0?s.gross/s.n:0});
+  });
+  return out;
+}
+/* вибірка для показу: спершу надійні вулиці, якщо їх мало — послаблюємо поріг */
+function streetsToShow(all){
+  const solid=all.filter(s=>s.n>=3);
+  if(solid.length>=8)return solid;
+  const two=all.filter(s=>s.n>=2);
+  if(two.length>=8)return two;
+  return all;
+}
+async function buildStreetMap(){
+  if(rtBusy)return;
+  const list=ordersForRoutes();
+  rtStat={done:0,total:list.length,fail:0};
+  if(!list.length){renderRtStatus();return;}
+  rtBusy=true; renderRtStatus();
+  for(const o of list){
+    try{
+      const u=OSRM_URL+o.lon+','+o.lat+';'+o.lon2+','+o.lat2+'?overview=false&steps=true&geometries=geojson';
+      const r=await fetch(u);
+      if(!r.ok)throw 0;
+      const j=await r.json();
+      if(j.code!=='Ok'||!j.routes||!j.routes[0])throw 0;
+      ingestRoute(o,j.routes[0]);
+      o.rtDone=1;
+    }catch(err){
+      rtStat.fail++;
+      o.rtFail=(o.rtFail||0)+1;
+      if(o.rtFail>=3)o.rtDone=1; /* тричі не вийшло — не мучимо сервер далі */
+    }
+    rtStat.done++;
+    renderRtStatus();
+    if(rtStat.done%5===0){await persist();renderMapLayers();}
+    await sleep(1100); /* ввічливо до безкоштовного сервера */
+  }
+  rtBusy=false;
+  await persist();
+  renderMapLayers();
+}
+/* Скільки замовлень реально мають координати — щоб не гадати, чому мапа порожня */
+function orderGeoStats(){
+  let total=0,start=0,both=0;
+  data.entries.forEach(e=>(e.orders||[]).forEach(o=>{
+    if(!o.endT||!o.amount)return;
+    total++;
+    if(o.lat&&o.lon)start++;
+    if(o.lat&&o.lon&&o.lat2&&o.lon2)both++;
+  }));
+  return{total:total,start:start,both:both};
+}
+function renderGeoDiag(){
+  const box=$('geo-diag');if(!box)return;
+  const g=orderGeoStats();
+  if(!g.total){box.style.display='none';return;}
+  box.style.display='block';
+  let t='Завершених замовлень: '+g.total+' · з точкою подачі: '+g.start+' · з обома точками: '+g.both;
+  if(!g.both)t+=' — мапа вулиць порожня саме тому. Натисни кнопку нижче й дозволь геолокацію.';
+  box.textContent=t;
+}
+function renderRtStatus(){
+  const box=$('rt-status');if(!box)return;
+  box.style.display='block';
+  if(rtBusy){
+    box.textContent='Будую мапу вулиць: '+rtStat.done+' з '+rtStat.total+'…'+(rtStat.fail?' (не вийшло: '+rtStat.fail+')':'');
+    return;
+  }
+  const need=ordersForRoutes().length;
+  const have=Object.keys(data.streets||{}).length;
+  if(!have&&!need){
+    box.textContent='Вулиці зʼявляться, коли будуть замовлення з точкою початку й кінця. Працюй з увімкненою геолокацією — мапа намалюється сама.';
+    return;
+  }
+  if(need){box.textContent='Ще не оброблено замовлень: '+need+'. Зайди на мапу ще раз — дорахую.';return;}
+  const solid=streetStats().filter(s=>s.n>=3).length;
+  if(have&&solid<8){box.textContent='Даних поки мало — показую всі вулиці, навіть з одним замовленням. Кольори стануть чесними, коли по вулиці набереться 3+ поїздки.';return;}
+  box.style.display='none';
+}
+function renderStreetsList(){
+  const box=$('streets-list');if(!box)return;
+  box.innerHTML='';
+  const all=streetStats();
+  if(!all.length){
+    box.innerHTML='<div class="empty">Тут зʼявиться список вулиць, щойно накопичаться замовлення з маршрутами</div>';
+    return;
+  }
+  const list=streetsToShow(all).slice().sort((a,b)=>b.rate-a.rate);
+  list.slice(0,6).forEach(s=>{
+    const r=document.createElement('div');r.className='ins';
+    r.innerHTML='<span class="k">🛣 '+esc(s.name)+' · '+s.n+' зам.</span>'+
+      '<span class="v">'+fmt(s.rate)+'/год</span>';
+    box.appendChild(r);
+  });
+  const worst=list[list.length-1];
+  if(list.length>=4&&worst&&worst.rate>0){
+    const d=document.createElement('div');d.className='hint';d.style.marginTop='8px';
+    d.textContent='⚠️ Найповільніша за грошима: '+worst.name+' — '+fmt(worst.rate)+'/год.';
+    box.appendChild(d);
+  }
+}
+
 function renderMapLayers(){
   if(!map)return;
   if(zoneLayer){map.removeLayer(zoneLayer);zoneLayer=null;}
   if(pathLayer){map.removeLayer(pathLayer);pathLayer=null;}
   const zs=zoneStats();
-  const val=z=>mapMode==='avg'?z.avg:mapMode==='idle'?z.minAvg:z.rate;
-  if(zs.length){
-    const vs=zs.map(val),mn=Math.min(...vs),mx=Math.max(...vs);
-    const marks=zs.map(z=>{
-      let t=mx>mn?(val(z)-mn)/(mx-mn):0.5;
-      if(mapMode==='idle')t=1-t; /* довший простій = гірше = червоніше */
-      return L.circleMarker([z.lat,z.lon],{
-        radius:8+Math.min(12,z.n*2),
-        color:colorFor(t),fillColor:colorFor(t),fillOpacity:.35,weight:2
+  const all=streetStats();
+  const ss=streetsToShow(all);
+  const val=s=>mapMode==='avg'?s.avg:mapMode==='freq'?s.n:s.rate;
+  if(ss.length){
+    const vs=ss.map(val),mn=Math.min(...vs),mx=Math.max(...vs);
+    const lines=ss.map(s=>{
+      const t=mx>mn?(val(s)-mn)/(mx-mn):0.5;
+      return L.polyline(s.pts,{
+        color:colorFor(t),weight:4+Math.min(6,s.n),
+        opacity:.85,lineCap:'round',lineJoin:'round'
       }).bindPopup(
-        '<b>'+z.n+' замовл.</b><br>Чек: '+fmt(z.avg)+
-        (z.rate>0?'<br>Темп: '+fmt(z.rate)+'/год':'')+
-        (z.minAvg>0?'<br>У поїздці: ~'+Math.round(z.minAvg)+' хв':'')
+        '<b>'+esc(s.name)+'</b><br>'+s.n+' замовл.'+
+        (s.rate>0?'<br>Темп: '+fmt(s.rate)+'/год':'')+
+        (s.avg>0?'<br>Чек: '+fmt(s.avg):'')
       );
     });
-    zoneLayer=L.layerGroup(marks).addTo(map);
+    zoneLayer=L.layerGroup(lines).addTo(map);
+    const b=L.latLngBounds([].concat.apply([],ss.map(s=>s.pts)));
+    map.fitBounds(b.pad(0.15),{maxZoom:15});
+  }else if(zs.length){
     const b=L.latLngBounds(zs.map(z=>[z.lat,z.lon]));
-    map.fitBounds(b.pad(0.3),{maxZoom:14});
+    map.fitBounds(b.pad(0.3),{maxZoom:13});
   }
   if(showPath){
     const pts=[];
@@ -1591,11 +1769,11 @@ function renderMapLayers(){
     data.entries.filter(e=>e.date===today&&e.path).forEach(e=>e.path.forEach(x=>pts.push([x[1],x[2]])));
     if(data.active&&data.active.path)data.active.path.forEach(x=>pts.push([x[1],x[2]]));
     if(pts.length>1){
-      pathLayer=L.polyline(pts,{color:'#3BE0A6',weight:3,opacity:.75}).addTo(map);
+      pathLayer=L.polyline(pts,{color:'#7AA7FF',weight:3,opacity:.6,dashArray:'6 6'}).addTo(map);
     }
   }
   if(zs.length)collectRaionGroups(zs,()=>renderRaionLabels());
-  renderZonesList();
+  renderZonesList();renderStreetsList();renderRtStatus();renderGeoDiag();
 }
 
 /* ── Реальні райони Дніпра: reverse-geocoding через OSM Nominatim ──
@@ -1852,6 +2030,20 @@ document.querySelectorAll('[data-mm]').forEach(ch=>ch.addEventListener('click',(
   document.querySelectorAll('[data-mm]').forEach(x=>x.classList.remove('active'));
   ch.classList.add('active');mapMode=ch.dataset.mm;renderMapLayers();
 }));
+$('geo-check').addEventListener('click',function(){
+  const b=this;
+  if(!navigator.geolocation){toast('Браузер не вміє геолокацію');return;}
+  b.disabled=true;b.textContent='Перевіряю…';
+  const back=()=>{b.disabled=false;b.textContent='Перевірити геолокацію';};
+  navigator.geolocation.getCurrentPosition(pos=>{
+    back();
+    data.settings.geoOn=true;persist();
+    toast('Геолокація працює · точність ~'+Math.round(pos.coords.accuracy)+' м');
+  },err=>{
+    back();
+    toast(err.code===1?'Доступ заборонено. Дозволь геолокацію в налаштуваннях сайту у браузері':'Не вдалося визначити місце — спробуй просто неба');
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:0});
+});
 $('chip-path').addEventListener('click',function(){
   showPath=!showPath;this.classList.toggle('active',showPath);renderMapLayers();
 });
@@ -2442,6 +2634,11 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='22.08.2026';
 const CHANGELOG=[
+  {v:'1.7',d:'22.08.2026',items:[
+    'Мапа тепер показує вулиці, а не кружки — кожна дорога пофарбована за твоїм ₴/год',
+    'Маршрут кожного замовлення будується по реальних дорогах, з назвами вулиць',
+    'Новий список «Найвигідніші вулиці» під мапою'
+  ],tip:'Вулиця фарбується, коли по ній набереться хоча б три замовлення — спершу мапа буде порожнюватою, далі заповниться. Тапни лінію, щоб побачити назву й цифри. Підкладку перемкнув на «Світлу» — на ній кольори видно найкраще, але можеш повернути будь-яку.'},
   {v:'1.6',d:'22.08.2026',items:[
     'Новий стиль мапи «Навігація» — виразні магістралі й контрастні дороги, як у навігаторах',
     'Тепер чотири стилі: Навігація, Дороги, Світла, Супутник'
