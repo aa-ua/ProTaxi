@@ -58,10 +58,12 @@ body{
 .card-title{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:12px}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
 
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .grid2 .field{display:flex;flex-direction:column;justify-content:flex-end;margin-bottom:0}
 .grid2 .field label{min-height:2.6em;display:flex;align-items:flex-end}
-.grid2+.field,.grid2+.hint{margin-top:10px}
+.grid2+.field,.grid2+.hint{margin-top:14px}
+.grid2+.btn,.field+.btn{margin-top:14px}
+.btn+.hint{margin-top:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
 .field input{width:100%;height:48px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal}
@@ -115,14 +117,13 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .chip.active{background:var(--yellow);color:#101010;border-color:var(--yellow)}
 
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.stat.hours-tile .v{font-size:21px;letter-spacing:-.045em}
+.stat.hours-tile .v{letter-spacing:-.05em}
 .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
-.stat .v{font-family:'Unbounded',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.stat .v{font-family:'Unbounded',sans-serif;font-size:clamp(22px,6.6vw,26px);line-height:1.25;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
 .stat .k{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:3px}
 .stat.stat-main{border-color:rgba(59,224,166,.38);background:linear-gradient(180deg,rgba(59,224,166,.12),rgba(59,224,166,.03))}
-.stat.stat-main .v{color:#3BE0A6;font-size:26px}
+.stat.stat-main .v{color:#3BE0A6}
 .stat.stat-main .k{color:#8FE7C8}
-@media (max-width:379px){.stat .v{font-size:18px}.stat.hours-tile .v{font-size:18px}.stat.stat-main .v{font-size:22px}}
 
 .chart{display:flex;align-items:flex-end;gap:4px;height:128px;padding-top:6px}
 .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
@@ -3062,8 +3063,8 @@ const CHANGELOG=[
   {v:'2.2',d:'23.08.2026',items:[
     'Нова назва — «єТакси»: коротко, як його й називають',
     'Заставка тепер висить трохи довше і плавно розчиняється, а не зникає ривком',
-    'На екрані зміни «Час початку» і «Одометр» стали однакової ширини й висоти — картка більше не з\'їжджає',
-    'Цифри у плитках статистики зрівняли: «Виручка» тепер такого ж розміру, як сусідні'
+    'На екрані зміни «Час початку» і «Одометр» стали однакової ширини й висоти, а відступи до кнопки — рівні',
+    'Усі чотири плитки статистики тепер одного розміру й стоять на одній лінії'
   ],tip:'Якщо на домашньому екрані лишився старий підпис під іконкою — це нормально, iOS запам\'ятовує його при додаванні. Ярлик НЕ видаляй: разом з ним зітреться вся база. Просто додай сайт ще раз другим ярликом.'},
   {v:'2.1',d:'23.08.2026',items:[
     'Екран запуску: логотип на зеленому тлі, пів секунди — і застосунок готовий',
