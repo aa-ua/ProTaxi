@@ -605,6 +605,10 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
       <button class="wchip on" data-full="1"><span class="e">⛽</span>До повного</button>
       <button class="wchip" data-full="0"><span class="e">🫗</span>Частково</button>
     </div>
+    <div class="wchips" id="rf-reset">
+      <button class="wchip on" data-reset="0"><span class="e">➡️</span>Лічильник далі</button>
+      <button class="wchip" data-reset="1"><span class="e">🔄</span>Обнулив лічильник</button>
+    </div>
     <div class="hint" id="rf-calc" style="margin:0 0 12px;text-align:center"></div>
     <button class="btn btn-primary" id="rf-save">Зберегти заправку</button>
     <button class="btn btn-ghost" id="rf-cancel">Скасувати</button>
@@ -684,7 +688,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='1.7';
+const APP_VER='1.8';
 /* УВАГА: ключі не змінюються ніколи, інакше записи "загубляться" при оновленні */
 const KEY='uklon-driver-finance-v2';
 const BAK=KEY+'-bak';
@@ -760,7 +764,35 @@ const fmtDate=ds=>{const d=new Date(ds+'T00:00:00');return pad(d.getDate())+'.'+
 
 /* ── Замовлення ── */
 const isOpen=o=>!o.endT;
-const oKm=o=>(o.odoEnd>o.odoStart)?+(o.odoEnd-o.odoStart).toFixed(1):(+o.km||0);
+/* Лічильник можна обнулити на заправці. Тоді кінець відрізка менший за початок —
+ і треба додати те, що проїхано до обнулення, до того, що після. */
+const MAX_LEG_KM=200; /* більше за один відрізок до заправки таксист у місті не проїде */
+const dayDiff=(a,b)=>Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/86400000);
+function resetValueFor(odoStart,dateStr){
+  let best=0;
+  (data.refuels||[]).forEach(rf=>{
+    if(!rf.reset)return;
+    const v=+rf.odo||0;
+    if(v<odoStart)return;
+    /* обнулення має бути з тієї ж зміни: та сама дата або сусідня (нічна зміна) */
+    if(dateStr&&rf.date&&Math.abs(dayDiff(rf.date,dateStr))>1)return;
+    if(!best||v<best)best=v;
+  });
+  return best;
+}
+function spanKm(odoStart,odoEnd,dateStr){
+  odoStart=+odoStart||0; odoEnd=+odoEnd||0;
+  if(odoStart<=0||odoEnd<=0)return 0;
+  if(odoEnd>=odoStart)return +(odoEnd-odoStart).toFixed(1);
+  const r=resetValueFor(odoStart,dateStr);
+  if(!r)return 0;
+  /* Скільки проїхано ДО обнулення. Якщо виходить неправдоподібно багато —
+     це не перехід через обнулення, а описка в цифрі. Краще нічого, ніж вигадані км. */
+  const lead=r-odoStart;
+  if(lead<0||lead>MAX_LEG_KM)return 0;
+  return +(lead+odoEnd).toFixed(1);
+}
+const oKm=o=>{const k=spanKm(o.odoStart,o.odoEnd,o.t?dateOf(o.t):'');return k>0?k:(+o.km||0);};
 const oMin=o=>o.endT&&o.endT>o.t?(o.endT-o.t)/60000:0;
 const oTime=o=>o.endT?hm(o.t)+'–'+hm(o.endT):hm(o.t);
 function oMeta(o){
@@ -1157,10 +1189,14 @@ function renderShift(){
       '<div class="card"><div class="card-title">Нова сесія</div>'+
       '<div class="grid2">'+
       '<div class="field"><label>Час початку</label><input type="time" id="open-time" value="'+nowHM()+'"></div>'+
-      '<div class="field"><label>Одометр, км</label><input type="number" inputmode="decimal" id="open-odo" step="0.1" placeholder="денний"></div>'+
+      '<div class="field"><label>Одометр, км</label><input type="number" inputmode="decimal" id="open-odo" step="0.1" placeholder="денний"'+(lastKnownOdo()>0?' value="'+fmt1(lastKnownOdo()).replace(',','.')+'"':'')+'></div>'+
       '</div>'+
       '<button class="btn btn-primary" id="btn-open">Розпочати сесію</button>'+
-      '<p class="hint">Впиши показник добового одометра — далі всі кілометри рахуватимуться по факту, а не по картах.</p></div>'+
+      '<p class="hint">'+(lastKnownOdo()>0
+        ? '⚠️ Підставив показник з минулої зміни — <b>'+fmt1(lastKnownOdo())+' км</b>. <b>Звірся з лічильником у машині</b> і виправ, якщо не збігається: від цієї цифри рахується весь пробіг і пальне.'
+        : (lastOdoWasReset()
+          ? '🔄 Після заправки ти обнулив лічильник, тож починаємо з нуля. Звірся з машиною — якщо там уже накрутилось, впиши як є.'
+          : 'Впиши показник добового одометра — далі всі кілометри рахуватимуться по факту, а не по картах.'))+'</p></div>'+
       boostCardHTML()+goalCardHTML();
     $('btn-open').addEventListener('click',async()=>{
       const t=$('open-time').value||nowHM();
@@ -1265,9 +1301,33 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)persist();}
 window.addEventListener('pagehide',()=>{persist();});
 
 /* ── Прийняти замовлення ── */
+/* Показання лічильника з останньої завершеної зміни.
+   Якщо після неї була заправка з обнуленням — лічильник пішов з нуля. */
+function lastKnownOdo(){
+  let t=0,v=0;
+  (data.entries||[]).forEach(e=>{
+    const et=e.endT||e.startT||0;
+    if(et>=t){t=et;if(+e.odoEnd>0)v=+e.odoEnd;else if(+e.odoStart>0)v=+e.odoStart;}
+  });
+  if((data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t))return 0;
+  return v;
+}
+function lastOdoWasReset(){
+  let t=0;
+  (data.entries||[]).forEach(e=>{const et=e.endT||e.startT||0;if(et>t)t=et;});
+  return t>0&&(data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t);
+}
 function lastOdometer(){
   const a=data.active;if(!a)return 0;
-  return Math.max(a.odoStart||0,...a.orders.map(o=>Math.max(o.odoStart||0,o.odoEnd||0)));
+  /* беремо хронологічно останнє показання, а не найбільше — після обнулення воно менше */
+  let t=0,v=a.odoStart||0;
+  (a.orders||[]).forEach(o=>{
+    const ot=o.endT||o.t||0;
+    if(ot>=t){t=ot;if(o.odoEnd>0)v=o.odoEnd;else if(o.odoStart>0)v=o.odoStart;}
+  });
+  /* якщо після цього була заправка з обнуленням — лічильник пішов з нуля */
+  if((data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t))return 0;
+  return v;
 }
 function openNewOrder(){
   $('om-time').value=nowHM();
@@ -1330,7 +1390,7 @@ function openFinish(id){
 function finCalc(){
   const amt=num($('fin-amount').value);
   const os=num($('fin-odo-start').value), oe=num($('fin-odo-end').value);
-  const km=oe>os?oe-os:0;
+  const km=spanKm(os,oe,dateOf((findOrder(finId)||{o:{}}).o.t||Date.now()));
   const a=$('fin-start').value,b=$('fin-end').value;
   let m=0;
   if(a&&b){m=(toMs('2000-01-01',b)-toMs('2000-01-01',a))/60000;if(m<0)m+=1440;}
@@ -1349,7 +1409,7 @@ $('fin-save').addEventListener('click',function(){
   const amount=num($('fin-amount').value);
   if(amount<=0){toast('Вкажи суму');return;}
   const os=num($('fin-odo-start').value), oe=num($('fin-odo-end').value);
-  if(oe>0&&os>0&&oe<os){toast('Одометр в кінці менший за початковий');return;}
+  if(oe>0&&os>0&&oe<os&&!resetValueFor(os,dateOf(o.t||Date.now()))){toast('Одометр в кінці менший за початковий. Якщо ти обнулив лічильник — спочатку впиши заправку з позначкою «Обнулив лічильник»');return;}
   arm(this,open?'Точно завершити?':'Точно зберегти?',async()=>{
     const ds=f.entry?f.entry.date:dateOf(data.active.startT);
     o.amount=amount;
@@ -2093,7 +2153,7 @@ function openCloseShift(){
 function cmShiftKm(){
   const a=data.active;if(!a)return 0;
   const oe=num($('cm-odo').value);
-  return (a.odoStart>0&&oe>a.odoStart)?oe-a.odoStart:0;
+  return spanKm(a.odoStart,oe,dateOf(a.startT));
 }
 function cmPreview(){
   const a=data.active;if(!a)return;
@@ -2634,6 +2694,12 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='22.08.2026';
 const CHANGELOG=[
+  {v:'1.8',d:'23.08.2026',items:[
+    'На початку зміни одометр підставляється з минулої зміни — і застосунок просить звіритися з машиною',
+    'У заправці зʼявилась позначка «Обнулив лічильник» — тепер обнулення не ламає кілометраж',
+    'Замовлення, яке почалось до заправки, а завершилось після обнулення, рахується правильно',
+    'Підказка одометра в новому замовленні враховує обнулення'
+  ],tip:'Заправився і скинув лічильник на нуль — став позначку «Обнулив лічильник» і впиши показання ДО обнулення. Далі застосунок сам складе кілометри до і після.'},
   {v:'1.7',d:'22.08.2026',items:[
     'Мапа тепер показує вулиці, а не кружки — кожна дорога пофарбована за твоїм ₴/год',
     'Маршрут кожного замовлення будується по реальних дорогах, з назвами вулиць',
@@ -2970,12 +3036,15 @@ function openRefuel(id){
   $('rf-date').value=r?r.date:todayStr();
   const full=r?!!r.full:true;
   document.querySelectorAll('#rf-full .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.full==='1')===full));
+  const wasReset=r?!!r.reset:false;
+  document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.reset==='1')===wasReset));
   $('rf-del').style.display=r?'block':'none';
   disarm($('rf-save'));disarm($('rf-del'));
   rfCalc();openM('modal-refuel');
   if(!r)setTimeout(()=>$('rf-liters').focus(),120);
 }
 function rfFull(){return document.querySelector('#rf-full .wchip.on').dataset.full==='1';}
+function rfReset(){const b=document.querySelector('#rf-reset .wchip.on');return !!b&&b.dataset.reset==='1';}
 function rfCalc(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
   const p=[];
@@ -2993,16 +3062,23 @@ $('rf-full').addEventListener('click',e=>{
   document.querySelectorAll('#rf-full .wchip').forEach(x=>x.classList.toggle('on',x===b));
   disarm($('rf-save'));rfCalc();
 });
+$('rf-reset').addEventListener('click',e=>{
+  const b=e.target.closest('.wchip');if(!b)return;
+  document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',x===b));
+  disarm($('rf-save'));rfCalc();
+});
 $('btn-refuel').addEventListener('click',()=>openRefuel(null));
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
 $('rf-save').addEventListener('click',function(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
   if(l<=0){toast('Вкажи літри з чека');return;}
   if(pr<=0){toast('Вкажи ціну за літр');return;}
-  const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo);
+  const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
   if(dup){toast('Заправка з таким одометром уже є');return;}
   arm(this,rfId?'Точно зберегти?':'Точно записати?',async()=>{
-    const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull()};
+    const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
+    const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
+      reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now()};
     if(rfId)data.refuels=data.refuels.map(x=>x.id===rfId?rec:x);
     else data.refuels.push(rec);
     recalcAll();await persist();closeM('modal-refuel');renderAll();
