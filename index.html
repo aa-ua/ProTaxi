@@ -64,6 +64,7 @@ body{
 .grid2 .field label{min-height:2.6em;display:flex;align-items:flex-end}
 .grid2+.field,.grid2+.hint{margin-top:14px}
 .grid2+.btn,.field+.btn{margin-top:14px}
+.field+.wchips{margin-top:4px} /* у поля вже є 10px знизу — разом виходить ті самі 14 */
 .btn+.hint{margin-top:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
@@ -627,8 +628,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
       <div class="field"><label>Завершення</label><input type="time" id="fin-end"></div>
       <div class="field"><label>Одометр на початку</label><input type="number" inputmode="decimal" id="fin-odo-start" step="0.1"></div>
       <div class="field"><label>Чайові, ₴</label><input type="number" inputmode="decimal" id="fin-tip" placeholder="0"></div>
-      <div class="field"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     </div>
+    <div class="field"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div class="wchips" id="fin-pay">
       <button class="wchip on" data-pay="cash"><span class="e">💵</span>Готівка</button>
       <button class="wchip" data-pay="card"><span class="e">💳</span>Картка</button>
@@ -766,7 +767,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='2.6';
+const APP_VER='2.7';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3071,6 +3072,9 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'2.7',d:'23.08.2026',items:[
+    'У вікні замовлення поле «Дав готівкою» більше не тулиться в піврядка — стоїть на всю ширину'
+  ],tip:'Воно потрібне лише коли даєш здачу: впиши, скільки людина дала купюрою, і застосунок порахує решту.'},
   {v:'2.6',d:'23.08.2026',items:[
     'Цифри у чотирьох плитках повернув до колишнього розміру — 18, як було до правок',
     'Оновлення тепер доходять одразу, без очікування кеша'
