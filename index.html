@@ -172,7 +172,8 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal-bg.open{display:flex}
-.modal{background:var(--surface);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));border:1px solid var(--border);border-bottom:none;animation:slideup .25s ease}
+.modal{background:var(--surface);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));border:1px solid var(--border);border-bottom:none;animation:slideup .25s ease;
+  max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:14px}
 
@@ -767,7 +768,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='2.7';
+const APP_VER='2.8';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3072,6 +3073,9 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'2.8',d:'23.08.2026',items:[
+    'Вікна замовлення й закриття зміни тепер гортаються — верх більше не тікає за край екрана'
+  ],tip:'Якщо вміст не вміщується — просто тягни пальцем усередині вікна.'},
   {v:'2.7',d:'23.08.2026',items:[
     'У вікні замовлення поле «Дав готівкою» більше не тулиться в піврядка — стоїть на всю ширину'
   ],tip:'Воно потрібне лише коли даєш здачу: впиши, скільки людина дала купюрою, і застосунок порахує решту.'},
