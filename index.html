@@ -188,7 +188,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .tab.tab-main .ico{width:54px;height:54px;border-radius:50%;background:var(--yellow);color:#101010;
   display:flex;align-items:center;justify-content:center;margin-top:-20px;
   box-shadow:0 0 0 5px var(--bg),0 8px 20px rgba(59,224,166,.38)}
-.tab.tab-main .ico svg{width:27px;height:27px}
+.tab.tab-main .ico svg{width:42px;height:42px}
 .avatar.active{color:var(--yellow);border-color:var(--yellow)}
 .tab svg{width:20px;height:20px}
 
@@ -776,7 +776,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     Мапа
   </button>
   <button class="tab tab-main active" data-screen="shift">
-    <span class="ico"><svg viewBox="0 0 23.5 23.5" fill="none" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="13" y="2" width="5" height="5" rx="1" fill="currentColor"/><rect x="7" y="7" width="5" height="5" rx="1" fill="currentColor"/><rect x="18" y="7" width="5" height="5" rx="1" fill="currentColor"/><rect x="2" y="13" width="5" height="5" rx="1" fill="currentColor"/><rect x="13" y="13" width="5" height="5" rx="1" fill="currentColor"/><rect x="7" y="18" width="5" height="5" rx="1" fill="currentColor"/><rect x="18" y="18" width="5" height="5" rx="1" fill="currentColor"/></svg></span>
+    <span class="ico"><svg viewBox="0 0 24 24" fill="currentColor" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="8" width="4" height="4"/><rect x="10" y="8" width="4" height="4"/><rect x="18" y="8" width="4" height="4"/><rect x="6" y="12" width="4" height="4"/><rect x="14" y="12" width="4" height="4"/></svg></span>
     Зміна
   </button>
   <button class="tab" data-screen="tank">
@@ -790,7 +790,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.0';
+const APP_VER='3.1';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3123,6 +3123,9 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.1',d:'24.08.2026',items:[
+    'Шашечка на кнопці «Зміна» стала така, як на даху таксі — широка, у два ряди, і рівно посередині кружка'
+  ],tip:'Стара стояла зі зсувом управо: у полі 23,5 крапки зліва лишалось 2, а справа нуль.'},
   {v:'3.0',d:'24.08.2026',items:[
     'На кнопці «Зміна» тепер таксистська шашечка замість плюсика',
     'Нове поле «Оренда авто, ₴ за зміну» — для тих, хто працює на орендованому. Знімається як пальне, ще до авто-фонду',
