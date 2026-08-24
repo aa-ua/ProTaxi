@@ -70,18 +70,19 @@ body{
 .grid2+.field,.grid2+.hint{margin-top:14px}
 .grid2+.btn,.field+.btn{margin-top:14px}
 .field+.wchips{margin-top:4px} /* у поля вже є 10px знизу — разом виходить ті самі 14 */
+.grid2+.wchips{margin-top:14px}  /* у сітки свого відступу знизу немає */
 .btn+.hint{margin-top:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
 .field input{width:100%;height:48px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal}
-/* Поле часу. iOS малює значення input[type=time] по-своєму — по центру поля
+/* Поля часу й дати. iOS малює їхні значення по-своєму — по центру поля
    й вище за сусіднє число, і на звичайні правила не зважає. Тому рідне значення
    ховаємо (input лежить зверху прозорим і ловить дотик), а текст малюємо самі —
    тим же шрифтом і з тим же вирівнюванням, що у звичайному полі. Див. dressTime(). */
 .field .tinp{position:relative;width:100%;height:48px;
   background:var(--surface2);border:1px solid var(--border);border-radius:12px}
 .field .tinp:focus-within{border-color:var(--yellow)}
-.field .tinp input[type="time"]{position:absolute;inset:0;width:100%;height:100%;
+.field .tinp input[type="time"],.field .tinp input[type="date"]{position:absolute;inset:0;width:100%;height:100%;
   opacity:0;border:none;background:none;padding:0;margin:0;
   -webkit-appearance:none;appearance:none}
 .field .tinp .tinp-v{position:absolute;inset:0;display:flex;align-items:center;
@@ -831,7 +832,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.5';
+const APP_VER='3.6';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1047,12 +1048,11 @@ function tankLevel(){
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
   let i=-1;for(let j=rs.length-1;j>=0;j--)if(rs[j].full){i=j;break;}
   if(i<0)return null;                       /* повного бака ще не було — рахувати нема від чого */
-  const from=rs[i].date;
+  const base=rs[i],from=base.date;
   const cons=avgConsumption()||+s.consumption||0;
   if(cons<=0)return null;
-  let km=(data.entries||[]).filter(e=>e.date>from).reduce((a,e)=>a+(+e.km||0),0);
-  if(data.active&&dateOf(data.active.startT)>from)
-    km+=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
+  let km=(data.entries||[]).filter(e=>entryAfterRefuel(e,base)).reduce((a,e)=>a+(+e.km||0),0);
+  if(activeAfterRefuel(base))km+=activeKmEst();
   const added=rs.slice(i+1).reduce((a,r)=>a+(+r.liters||0),0);
   const left=Math.max(0,Math.min(cap,cap-km/100*cons+added));
   return{cap,left,km,cons,pct:left/cap,range:left/cons*100,from};
@@ -1072,8 +1072,8 @@ function lastRefuelInfo(){
   if(!rs.length)return null;
   const r=rs[rs.length-1];
   const days=Math.round((new Date(todayStr()+'T12:00:00')-new Date(r.date+'T12:00:00'))/86400000);
-  let km=(data.entries||[]).filter(e=>e.date>r.date).reduce((a,e)=>a+(+e.km||0),0);
-  if(data.active&&dateOf(data.active.startT)>r.date)km+=activeKmEst();
+  let km=(data.entries||[]).filter(e=>entryAfterRefuel(e,r)).reduce((a,e)=>a+(+e.km||0),0);
+  if(activeAfterRefuel(r))km+=activeKmEst();
   const when=days<=0?'сьогодні':days===1?'учора':days+' дн. тому';
   return{r,days,km,when};
 }
@@ -1088,12 +1088,13 @@ function tankSaving(){
   const target=cap*price;
   const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
-  const from=rs.length?rs[rs.length-1].date:null;
-  let saved=(data.entries||[]).filter(e=>!from||e.date>from)
+  const base=rs.length?rs[rs.length-1]:null;
+  let saved=(data.entries||[]).filter(e=>!base||entryAfterRefuel(e,base))
     .reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
-  if(data.active&&(!from||dateOf(data.active.startT)>from))
+  if(data.active&&(!base||activeAfterRefuel(base)))
     saved+=litersFor(activeKmEst(),s)*price;
-  return{target,saved,price,pct:target>0?saved/target:0,extra:Math.max(0,saved-target),from};
+  return{target,saved,price,pct:target>0?saved/target:0,extra:Math.max(0,saved-target),
+    from:base?base.date:null};
 }
 
 function fuelPurse(){
@@ -1103,13 +1104,40 @@ function fuelPurse(){
   return{should:should,spent:spent,balance:should-spent};
 }
 /* Дні, коли ти працював після останньої заправки */
-function daysSinceRefuel(){
+/* Заправка знає лише дату, не час. Тому в межах того самого дня питаємо
+   час заправки (пишеться при збереженні), а якщо його немає — одометр:
+   зміна, що закінчилась не далі за показник заправки, була до неї.
+   Не знаємо нічого — вважаємо, що заправка була пізніше: закінчив зміну,
+   поїхав на заправку. Саме цей випадок раніше рахувався навпаки. */
+function entryAfterRefuel(e,r){
+  if(!r)return true;
+  if(e.date>r.date)return true;
+  if(e.date<r.date)return false;
+  if(+r.t>0&&+e.endT>0)return +e.endT>+r.t;
+  if(+r.odo>0&&+e.odoEnd>0&&!r.reset)return +e.odoEnd>+r.odo;
+  return false;
+}
+function activeAfterRefuel(r){
+  const a=data.active;if(!a)return false;
+  if(!r)return true;
+  const d=dateOf(a.startT);
+  if(d>r.date)return true;
+  if(d<r.date)return false;
+  return !(+r.t>0)||a.startT>+r.t;
+}
+function lastRefuel(){
   const rs=[...(data.refuels||[])].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
-  if(!rs.length)return null;
-  const last=rs[rs.length-1];
-  const es=(data.entries||[]).filter(e=>e.date>=last.date);
-  return{from:last.date,dates:[...new Set(es.map(e=>e.date))].sort(),
-    km:es.reduce((a,e)=>a+(+e.km||0),0),oc:es.reduce((a,e)=>a+(e.oc||0),0)};
+  return rs.length?rs[rs.length-1]:null;
+}
+function daysSinceRefuel(){
+  const last=lastRefuel();
+  if(!last)return null;
+  const es=(data.entries||[]).filter(e=>entryAfterRefuel(e,last));
+  const days=Math.round((new Date(todayStr()+'T12:00:00')-new Date(last.date+'T12:00:00'))/86400000);
+  let km=es.reduce((a,e)=>a+(+e.km||0),0);
+  if(activeAfterRefuel(last))km+=activeKmEst();
+  return{from:last.date,days,dates:[...new Set(es.map(e=>e.date))].sort(),
+    km,oc:es.reduce((a,e)=>a+(e.oc||0),0)};
 }
 function tankPeriods(){
   /* Порядок хронологічний, а НЕ за одометром: після обнулення лічильника
@@ -3263,6 +3291,11 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.6',d:'24.08.2026',items:[
+    'Виправлено рахунок кілометрів на баку: зміна, після якої ти поїхав заправлятись, більше не зараховується в новий бак',
+    'Поле «Дата» у заправці стало таким самим, як сусідні — однакова висота, шрифт і вирівнювання',
+    'Замість переліку дат під заправкою тепер коротко: скільки днів, кілометрів і замовлень на цьому баку'
+  ],tip:'Час заправки тепер запамʼятовується, тож застосунок бачить, яка зміна була до неї, а яка після.'},
   {v:'3.5',d:'24.08.2026',items:[
     'Порожня картка «Фактична витрата» прибрана — витрата й ціна кілометра тепер стоять коротким рядком біля каністри',
     'Динаміка ціни переїхала у свою картку «Ціна літра», де їй і місце'
@@ -3825,9 +3858,9 @@ function rfCalc(){
     const d=daysSinceRefuel();
     if(d&&d.dates.length){
       db.style.display='block';
-      const lbl=d.dates.map(x=>fmtDate(x)).join(', ');
-      db.innerHTML='З минулої заправки ('+fmtDate(d.from)+') ти працював: <b>'+lbl+'</b>'+
-        (d.km>0?' · '+fmt1(d.km)+' км':'')+(d.oc>0?' · '+d.oc+' замовл.':'');
+      const dd=d.days<=0?'сьогодні':d.days===1?'1 день':d.days+' дн.';
+      db.innerHTML='На цьому баку: <b>'+dd+'</b>'+
+        (d.km>0?' · <b>'+fmt1(d.km)+' км</b>':'')+(d.oc>0?' · '+d.oc+' замовл.':'');
     }else db.style.display='none';
   }
 }
@@ -3853,7 +3886,10 @@ $('rf-save').addEventListener('click',function(){
   arm(this,rfId?'Точно зберегти?':'Точно записати?',async()=>{
     const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
     const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
-      reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now()};
+      reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now(),
+      /* час потрібен, щоб відрізнити зміну до заправки від зміни після неї.
+         Заправку заднім числом вважаємо вечірньою. */
+      t:(prev&&+prev.t)||(($('rf-date').value||todayStr())===todayStr()?Date.now():toMs($('rf-date').value,'23:59'))};
     const wasShould=fuelPurse().should;
     if(rfId)data.refuels=data.refuels.map(x=>x.id===rfId?rec:x);
     else data.refuels.push(rec);
@@ -4163,13 +4199,17 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
    присвоєння .value) — інакше напис показував би старе. */
 const rawValue=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
 function dressTime(){
-  document.querySelectorAll('.field > input[type="time"]').forEach(function(inp){
+  document.querySelectorAll('.field > input[type="time"],.field > input[type="date"]').forEach(function(inp){
     if(inp.dataset.dressed)return;
     inp.dataset.dressed='1';
     const box=document.createElement('div');box.className='tinp';
     inp.parentNode.insertBefore(box,inp);box.appendChild(inp);
     const view=document.createElement('span');view.className='tinp-v';box.appendChild(view);
-    const sync=function(){view.textContent=rawValue.get.call(inp)||'--:--';};
+    const isDate=inp.type==='date';
+    const sync=function(){
+      const v=rawValue.get.call(inp);
+      view.textContent=v?(isDate?v.split('-').reverse().join('.'):v):(isDate?'--.--.----':'--:--');
+    };
     inp.addEventListener('input',sync);inp.addEventListener('change',sync);
     Object.defineProperty(inp,'value',{configurable:true,
       get(){return rawValue.get.call(this);},
