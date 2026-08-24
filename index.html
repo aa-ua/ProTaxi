@@ -508,15 +508,6 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     </div>
 
     <div class="card">
-      <div class="tank-hero">
-        <div class="k">Фактична витрата</div>
-        <div class="big" id="tank-cons">—</div>
-        <div class="hint" id="tank-sub" style="margin-top:6px"></div>
-        <div class="trend" id="tank-trend"></div>
-      </div>
-    </div>
-
-    <div class="card">
       <div class="card-title">Папка на пальне</div>
       <div id="purse-box"></div>
     </div>
@@ -528,6 +519,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 
     <div class="card">
       <div class="card-title">Ціна літра · динаміка</div>
+      <div class="trend" id="tank-trend" style="margin-bottom:10px"></div>
       <div class="chart" id="price-chart"></div>
       <div class="hint" id="price-note" style="margin-top:10px"></div>
     </div>
@@ -839,7 +831,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.4';
+const APP_VER='3.5';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3271,6 +3263,10 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.5',d:'24.08.2026',items:[
+    'Порожня картка «Фактична витрата» прибрана — витрата й ціна кілометра тепер стоять коротким рядком біля каністри',
+    'Динаміка ціни переїхала у свою картку «Ціна літра», де їй і місце'
+  ],tip:'Екран «Бак» став на цілу картку коротшим — усе головне видно одразу біля каністри.'},
   {v:'3.4',d:'24.08.2026',items:[
     'У картці бака зʼявився рядок із заповненням: скільки вже накопичено на наступний повний бак і скільки лишилось',
     'Накопичив на бак — пише про це й показує, скільки зайвого можеш забрати собі, поки їдеш на старому пальному',
@@ -3647,6 +3643,7 @@ function renderGauge(){
   const rows=
     '<div class="gauge-row"><span>Обʼєм бака</span>'+
       '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> л</span></div>'+
+    '<div class="gauge-row"><span>Витрата</span><span class="v">'+consLine()+'</span></div>'+
     '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
       (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
     savingHTML();
@@ -3671,6 +3668,13 @@ function renderGauge(){
     '</div>'+
     '<div class="gauge-rows">'+rows+'</div>';
   bindGauge();
+}
+/* Витрата одним рядком: факт по баках, якщо він є, інакше цифра з налаштувань. */
+function consLine(){
+  const s=data.settings,avg=avgConsumption(),lp=lastPrice()||+s.fuelPrice||0;
+  const v=avg||+s.consumption||0;
+  if(v<=0)return '—';
+  return fmt1(v)+' л/100'+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
 }
 function savingHTML(){
   const g=tankSaving();
@@ -3705,12 +3709,6 @@ function renderTank(){
     ? (ps.length?'Витрата береться з реальних чеків: '+ps.length+' завершених баків. Простій на світлофорах уже врахований.'
                :'Додай ще одну заправку до повного — і почнеться точний облік. Поки рахую за налаштуваннями.')
     : 'Рахую за витратою '+fmt1(s.consumption)+' л/100 км з налаштувань. Для точності перейди на облік по баках.';
-
-  $('tank-cons').textContent=avg?fmt1(avg)+' л':'—';
-  const lp=lastPrice();
-  $('tank-sub').textContent=avg
-    ? 'на 100 км · вартість кілометра '+fmt1(avg/100*(lp||s.fuelPrice))+' ₴'
-    : 'Заправся двічі до повного, вписуючи одометр — і я порахую факт';
 
   /* динаміка ціни */
   const rs=[...data.refuels].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
