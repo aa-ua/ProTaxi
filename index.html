@@ -230,22 +230,29 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .metrics.four .metric .v{font-size:12.5px}
 .metrics.four .metric .k{font-size:9.5px}
 .metric.split .v{font-size:13.5px}
-.gauge{display:flex;flex-direction:column;align-items:center;gap:2px}
-.gauge-cap{width:30px;height:9px;border-radius:5px 5px 0 0;background:var(--border)}
-.gauge-body{position:relative;width:100%;max-width:280px;height:62px;
-  border:2.5px solid var(--border);border-radius:14px;background:var(--surface2);overflow:hidden}
-.gauge-fill{position:absolute;left:0;top:0;bottom:0;
-  background:linear-gradient(180deg,var(--yellow),var(--yellow-deep));transition:width .45s ease}
-.gauge-fill.low{background:linear-gradient(180deg,#FF8A82,#D8443C)}
-.gauge-ticks{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
-  padding:0 12px;font-size:12px;font-weight:800;color:var(--text);opacity:.75}
-.gauge-val{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:800;
-  letter-spacing:-.02em;margin-top:12px}
+.card-title.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mini-add{width:34px;height:34px;border-radius:11px;flex-shrink:0;
+  background:var(--yellow);color:#101010;border:none;font-family:inherit;font-size:22px;
+  font-weight:800;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  margin:-6px 0}
+.mini-add:active{transform:scale(.94)}
+.gauge{display:flex;align-items:center;gap:18px}
+.can{width:96px;height:126px;flex-shrink:0}
+.gauge-side{min-width:0;flex:1}
+.gauge-val{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
 .gauge-val.low{color:#FF8A82}
-.gauge-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:2px}
-.gauge-money{display:flex;justify-content:space-between;align-items:center;margin-top:16px;
-  padding-top:14px;border-top:1px solid var(--border);font-size:13.5px;font-weight:700;color:var(--muted)}
-.gauge-money b{font-family:'Unbounded',sans-serif;font-size:17px;color:var(--yellow);letter-spacing:-.02em}
+.gauge-pct{font-size:13px;font-weight:800;color:var(--yellow);margin-top:3px}
+.gauge-pct.low{color:#FF8A82}
+.gauge-note{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.45}
+.gauge-rows{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.gauge-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:7px 0;font-size:13.5px;font-weight:700;color:var(--muted)}
+.gauge-row .v{color:var(--text)}
+.gauge-row input{width:64px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
+  padding:6px 8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;text-align:center}
+.gauge-row input:focus{outline:none;border-color:var(--yellow)}
+.gauge-row.money b{font-family:'Unbounded',sans-serif;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
+.gauge-row.money b.neg{color:#FF8A82}
 .odo-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:8px}
 .approx{color:var(--muted);font-size:11px;font-weight:700}
 .modal .row-btn{display:flex;gap:10px}
@@ -484,7 +491,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 
   <section class="screen" id="screen-tank">
     <div class="card">
-      <div class="card-title">Скільки в баку</div>
+      <div class="card-title row">Бак<button class="mini-add" id="btn-refuel" aria-label="Записати заправку">+</button></div>
       <div id="gauge-box"></div>
     </div>
 
@@ -504,7 +511,6 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
         <div class="hint" id="tank-sub" style="margin-top:6px"></div>
         <div class="trend" id="tank-trend"></div>
       </div>
-      <button class="btn btn-primary" id="btn-refuel">+ Записати заправку</button>
     </div>
 
     <div class="card">
@@ -830,7 +836,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.2';
+const APP_VER='3.3';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1057,8 +1063,29 @@ function tankLevel(){
   return{cap,left,km,cons,pct:left/cap,range:left/cons*100,from};
 }
 
+/* Пальне відкладається і за поточну сесію теж — інакше після заправки папка
+   показує нуль аж до кінця зміни, хоч гроші вже відкладені. */
+function activeKmEst(){
+  const a=data.active;if(!a)return 0;
+  const lastOdo=Math.max(a.odoStart||0,...a.orders.map(o=>Math.max(o.odoStart||0,o.odoEnd||0)));
+  const factKm=(a.odoStart>0&&lastOdo>a.odoStart)?lastOdo-a.odoStart:0;
+  return factKm>0?factKm:a.orders.reduce((x,o)=>x+oKm(o),0)*idleFactor();
+}
+function lastRefuelInfo(){
+  const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
+  if(!rs.length)return null;
+  const r=rs[rs.length-1];
+  const days=Math.round((new Date(todayStr()+'T12:00:00')-new Date(r.date+'T12:00:00'))/86400000);
+  let km=(data.entries||[]).filter(e=>e.date>r.date).reduce((a,e)=>a+(+e.km||0),0);
+  if(data.active&&dateOf(data.active.startT)>r.date)km+=activeKmEst();
+  const when=days<=0?'сьогодні':days===1?'учора':days+' дн. тому';
+  return{r,days,km,when};
+}
+
 function fuelPurse(){
-  const should=(data.entries||[]).reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
+  let should=(data.entries||[]).reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
+  if(data.active)should+=litersFor(activeKmEst(),data.settings)*(lastPrice()||+data.settings.fuelPrice||0);
   const spent=(data.refuels||[]).reduce((a,r)=>a+(+r.liters||0)*(+r.price||0),0);
   return{should:should,spent:spent,balance:should-spent};
 }
@@ -3223,6 +3250,14 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.3',d:'24.08.2026',items:[
+    'Бак намальовано каністрою, а не батарейкою — наповнення росте знизу вгору',
+    'Виправлено: у «Відкладено на пальне» не рахувалась відкрита сесія, тому після заправки стояв нуль аж до кінця зміни',
+    'Мінус у папці більше не ховається за нулем — видно справжню цифру й чому вона така',
+    'Поруч із каністрою видно, коли була остання заправка і скільки кілометрів тому',
+    'Обʼєм бака можна змінити прямо тут, не ходячи в налаштування',
+    '«Записати заправку» стала плюсиком у тій самій картці; уся текстова частина — нижче'
+  ],tip:'Цифри рахуються від того, що вже записано, тож старі заправки й зміни враховуються одразу після оновлення.'},
   {v:'3.2',d:'24.08.2026',items:[
     'Оренду тепер можна задати сумою за день, тиждень чи місяць — або відсотком від чистого',
     'Сума за добу ділиться між змінами того самого дня, а не знімається двічі',
@@ -3556,29 +3591,68 @@ function renderPurse(){
     : 'Стільки грошей на пальне має лежати окремо. Після кожної заправки цифра зменшується, після кожної зміни — росте.')+'</p>';
   box.innerHTML=h;
 }
+/* Каністра. Заповнення росте знизу вгору, обрізане по формі корпусу. */
+function canisterSVG(pct,low){
+  const X=14,Y=34,W=88,H=104;                 /* корпус */
+  const h=Math.max(pct>0?4:0,Math.round(H*pct));
+  const fill=low?'#E0574E':'var(--yellow)';
+  return '<svg class="can" viewBox="0 0 116 152" aria-hidden="true">'+
+    '<defs><clipPath id="canclip"><rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11"/></clipPath>'+
+    '<linearGradient id="cangrad" x1="0" y1="1" x2="0" y2="0">'+
+      '<stop offset="0" stop-color="'+(low?'#B9382F':'var(--yellow-deep)')+'"/>'+
+      '<stop offset="1" stop-color="'+fill+'"/></linearGradient></defs>'+
+    /* ручка й горловина */
+    '<path d="M36 34 L36 22 Q36 15 43 15 L73 15 Q80 15 80 22 L80 34" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<rect x="86" y="21" width="20" height="13" rx="4" fill="var(--border)"/>'+
+    /* корпус */
+    '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11" fill="var(--surface2)"/>'+
+    '<g clip-path="url(#canclip)"><rect x="'+X+'" y="'+(Y+H-h)+'" width="'+W+'" height="'+h+'" fill="url(#cangrad)"/></g>'+
+    /* хрест-навхрест, як на справжній каністрі */
+    '<g clip-path="url(#canclip)" opacity=".28"><path d="M30 52 L86 120 M86 52 L30 120" fill="none" stroke="var(--text)" stroke-width="3.5" stroke-linecap="round"/></g>'+
+    '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11" fill="none" stroke="var(--border)" stroke-width="4"/>'+
+    '</svg>';
+}
+
 function renderGauge(){
   const box=$('gauge-box');if(!box)return;
-  const t=tankLevel(),p=fuelPurse();
-  const money='<div class="gauge-money"><span>Відкладено на пальне</span>'+
-    '<b>'+fmt(Math.max(0,p.balance))+'</b></div>';
+  const t=tankLevel(),p=fuelPurse(),lr=lastRefuelInfo();
+  const s=data.settings;
+
+  const rows=
+    '<div class="gauge-row"><span>Обʼєм бака</span>'+
+      '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> л</span></div>'+
+    '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
+      (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
+    '<div class="gauge-row money"><span>Відкладено на пальне</span><b class="'+(p.balance<0?'neg':'')+'">'+fmt(p.balance)+'</b></div>'+
+    (p.balance<0?'<p class="hint" style="margin-top:6px">Заправив більше, ніж устиг відкласти. Наступні зміни це наздоженуть.</p>':'');
+
   if(!t){
-    box.innerHTML='<div class="empty">Впиши обʼєм бака в налаштуваннях і запиши хоч одну заправку «до повного» — і тут буде видно, скільки лишилось</div>'+money;
-    return;
+    box.innerHTML='<div class="gauge">'+canisterSVG(0,false)+
+      '<div class="gauge-side"><div class="gauge-val">—</div>'+
+      '<div class="gauge-note">Запиши заправку «до повного» — і я почну рахувати, скільки лишилось</div></div></div>'+
+      '<div class="gauge-rows">'+rows+'</div>';
+    bindGauge();return;
   }
-  const pc=Math.round(t.pct*100);
-  const low=t.pct<=0.18;
+  const pc=Math.round(t.pct*100),low=t.pct<=0.18;
   box.innerHTML=
-    '<div class="gauge">'+
-      '<div class="gauge-cap"></div>'+
-      '<div class="gauge-body">'+
-        '<div class="gauge-fill'+(low?' low':'')+'" style="width:'+Math.max(2,pc)+'%"></div>'+
-        '<div class="gauge-ticks"><span>E</span><span>F</span></div>'+
+    '<div class="gauge">'+canisterSVG(t.pct,low)+
+      '<div class="gauge-side">'+
+        '<div class="gauge-val'+(low?' low':'')+'">≈ '+fmt1(t.left)+' л</div>'+
+        '<div class="gauge-pct'+(low?' low':'')+'">'+pc+'% бака</div>'+
+        '<div class="gauge-note">'+(low
+          ? 'Пора на заправку — лишилось приблизно '+Math.round(t.range)+' км ходу'
+          : 'Вистачить приблизно на '+Math.round(t.range)+' км')+'</div>'+
       '</div>'+
-      '<div class="gauge-val'+(low?' low':'')+'">≈ '+fmt1(t.left)+' л · '+pc+'%</div>'+
-      '<div class="gauge-note">'+(low
-        ? 'Пора на заправку — вистачить приблизно на '+Math.round(t.range)+' км'
-        : 'Вистачить приблизно на '+Math.round(t.range)+' км. Від повного бака проїхано '+fmt1(t.km)+' км')+'</div>'+
-    '</div>'+money;
+    '</div>'+
+    '<div class="gauge-rows">'+rows+'</div>';
+  bindGauge();
+}
+function bindGauge(){
+  const i=$('g-tankl');if(!i)return;
+  i.addEventListener('change',async()=>{
+    data.settings.tankLiters=num(i.value)||50;
+    await persist();renderTank();toast('Обʼєм бака · '+fmt1(data.settings.tankLiters)+' л');
+  });
 }
 
 function renderTank(){
