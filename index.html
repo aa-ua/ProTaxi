@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#24262C">
@@ -29,6 +30,10 @@ body{
   font-size:15px;line-height:1.45;padding-bottom:96px;
 }
 .app{max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px 0;min-height:100vh;min-height:100dvh}
+/* Усередині Telegram висоту вікна дає сам Telegram — 100dvh там показує не те */
+html.in-tg .app{min-height:var(--tgvh,100dvh)}
+html.in-tg .modal{max-height:calc(var(--tgvh,92dvh) * .92)}
+html.in-tg .only-web{display:none}
 
 /* ── Заставка при запуску: висить, потім плавно розчиняється ── */
 #splash{position:fixed;inset:0;z-index:9999;background:var(--yellow);
@@ -613,6 +618,13 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     </div>
 
     <div class="card">
+      <div class="card-title">Підтримка</div>
+      <div class="ins" id="tg-who" style="display:none"><span class="k">Ти увійшов як</span><span class="v" id="tg-name">—</span></div>
+      <button class="btn btn-primary" id="btn-support" style="margin-top:12px">Написати в підтримку</button>
+      <p class="hint" id="support-note"></p>
+    </div>
+
+    <div class="card">
       <div class="card-title">Про застосунок</div>
       <div class="ins"><span class="k">Версія</span><span class="v" id="about-ver">—</span></div>
       <div class="ins"><span class="k">Оновлено</span><span class="v" id="about-date">—</span></div>
@@ -832,7 +844,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.8';
+const APP_VER='3.9';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3291,6 +3303,10 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.9',d:'24.08.2026',items:[
+    'ProTaxi тепер працює прямо в Telegram — відкривається з бота, нічого встановлювати не треба',
+    'Зʼявилась кнопка «Написати в підтримку»: «Ще» → «Підтримка»'
+  ],tip:'Усередині Telegram гортання більше не закриває застосунок випадковим свайпом.'},
   {v:'3.8',d:'24.08.2026',items:[
     'Застосунок тепер називається ProTaxi'
   ],tip:'Підпис під іконкою на домашньому екрані iOS запамʼятала при додаванні й сама не зміниться. Ярлик НЕ видаляй — разом з ним зітреться вся база. Додай сайт другим ярликом, а старий прибереш потім.'},
@@ -3399,6 +3415,32 @@ function renderAccount(){
   }
 }
 function openAccount(){renderAccount();openM('modal-account');}
+/* Ім'я бота підставляється сюди після створення у BotFather.
+   Порожньо — кнопка мовчить, бо вести нема куди. */
+const SUPPORT_BOT='';
+function renderSupport(){
+  const u=tgUser(),who=$('tg-who');
+  if(u){
+    who.style.display='';
+    $('tg-name').textContent=[u.first_name,u.last_name].filter(Boolean).join(' ')||('@'+(u.username||u.id));
+  }else who.style.display='none';
+  $('support-note').textContent=TG
+    ? 'Напиши, що не так або чого бракує — повідомлення прийде власнику застосунку, він відповість тобі тут же, у Telegram.'
+    : (SUPPORT_BOT
+        ? 'Відкриється чат у Telegram. Пиши про будь-яку помилку — це справді допомагає.'
+        : 'Підтримка працює в Telegram. Відкрий застосунок через бота — і кнопка запрацює.');
+  $('btn-support').disabled=!TG&&!SUPPORT_BOT;
+}
+$('btn-support').addEventListener('click',()=>{
+  if(TG){
+    /* застосунок відкрито з чату бота — просто повертаємо людину туди */
+    toast('Напиши повідомлення в чаті — я його побачу');
+    setTimeout(()=>{try{TG.close();}catch(e){}},900);
+    return;
+  }
+  if(SUPPORT_BOT)window.open('https://t.me/'+SUPPORT_BOT,'_blank','noopener');
+});
+
 $('btn-account').addEventListener('click',openAccount);
 $('btn-account2').addEventListener('click',openAccount);
 $('acc-cancel').addEventListener('click',()=>closeM('modal-account'));
@@ -3869,6 +3911,7 @@ function renderSettings(){
   $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-tankl').value=s.tankLiters;
   renderRentMode();
   renderFundMode();
+  renderSupport();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
 }
@@ -4102,6 +4145,32 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
   else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
   if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
 })();
+
+/* ══ TELEGRAM MINI APP ══
+   Застосунок лишається звичайним сайтом: усе нижче вмикається, лише коли його
+   відкрили всередині Telegram. Поза Telegram TG просто немає. */
+const TG=(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData!==undefined)
+  ? window.Telegram.WebApp : null;
+if(TG){
+  document.documentElement.classList.add('in-tg');
+  const call=(fn,...a)=>{try{if(typeof TG[fn]==='function')TG[fn](...a);}catch(e){}};
+  call('ready');
+  call('expand');
+  /* без цього свайп вниз закриває застосунок просто під час гортання списку */
+  call('disableVerticalSwipes');
+  call('setHeaderColor','#24262C');
+  call('setBackgroundColor','#24262C');
+  const setVH=()=>{
+    const h=TG.viewportStableHeight||TG.viewportHeight;
+    if(h>0)document.documentElement.style.setProperty('--tgvh',h+'px');
+  };
+  setVH();
+  try{TG.onEvent('viewportChanged',setVH);}catch(e){}
+}
+/* Ім'я з Telegram — щоб не питати його вдруге */
+function tgUser(){
+  try{return (TG&&TG.initDataUnsafe&&TG.initDataUnsafe.user)||null;}catch(e){return null;}
+}
 
 /* ══ ПОЛЕ ЧАСУ ══
    Загортаємо кожне input[type=time] у коробку з власним написом. Значення
