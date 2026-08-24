@@ -3340,9 +3340,9 @@ function renderAccount(){
   }
 }
 function openAccount(){renderAccount();openM('modal-account');}
-/* Ім'я бота підставляється сюди після створення у BotFather.
-   Порожньо — кнопка мовчить, бо вести нема куди. */
-const SUPPORT_BOT='';
+/* Бот підтримки. Усередині Telegram кнопка просто повертає людину в чат з ним,
+   поза Telegram — відкриває цей чат. */
+const SUPPORT_BOT='ProTaxiApp_Bot';
 function renderSupport(){
   const u=tgUser(),who=$('tg-who');
   if(u){
