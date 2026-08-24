@@ -212,6 +212,13 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 
 /* Поки відкрита клавіатура, нижня панель їде вниз — інакше вона накриває поле вводу */
 html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
+/* Своя кнопка «готово» біля поля: на цифровій клавіатурі iOS закрити її нема чим */
+#kb-done{position:fixed;display:none;z-index:80;transform:translate(-100%,-50%);
+  width:36px;height:36px;padding:0;border:none;border-radius:10px;cursor:pointer;
+  background:var(--yellow);color:#101010;align-items:center;justify-content:center;
+  box-shadow:0 3px 12px rgba(0,0,0,.35)}
+#kb-done.on{display:flex}
+#kb-done svg{width:18px;height:18px}
 .tabbar{transition:transform .18s ease;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;z-index:40;background:rgba(34,37,43,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 max(12px, env(safe-area-inset-bottom));color:var(--muted);font-size:9.5px;font-weight:800;background:none;border:none;font-family:inherit;cursor:pointer}
 .tab.active{color:var(--yellow)}
@@ -4182,15 +4189,44 @@ dressTime();
 /* екрани й вікна малюються по ходу — одягаємо нові поля, щойно вони з'являються */
 new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:true});
 
-/* Клавіатура не повинна ховати поле під нижньою панеллю */
+/* Клавіатура не повинна ховати поле під нижньою панеллю.
+   Плюс своя галочка «готово»: на цифровій клавіатурі iOS кнопки закриття немає взагалі. */
 (function(){
   var root=document.documentElement;
   var isField=function(el){return !!el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');};
-  var tShow=null,tHide=null;
+  /* час і дату iOS показує власним підбирачем — там своя кнопка «Готово» */
+  var needsDone=function(el){return isField(el)&&el.tagName!=='SELECT'&&el.type!=='time'&&el.type!=='date';};
+  var tShow=null,tHide=null,raf=null;
+
+  var done=document.createElement('button');
+  done.type='button';done.id='kb-done';done.setAttribute('aria-label','Готово');
+  done.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"></polyline></svg>';
+  document.body.appendChild(done);
+  /* галочку тримаємо біля самого поля — тоді не треба вгадувати висоту клавіатури */
+  function place(){
+    var el=document.activeElement;
+    if(!needsDone(el)){done.classList.remove('on');raf=null;return;}
+    var r=el.getBoundingClientRect();
+    if(r.height<=0){done.classList.remove('on');}
+    else{
+      done.style.top=(r.top+r.height/2)+'px';
+      done.style.left=(r.right-7)+'px';
+      done.classList.add('on');
+    }
+    raf=requestAnimationFrame(place);
+  }
+  /* натиснення по галочці не повинно спершу знімати фокус — прибираємо його самі */
+  done.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    var el=document.activeElement;
+    if(el&&el.blur)el.blur();
+  });
+
   document.addEventListener('focusin',function(e){
     if(!isField(e.target))return;
     clearTimeout(tHide);
     root.classList.add('kbd');
+    if(raf===null)raf=requestAnimationFrame(place);
     clearTimeout(tShow);
     tShow=setTimeout(function(){
       if(document.activeElement!==e.target)return;
@@ -4200,6 +4236,7 @@ new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:tr
   });
   document.addEventListener('focusout',function(e){
     if(!isField(e.target))return;
+    done.classList.remove('on');
     clearTimeout(tHide);
     tHide=setTimeout(function(){
       if(!isField(document.activeElement))root.classList.remove('kbd');
