@@ -621,6 +621,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <div class="card">
       <div class="card-title">Підтримка</div>
       <div class="ins" id="tg-who" style="display:none"><span class="k">Ти увійшов як</span><span class="v" id="tg-name">—</span></div>
+      <div class="ins"><span class="k">Синхронізація</span><span class="v" id="cloud-state">—</span></div>
       <button class="btn btn-primary" id="btn-support" style="margin-top:12px">Написати в підтримку</button>
       <p class="hint" id="support-note"></p>
     </div>
@@ -1367,6 +1368,7 @@ async function persist(){
     await store.set(BAK,payload);
   }
   if(!ok)toast('Не вдалося зберегти');
+  cloudPush();
   const st=$('save-state');
   if(st)st.textContent='Збережено о '+nowHM()+' · версія '+APP_VER;
 }
@@ -3340,6 +3342,55 @@ function renderAccount(){
   }
 }
 function openAccount(){renderAccount();openM('modal-account');}
+/* ══ ХМАРА ══
+   Дані їдуть у Supabase і привʼязані до Telegram-акаунта. Ключ нижче публічний
+   за задумом: сервер приймає лише запити, підписані ботом, а токен бота лежить
+   у самій базі й сюди ніколи не потрапляє. Поза Telegram синхронізації немає. */
+const SB_URL='https://qlihbfqakiufehdiwart.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsaWhiZnFha2l1ZmVoZGl3YXJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1ODkwODksImV4cCI6MjEwMzE2NTA4OX0.gj9kV25hN5DeDI_O5P9RNc0CjyHQT56-fyyxcBQl618';
+let cloudState='off',cloudTimer=null;
+
+async function cloudCall(payload){
+  if(!TG||!TG.initData)return null;
+  const r=await fetch(SB_URL+'/rest/v1/rpc/sync',{
+    method:'POST',
+    headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},
+    body:JSON.stringify({p_init_data:TG.initData,p_payload:payload||null})
+  });
+  if(!r.ok)throw new Error('sync '+r.status+' '+(await r.text()).slice(0,120));
+  return await r.json();
+}
+/* Перший запуск: чия копія свіжіша — та й лишається */
+async function cloudPull(){
+  if(!TG||!TG.initData)return;
+  try{
+    cloudState='sync';renderCloud();
+    const res=await cloudCall(data.entries.length||data.active?data:null);
+    if(res&&res.source==='cloud'&&res.payload){
+      const p=parseSave(JSON.stringify(res.payload));
+      if(p)await applyPayload(JSON.stringify(res.payload));   /* воно саме скаже, скільки змін */
+    }
+    cloudState='ok';
+  }catch(e){cloudState='err';}
+  renderCloud();
+}
+/* Після кожного збереження — тиха відправка, але не частіше ніж раз на 4 секунди */
+function cloudPush(){
+  if(!TG||!TG.initData)return;
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(async()=>{
+    try{await cloudCall(data);cloudState='ok';}catch(e){cloudState='err';}
+    renderCloud();
+  },4000);
+}
+function renderCloud(){
+  const el=$('cloud-state');if(!el)return;
+  el.textContent=!TG?'працює лише в Telegram'
+    :cloudState==='ok'?'✅ дані в хмарі'
+    :cloudState==='sync'?'⏳ синхронізую…'
+    :cloudState==='err'?'❌ не вдалося — спробую пізніше':'—';
+}
+
 /* Бот підтримки. Усередині Telegram кнопка просто повертає людину в чат з ним,
    поза Telegram — відкриває цей чат. */
 const SUPPORT_BOT='ProTaxiApp_Bot';
@@ -3836,7 +3887,7 @@ function renderSettings(){
   $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-tankl').value=s.tankLiters;
   renderRentMode();
   renderFundMode();
-  renderSupport();
+  renderSupport();renderCloud();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
 }
@@ -4069,6 +4120,7 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
   if(data.settings.seenVer&&data.settings.seenVer!==APP_VER)setTimeout(()=>renderChangelog(true),600);
   else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
   if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
+  cloudPull();
 })();
 
 /* ══ TELEGRAM MINI APP ══
