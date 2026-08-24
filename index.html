@@ -17,7 +17,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#24262C; --surface:#32363E; --surface2:#3C414B; --border:#4A505C;
+  --bg:#22252B; --surface:#31353E; --surface2:#3B404A; --border:#464C58;
+  --line:rgba(255,255,255,.07);   /* тонкі роздільники всередині карток */
   --text:#F5F6F8; --muted:#9DA3AE; --yellow:#3BE0A6; --yellow-deep:#1FA97A;
   --green:#35D07C; --red:#FF5F57; --amber:#FFB020; --radius:18px;
 }
@@ -61,11 +62,11 @@ html.in-tg .only-web{display:none}
 .screen.active{display:block}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px}
 .sect{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:800;letter-spacing:-.01em;
   color:var(--text);margin:6px 2px 12px}
 .card+.sect,.btn+.sect{margin-top:26px}
-.card-title{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:12px}
+.card-title{font-size:13.5px;letter-spacing:-.005em;color:var(--muted);font-weight:700;margin-bottom:12px}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
 .goal-warn{margin-top:10px;padding:11px 13px;border-radius:12px;font-size:14px;font-weight:700;
   color:#FFB3AE;background:rgba(255,95,87,.12);border:1px solid rgba(255,95,87,.4);text-align:center}
@@ -83,7 +84,7 @@ html.in-tg .only-web{display:none}
 .btn+.hint{margin-top:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
-.field input{width:100%;height:48px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal}
+.field input{width:100%;height:48px;background:var(--surface2);border:1px solid transparent;border-radius:12px;padding:0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal}
 /* Поля часу й дати. iOS малює їхні значення по-своєму — по центру поля
    й вище за сусіднє число, і на звичайні правила не зважає. Тому рідне значення
    ховаємо (input лежить зверху прозорим і ловить дотик), а текст малюємо самі —
@@ -102,10 +103,10 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 
 /* Смена */
 .shift-hero{text-align:center;padding:10px 0 16px}
-.live-line{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:8px}
+.live-line{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(53,208,124,.55)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
-.hero-big{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 32px rgba(59,224,166,.26);line-height:1.15}
+.hero-big{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;line-height:1.15}
 .hero-sub{font-size:13px;color:var(--muted);font-weight:700;margin-top:6px}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .metric{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
@@ -123,7 +124,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
 #fin-verdict{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
-#fin-verdict .vh{font-size:12.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+#fin-verdict .vh{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
 #fin-verdict .vr{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;padding:4px 0}
 #fin-verdict .vr .n{color:var(--muted);font-weight:600}
 #fin-verdict .vr .z{font-weight:800;font-variant-numeric:tabular-nums}
@@ -140,15 +141,15 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .btn+.btn{margin-top:10px}
 
 .chips{display:flex;gap:8px;margin-bottom:12px}
-.chip{padding:9px 15px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-weight:800;font-size:13px;font-family:inherit;cursor:pointer}
+.chip{padding:9px 15px;border-radius:999px;background:var(--surface);border:1px solid transparent;color:var(--muted);font-weight:800;font-size:13px;font-family:inherit;cursor:pointer}
 .chip.active{background:var(--yellow);color:#101010;border-color:var(--yellow)}
 
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;margin-bottom:12px}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;
+.stat{background:var(--surface);border:1px solid transparent;border-radius:var(--radius);padding:14px;
   display:flex;flex-direction:column;justify-content:center}
 .stat .v{font-family:'Unbounded',sans-serif;font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
 .stat .k{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:3px}
-.stat.stat-main{border-color:rgba(59,224,166,.38);background:linear-gradient(180deg,rgba(59,224,166,.12),rgba(59,224,166,.03))}
+.stat.stat-main{background:rgba(59,224,166,.10)}
 .stat.stat-main .v{color:#3BE0A6}
 .stat.stat-main .k{color:#8FE7C8}
 
@@ -159,7 +160,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .bar.hot{background:linear-gradient(180deg,#A9F2D6,var(--yellow))}
 .bar-lbl{font-size:9px;color:var(--muted);font-weight:700}
 
-.ins{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);font-size:16px}
+.ins{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:16px}
 .ins:last-child{border-bottom:none}
 .ins .k{color:var(--muted);font-weight:600}
 .ins .v{font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
@@ -195,7 +196,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:60;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;z-index:40;background:rgba(36,38,44,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border)}
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;z-index:40;background:rgba(34,37,43,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 max(12px, env(safe-area-inset-bottom));color:var(--muted);font-size:9.5px;font-weight:800;background:none;border:none;font-family:inherit;cursor:pointer}
 .tab.active{color:var(--yellow)}
 /* «Зміна» — головна дія: посередині, піднята, завжди мʼятна, схожа на кнопку */
@@ -225,7 +226,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .lrow .v{font-variant-numeric:tabular-nums;white-space:nowrap}
 .wchips{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .wchips{align-items:stretch}
-.wchip{flex:1;min-width:62px;padding:10px 4px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;text-align:center;
+.wchip{flex:1;min-width:62px;padding:10px 4px;border-radius:12px;background:var(--surface2);border:1px solid transparent;color:var(--text);font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;text-align:center;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;line-height:1.25}
 .wchip .e{font-size:18px;display:block;margin:0;line-height:1}
 .wchip.on{border-color:var(--yellow);background:rgba(59,224,166,.12);color:var(--yellow)}
@@ -254,7 +255,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .gauge-pct{font-size:13px;font-weight:800;color:var(--yellow);margin-top:3px}
 .gauge-pct.low{color:#FF8A82}
 .gauge-note{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.45}
-.gauge-rows{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.gauge-rows{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
 .gauge-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
   padding:7px 0;font-size:13.5px;font-weight:700;color:var(--muted)}
 .gauge-row .v{color:var(--text)}
@@ -273,12 +274,12 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .btn-warn{background:var(--amber);color:#101010}
 /* v5: заправки й режим розрахунку */
 .modes{display:flex;gap:8px;margin-bottom:12px}
-.mode{flex:1;padding:12px 8px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;text-align:center}
+.mode{flex:1;padding:12px 8px;border-radius:14px;background:var(--surface2);border:1px solid transparent;color:var(--muted);font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;text-align:center}
 .mode.on{background:var(--yellow);color:#101010;border-color:var(--yellow)}
 .mode .sub{display:block;font-size:10px;font-weight:700;opacity:.75;margin-top:2px}
 .tank-hero{text-align:center;padding:6px 0 14px}
 .tank-hero .big{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
-.tank-hero .k{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:6px}
+.tank-hero .k{font-size:13.5px;color:var(--muted);font-weight:700;margin-bottom:6px}
 .trend{font-size:12.5px;font-weight:800;margin-top:8px}
 .trend.up{color:var(--red)} .trend.down{color:var(--green)} .trend.flat{color:var(--muted)}
 .exact-tag{font-size:10px;font-weight:800;color:var(--yellow);letter-spacing:.05em}
@@ -294,9 +295,9 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .topacts{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
 .logo-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 @media (max-width:359px){.logo-sub{display:none}}
-.avatar{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid transparent;color:var(--muted);font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .avatar svg{width:19px;height:19px}
-.soon{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);margin-left:8px;vertical-align:middle}
+.soon{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);margin-left:8px;vertical-align:middle}
 .modal .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em}
 .modal .divider::before,.modal .divider::after{content:"";flex:1;height:1px;background:var(--border)}
 .modal-scroll{max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -20px;padding:0 20px}
@@ -339,7 +340,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .route .rm .slow{color:var(--amber)}
 .slot{padding:10px 0;border-bottom:1px solid var(--border)}
 .slot:last-child{border-bottom:none}
-.slot .sh{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;margin-bottom:5px}
+.slot .sh{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:5px}
 .slot .sv{font-size:14px;font-weight:800}
 .slot .sv .zone{color:var(--yellow)}
 .slot .sub{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
@@ -830,7 +831,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='4.1';
+const APP_VER='4.2';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3265,6 +3266,9 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'4.2',d:'24.08.2026',items:[
+    'Вигляд став спокійнішим: картки відділяються тоном, а не рамками, підписи — звичайним шрифтом замість розрядженого капсу'
+  ],tip:'Нічого не переставляли — усе на своїх місцях, змінилась лише подача.'},
   {v:'4.1',d:'24.08.2026',items:[
     'Записи тепер зберігаються в хмарі й привʼязані до твого Telegram — відкрив з іншого телефона, і всі зміни на місці',
     'Налаштування розділені на дві групи: «Мої налаштування» і «Застосунок»',
