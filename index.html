@@ -251,8 +251,11 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .gauge-row input{width:64px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
   padding:6px 8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;text-align:center}
 .gauge-row input:focus{outline:none;border-color:var(--yellow)}
-.gauge-row.money b{font-family:'Unbounded',sans-serif;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
-.gauge-row.money b.neg{color:#FF8A82}
+.save-block{margin-top:4px}
+.save-block .gauge-row b{font-family:'Unbounded',sans-serif;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
+.save-block .gauge-row b.ok{color:var(--green)}
+.save-block .progress{margin:4px 0 6px}
+.save-block .progress .fill.done{background:linear-gradient(90deg,var(--green),#9CF2C4)}
 .odo-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:8px}
 .approx{color:var(--muted);font-size:11px;font-weight:700}
 .modal .row-btn{display:flex;gap:10px}
@@ -836,7 +839,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.3';
+const APP_VER='3.4';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1081,6 +1084,24 @@ function lastRefuelInfo(){
   if(data.active&&dateOf(data.active.startT)>r.date)km+=activeKmEst();
   const when=days<=0?'сьогодні':days===1?'учора':days+' дн. тому';
   return{r,days,km,when};
+}
+
+/* Скільки вже накопичено на НАСТУПНИЙ повний бак. На відміну від папки, лік іде
+   не за весь час, а від останньої заправки — тому цифра завжди додатна і росте.
+   Перевищив вартість бака — різниця твоя: ти й далі їдеш на старому пальному. */
+function tankSaving(){
+  const s=data.settings;
+  const cap=Math.max(0,+s.tankLiters||0);
+  const price=lastPrice()||+s.fuelPrice||0;
+  const target=cap*price;
+  const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
+  const from=rs.length?rs[rs.length-1].date:null;
+  let saved=(data.entries||[]).filter(e=>!from||e.date>from)
+    .reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
+  if(data.active&&(!from||dateOf(data.active.startT)>from))
+    saved+=litersFor(activeKmEst(),s)*price;
+  return{target,saved,price,pct:target>0?saved/target:0,extra:Math.max(0,saved-target),from};
 }
 
 function fuelPurse(){
@@ -3250,6 +3271,11 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.4',d:'24.08.2026',items:[
+    'У картці бака зʼявився рядок із заповненням: скільки вже накопичено на наступний повний бак і скільки лишилось',
+    'Накопичив на бак — пише про це й показує, скільки зайвого можеш забрати собі, поки їдеш на старому пальному',
+    'Незрозумілий мінус «Відкладено на пальне» прибрано з цієї картки: лік тепер іде від останньої заправки, а не за весь час. Загальний баланс лишився нижче, у «Папці на пальне»'
+  ],tip:'Ціль накопичення = обʼєм бака × ціна останньої заправки. Обнуляється щоразу, коли записуєш нову заправку.'},
   {v:'3.3',d:'24.08.2026',items:[
     'Бак намальовано каністрою, а не батарейкою — наповнення росте знизу вгору',
     'Виправлено: у «Відкладено на пальне» не рахувалась відкрита сесія, тому після заправки стояв нуль аж до кінця зміни',
@@ -3623,8 +3649,7 @@ function renderGauge(){
       '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> л</span></div>'+
     '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
       (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
-    '<div class="gauge-row money"><span>Відкладено на пальне</span><b class="'+(p.balance<0?'neg':'')+'">'+fmt(p.balance)+'</b></div>'+
-    (p.balance<0?'<p class="hint" style="margin-top:6px">Заправив більше, ніж устиг відкласти. Наступні зміни це наздоженуть.</p>':'');
+    savingHTML();
 
   if(!t){
     box.innerHTML='<div class="gauge">'+canisterSVG(0,false)+
@@ -3646,6 +3671,20 @@ function renderGauge(){
     '</div>'+
     '<div class="gauge-rows">'+rows+'</div>';
   bindGauge();
+}
+function savingHTML(){
+  const g=tankSaving();
+  if(g.target<=0)return '';
+  const pc=Math.min(100,Math.round(g.pct*100));
+  const done=g.saved>=g.target;
+  return '<div class="save-block">'+
+    '<div class="gauge-row"><span>'+(done?'Накопичено на повний бак':'Копиш на наступний бак')+'</span>'+
+      '<b class="'+(done?'ok':'')+'">'+fmt(g.saved)+'</b></div>'+
+    '<div class="progress"><div class="fill'+(done?' done':'')+'" style="width:'+Math.max(2,pc)+'%"></div></div>'+
+    '<div class="progress-text"><span>'+(done?'вистачає на повний бак':'з '+fmt(g.target)+' за бак')+'</span><span>'+pc+'%</span></div>'+
+    (done
+      ? '<p class="hint" style="margin-top:8px">🏁 <b>Накопичив на повний бак.</b> Поки їдеш на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — твої, можеш забирати.</p>'
+      : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Рахунок пішов від останньої заправки й обнулиться на наступній.</p>');
 }
 function bindGauge(){
   const i=$('g-tankl');if(!i)return;
