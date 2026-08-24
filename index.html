@@ -125,6 +125,19 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r{border-left-color:var(--red);background:linear-gradient(90deg,rgba(255,95,87,.10),transparent 62%)}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
+/* Знайомство: спершу кілька екранів «навіщо це», далі три кроки налаштування */
+.modal.intro{padding:16px 18px 18px}
+.intro-dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px}
+.intro-dots i{width:22px;height:3px;border-radius:2px;background:var(--surface2);transition:background .2s}
+.intro-dots i.on{background:var(--yellow)}
+.intro-ico{font-size:40px;text-align:center;line-height:1;margin-bottom:14px}
+.intro-t{font-size:20px;font-weight:800;text-align:center;line-height:1.25;margin-bottom:10px}
+.intro-p{font-size:14.5px;line-height:1.55;color:var(--muted);text-align:center;margin-bottom:18px}
+.intro-p b{color:var(--text);font-weight:800}
+.intro-foot{display:flex;justify-content:space-between;margin-top:12px}
+.lnk{background:none;border:none;padding:6px 2px;font-family:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}
+.lnk:disabled{opacity:.35}
+.intro .modes{margin-bottom:12px}
 /* Рядок часу над замовленням: не поле, а підпис — тапнув, і він розкрився */
 .fin-time{width:100%;background:none;border:none;padding:0 0 12px;margin:0;font-family:inherit;
   color:var(--muted);font-size:13.5px;font-weight:700;text-align:center;cursor:pointer;display:block}
@@ -202,6 +215,13 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal-bg.open{display:flex}
+/* Замовлення — по центру видимої частини екрана, трохи вище середини.
+   Знизу вікно штовхала клавіатура; тут вона просто з'їдає низ, а вікно стоїть. */
+.modal-bg.mid{align-items:center;padding:0 12px 5vh;top:var(--vvtop,0px);bottom:auto;height:var(--vvh,100dvh)}
+.modal-bg.mid .modal{border-radius:20px;border:1px solid var(--border);animation:popin .2s ease;
+  padding:18px;max-height:100%}
+html.in-tg .modal-bg.mid .modal{max-height:100%}
+@keyframes popin{from{transform:scale(.97);opacity:0}to{transform:none;opacity:1}}
 .modal{background:var(--surface);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));border:1px solid var(--border);border-bottom:none;animation:slideup .25s ease;
   max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
@@ -351,7 +371,9 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 /* Мапа */
 #map{width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#E8E6E1}
 #map.punchy .leaflet-tile-pane{filter:saturate(1.35) contrast(1.08) brightness(1.02)}
-#map.gray .leaflet-tile-pane{filter:grayscale(1) brightness(.9) contrast(.96)}
+/* Нічні тайли самі по собі пласкі — піднімаємо дорогам яскравість і додаємо синього */
+#map.dark{background:#131A22}
+#map.dark .leaflet-tile-pane{filter:brightness(1.22) contrast(1.3) saturate(1.55) hue-rotate(-6deg)}
 .map-card{position:relative;padding:8px}
 .map-fs{position:absolute;top:16px;right:16px;z-index:5;width:38px;height:38px;border-radius:11px;
   background:rgba(34,37,43,.86);border:none;color:#fff;display:flex;align-items:center;justify-content:center;
@@ -504,7 +526,7 @@ html.map-full .tabbar{display:none}
     </div>
     <div class="chips" style="margin-top:-4px">
       <button class="chip active" data-ms="light">Світла</button>
-      <button class="chip" data-ms="gray">Сіра</button>
+      <button class="chip" data-ms="dark">Темна</button>
     </div>
     <div class="card map-card" id="map-card">
       <div id="map"></div>
@@ -581,15 +603,15 @@ html.map-full .tabbar{display:none}
 
   <section class="screen" id="screen-funds">
     <div class="card">
-      <div class="card-title" id="fund-name">Авто-фонд</div>
+      <div class="card-title" id="fund-name">Запас</div>
       <div class="fund-balance" id="fund-balance">₴0</div>
       <div class="progress"><div class="fill" id="fund-fill"></div></div>
       <div class="progress-text"><span id="fund-target-text">ціль ₴0</span><span id="fund-pct">0%</span></div>
-      <button class="btn btn-ghost" id="btn-fund-exp" style="margin-top:14px">Витрата з фонду</button>
-      <p class="hint">Сюди автоматично падає відсоток з кожної зміни. Витрачай тільки на авто: ТО, гума, ремонт.</p>
+      <button class="btn btn-ghost" id="btn-fund-exp" style="margin-top:14px">Витрата із запасу</button>
+      <p class="hint" id="fund-hint"></p>
     </div>
     <div class="card">
-      <div class="card-title">Витрати з фонду</div>
+      <div class="card-title">Витрати із запасу</div>
       <div id="fundops-list"></div>
     </div>
     <div class="card">
@@ -617,7 +639,7 @@ html.map-full .tabbar{display:none}
       <div class="card-title">Розрахунок</div>
       <div class="grid2">
         <div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="set-comm"></div>
-        <div class="field"><label id="lab-fund">Авто-фонд, % від чистого</label><input type="number" inputmode="decimal" id="set-fund"></div>
+        <div class="field"><label id="lab-fund">Запас, % від чистого</label><input type="number" inputmode="decimal" id="set-fund"></div>
       </div>
       <div class="modes" id="fund-mode" style="margin-top:12px">
         <button class="mode" data-fm="pct">Відсотком<span class="sub">від чистого</span></button>
@@ -629,6 +651,15 @@ html.map-full .tabbar{display:none}
     </div>
 
     <div class="card">
+      <div class="card-title">Авто</div>
+      <div class="modes" id="car-mode">
+        <button class="mode" data-cm="own">Своє<span class="sub">відкладаю на ремонт</span></button>
+        <button class="mode" data-cm="rent">Орендоване<span class="sub">відкладаю на оренду</span></button>
+      </div>
+      <p class="hint" id="car-note"></p>
+    </div>
+
+    <div class="card" id="rent-card">
       <div class="card-title">Оренда авто</div>
       <div class="modes" id="rent-mode">
         <button class="mode" data-rm="sum">Сумою<span class="sub">фіксовано</span></button>
@@ -647,7 +678,7 @@ html.map-full .tabbar{display:none}
       <div class="card-title">Цілі</div>
       <div class="field"><label>Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
       <div class="grid2">
-        <div class="field"><label>Ціль авто-фонду, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
+        <div class="field"><label>Ціль запасу, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
         <div class="field"><label>На що збираєш</label><input type="text" id="set-sname" placeholder="Планове ТО"></div>
       </div>
     </div>
@@ -668,7 +699,8 @@ html.map-full .tabbar{display:none}
       <div class="card-title">Про застосунок</div>
       <div class="ins"><span class="k">Версія</span><span class="v" id="about-ver">—</span></div>
       <div class="ins"><span class="k">Оновлено</span><span class="v" id="about-date">—</span></div>
-      <button class="btn btn-ghost" id="btn-changelog" style="margin-top:12px">Що нового</button>
+      <button class="btn btn-ghost" id="btn-intro" style="margin-top:12px">Як користуватись</button>
+      <button class="btn btn-ghost" id="btn-changelog" style="margin-top:10px">Що нового</button>
     </div>
 
     <div class="card">
@@ -698,7 +730,7 @@ html.map-full .tabbar{display:none}
       <div class="card-title" style="color:var(--red)">Небезпечна зона</div>
       <button class="btn btn-danger" id="btn-wipe">Стерти всі дані…</button>
       <div id="wipe-zone" style="display:none;margin-top:14px">
-        <p class="hint" style="margin:0 0 4px">Крок 2 з 3: проведи повзунок до кінця. Це зітре всі сесії, заправки й фонди назавжди — спершу зроби повну копію вище.</p>
+        <p class="hint" style="margin:0 0 4px">Крок 2 з 3: проведи повзунок до кінця. Це зітре всі сесії, заправки й запас назавжди — спершу зроби повну копію вище.</p>
         <input type="range" id="wipe-slider" min="0" max="100" value="0" step="1">
         <button class="btn" id="wipe-final" disabled style="margin-top:12px">Крок 3: утримуй 2 секунди</button>
       </div>
@@ -706,8 +738,21 @@ html.map-full .tabbar{display:none}
   </section>
 </div>
 
+<!-- Модалка: знайомство і перше налаштування -->
+<div class="modal-bg mid" id="modal-intro">
+  <div class="modal intro">
+    <div class="intro-dots" id="intro-dots"></div>
+    <div id="intro-body"></div>
+    <button class="btn btn-primary" id="intro-next">Далі</button>
+    <div class="intro-foot">
+      <button class="lnk" id="intro-back" type="button">Назад</button>
+      <button class="lnk" id="intro-skip" type="button">Пропустити</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка: прийняти замовлення -->
-<div class="modal-bg" id="modal-order">
+<div class="modal-bg mid" id="modal-order">
   <div class="modal">
     <h3>Прийняти замовлення</h3>
     <button class="fin-time" id="om-time-line" type="button"></button>
@@ -727,7 +772,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: завершити / редагувати замовлення -->
-<div class="modal-bg" id="modal-finish">
+<div class="modal-bg mid" id="modal-finish">
   <div class="modal">
     <h3 id="fin-title">Завершити замовлення</h3>
     <!-- Час — другорядне: один рядок, розгортається тапом -->
@@ -818,7 +863,7 @@ html.map-full .tabbar{display:none}
 <!-- Модалка: витрата з фонду -->
 <div class="modal-bg" id="modal-fund">
   <div class="modal">
-    <h3>Витрата з авто-фонду</h3>
+    <h3>Витрата із запасу</h3>
     <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="fx-amount" placeholder="0"></div>
     <div class="field"><label>Опис</label><input type="text" id="fx-desc" placeholder="Заміна масла, гума..."></div>
     <div class="field"><label>Дата</label><input type="date" id="fx-date"></div>
@@ -878,12 +923,12 @@ html.map-full .tabbar{display:none}
   </button>
   <button class="tab" data-screen="funds">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 15h2"/></svg>
-    Фонди
+    Запас
   </button>
 </nav>
 
 <script>
-const APP_VER='4.3';
+const APP_VER='4.4';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -926,8 +971,8 @@ const store={
   }
 };
 
-const MAP_STYLES_KEYS=['light','gray'];
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const MAP_STYLES_KEYS=['light','dark'];
+const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -1269,10 +1314,11 @@ function recalcAll(){
    коштували б як дві доби оренди. */
 const RENT_DAYS={day:1,week:7,month:30};
 function rentPerDay(s){
-  if(s.rentMode==='pct')return 0;
+  if(s.carMode==='own'||s.rentMode==='pct')return 0;
   return Math.max(0,+s.rentAmount||0)/(RENT_DAYS[s.rentPeriod]||1);
 }
 function rentForShift(s,base,shifts){
+  if(s.carMode==='own')return 0; /* своє авто — оренди немає */
   if(s.rentMode==='pct')return Math.max(0,base*(+s.rentPct||0)/100);
   return rentPerDay(s)/Math.max(1,+shifts||1);
 }
@@ -1281,6 +1327,14 @@ function shiftsOnDay(ds,withActive){
   if(withActive&&data.active&&dateOf(data.active.startT)===ds)n++;
   return Math.max(1,n);
 }
+
+/* Запас — це те, що відкладається з кожної зміни. У кого своє авто, той збирає
+   на ремонт; у кого орендоване, той збирає на оренду наперед. Назва йде звідси. */
+const isRentCar=()=>data.settings.carMode==='rent';
+const fundLabel=()=>isRentCar()?'Запас на оренду':'Запас на авто';
+const fundHint=()=>isRentCar()
+  ? 'Сюди з кожної зміни падає частка, щоб оренду завжди було чим заплатити — навіть у слабкий тиждень.'
+  : 'Сюди з кожної зміни падає частка. Витрачай тільки на авто: ТО, гума, ремонт.';
 
 /* Авто-фонд рахуємо або відсотком від чистого, або гривнями за кілометр —
    як зручніше водієві. Більше за чисте не відкладаємо, інакше «на руки» пішло б у мінус. */
@@ -1391,6 +1445,11 @@ async function load(){
   if(!data.streets||typeof data.streets!=='object')data.streets={};
   /* 1.7: мапа стала мапою даних — на «Навігації» кольорові вулиці не читаються */
   if(!data.settings.stMig17){data.settings.stMig17=1;if(data.settings.mapStyle==='nav')data.settings.mapStyle='light';}
+  if(!data.settings.carMig43){
+    data.settings.carMig43=1;
+    if(+data.settings.rentAmount>0||+data.settings.rentPct>0)data.settings.carMode='rent';
+  }
+  if(data.settings.mapStyle==='gray')data.settings.mapStyle='dark';
   if(!MAP_STYLES_KEYS.includes(data.settings.mapStyle))data.settings.mapStyle='light';
   if(data.active){
     if(!Array.isArray(data.active.orders))data.active.orders=[];
@@ -1701,9 +1760,9 @@ function renderShift(){
     '<div class="metric split"><div class="v neg">−'+fmt(c.commission)+'</div><div class="k">платформі</div></div>'+
     (c.rent>0?'<div class="metric split"><div class="v neg">−'+fmt(c.rent)+'</div><div class="k">оренда</div></div>':'')+
     '<div class="metric split"><div class="v neg">−'+fmt(c.fuel)+'</div><div class="k">пальне '+fmt1(liters)+' л</div></div>'+
-    '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">авто-фонд</div></div>'+
+    '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">у запас</div></div>'+
     '</div>'+
-    '<div class="odo-note">Авто-фонд: '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
+    '<div class="odo-note">'+fundLabel()+': '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
     (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуй заказ з одометром — і цифри стануть точними.</div>':'')+
     (stale?'<div class="warn">Сесія відкрита ще '+fmtDate(dateOf(a.startT))+' — закрий або скасуй її</div>':'')+
     '<div class="warn" id="t-nudge" style="display:none"></div>'+
@@ -2125,11 +2184,13 @@ function loadLeaflet(cb){
   s.onerror=()=>{leafletState='failed';const q=leafletCbs;leafletCbs=[];q.forEach(f=>f(false));};
   document.head.appendChild(s);
 }
-const CARTO_TILES='https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const CARTO=n=>'https://{s}.basemaps.cartocdn.com/rastertiles/'+n+'/{z}/{x}/{y}{r}.png';
 const CARTO_OPT={maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'};
+/* Темну не робимо фільтром зі світлої: у світлій і дороги, і фон майже білі,
+   інверсія зливає їх у чорне. Тому беремо окремі нічні тайли й піднімаємо контраст. */
 const MAP_STYLES={
-  light:{url:CARTO_TILES,opt:CARTO_OPT},              /* світла підкладка */
-  gray :{url:CARTO_TILES,opt:CARTO_OPT,gray:true}     /* та сама, але приглушена в сірий */
+  light:{url:CARTO('voyager'),opt:CARTO_OPT},
+  dark :{url:CARTO('dark_all'),opt:CARTO_OPT,dark:true}
 };
 let tileLayerRef=null;
 function applyMapStyle(){
@@ -2140,7 +2201,7 @@ function applyMapStyle(){
   tileLayerRef=L.tileLayer(s.url,s.opt).addTo(map);
   if(tileLayerRef.bringToBack)tileLayerRef.bringToBack();
   const holder=$('map');
-  if(holder){holder.classList.toggle('punchy',!!s.punch);holder.classList.toggle('gray',!!s.gray);}
+  if(holder){holder.classList.toggle('punchy',!!s.punch);holder.classList.toggle('dark',!!s.dark);}
   document.querySelectorAll('[data-ms]').forEach(x=>x.classList.toggle('active',x.dataset.ms===key));
 }
 document.querySelectorAll('[data-ms]').forEach(ch=>ch.addEventListener('click',async()=>{
@@ -2938,7 +2999,7 @@ function renderDayDetail(){
     h+='<div class="ins"><span class="k">Пальне · '+fmt1(e.liters)+' л</span><span class="v neg">−'+fmt(e.calc.fuel)+'</span></div>';
     if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
     h+='<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(e.calc.net)+'</span></div>';
-    h+='<div class="ins"><span class="k">Авто-фонд</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
+    h+='<div class="ins"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
     h+='<div class="ins"><span class="k"><b>На руки</b> · твої гроші</span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
     h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
     if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
@@ -2979,7 +3040,7 @@ function renderDonut(es){
     {n:'Еквайринг',v:sum('acquiring'),c:'#FF9A8B'},
     {n:'Пальне',v:sum('fuel'),c:'#FFB020'},
     {n:'Оренда',v:sum('rent'),c:'#FF7BC2'},
-    {n:'Авто-фонд',v:sum('fund'),c:'#57B9FF'},
+    {n:'Запас',v:sum('fund'),c:'#57B9FF'},
     {n:'Податки',v:sum('tax'),c:'#B48CFF'}
   ].filter(s=>s.v>0.5);
   const total=segs.reduce((a,s)=>a+s.v,0);
@@ -3001,9 +3062,9 @@ function renderDonut(es){
     leg.appendChild(r);
   });
   donut.style.background='conic-gradient('+parts.join(',')+')';
-  const fseg=segs.find(s=>s.n==='Авто-фонд');
+  const fseg=segs.find(s=>s.n==='Запас');
   $('donut-note').textContent=fseg
-    ? 'Відсотки тут — частка від виручки. Авто-фонд = '+data.settings.fundPct+'% від чистого, тому від виручки виходить '+Math.round(fseg.v/total*100)+'%.'
+    ? 'Відсотки тут — частка від виручки. Запас = '+data.settings.fundPct+'% від чистого, тому від виручки виходить '+Math.round(fseg.v/total*100)+'%.'
     : 'Відсотки — частка кожної статті від виручки.';
 }
 
@@ -3410,6 +3471,114 @@ function renderChangelog(onlyNew){
   });
   openM('modal-changelog');
 }
+/* ══ ЗНАЙОМСТВО ══
+   Спершу коротко пояснюємо, навіщо це все, а далі одразу питаємо те, без чого
+   рахунок буде брехати: авто, пальне, комісія й ціль. */
+const INTRO=[
+ {ico:'💸',t:'Виручка — це не твої гроші',
+  p:'З кожної тисячі частина йде платформі, частина згорає в баку, частина — на ремонт, який колись усе одно настане.<br><br>ProTaxi віднімає це все сам і показує одну чесну цифру — <b>скільки лишилось тобі</b>.'},
+ {ico:'🚕',t:'Один день у застосунку',
+  p:'Вранці тапни <b>зелену шашечку</b> й впиши одометр.<br>На кожному замовленні — «Прийняти», в кінці — сума й одометр.<br>Увечері закрий зміну. Усе.'},
+ {ico:'⛽',t:'Пальне по факту, не «приблизно»',
+  p:'Заправився — запиши чек. Витрата рахується <b>від повного бака до повного</b>, по твоїх же чеках.<br><br>Видно, скільки лишилось у баку і скільки грошей уже відкладено на наступну заправку.'},
+ {ico:'🗺️',t:'Де ти справді заробляєш',
+  p:'Вулиці на мапі фарбуються за твоїм заробітком на годину: <b>зелена — вигідна, червона — ні</b>.<br><br>Плюс видно найкращі години й дні тижня — за твоєю власною статистикою.'},
+ {setup:'car',t:'Авто',p:'Від цього залежить, що застосунок віднімає й на що збирає запас.'},
+ {setup:'fuel',t:'Пальне',p:'Без цих трьох цифр пальне рахуватиметься навмання.'},
+ {setup:'money',t:'Гроші',p:'Останній крок — і можна працювати.'}
+];
+let introIx=0;
+function introSetupHTML(kind){
+  const s=data.settings;
+  if(kind==='car')
+    return '<div class="modes" id="in-car">'+
+      '<button class="mode" data-cm="own">Своє<span class="sub">збираю на ремонт</span></button>'+
+      '<button class="mode" data-cm="rent">Орендоване<span class="sub">збираю на оренду</span></button>'+
+      '</div>'+
+      '<div id="in-rent-box" style="display:none">'+
+      '<div class="field"><label>Скільки платиш за оренду, ₴</label><input type="number" inputmode="decimal" id="in-rent" placeholder="0"></div>'+
+      '<div class="modes" id="in-rentper">'+
+      '<button class="mode" data-rp="day">За день</button>'+
+      '<button class="mode" data-rp="week">За тиждень</button>'+
+      '<button class="mode" data-rp="month">За місяць</button>'+
+      '</div></div>';
+  if(kind==='fuel')
+    return '<div class="grid2">'+
+      '<div class="field"><label>Витрата, л/100 км</label><input type="number" inputmode="decimal" id="in-cons" step="0.1" value="'+(s.consumption||'')+'"></div>'+
+      '<div class="field"><label>Ціна, ₴/л</label><input type="number" inputmode="decimal" id="in-price" step="0.01" value="'+(s.fuelPrice||'')+'"></div>'+
+      '</div>'+
+      '<div class="field" style="margin-top:12px"><label>Обʼєм бака, л</label><input type="number" inputmode="decimal" id="in-tank" step="1" value="'+(s.tankLiters||'')+'"></div>'+
+      '<p class="hint">На газу постав свою реальну витрату — вона зазвичай на 15–20% вища за бензинову.</p>';
+  return '<div class="grid2">'+
+    '<div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
+    '<div class="field"><label>Ціль на день, ₴ на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
+    '</div>'+
+    '<p class="hint">Ціль — це чисто твої гроші, вже після пального, комісії та запасу.</p>';
+}
+function renderIntro(){
+  const sl=INTRO[introIx],last=introIx===INTRO.length-1;
+  let dots='';INTRO.forEach((_,i)=>{dots+='<i class="'+(i<=introIx?'on':'')+'"></i>';});
+  $('intro-dots').innerHTML=dots;
+  $('intro-body').innerHTML=
+    (sl.ico?'<div class="intro-ico">'+sl.ico+'</div>':'')+
+    '<div class="intro-t">'+sl.t+'</div>'+
+    '<div class="intro-p">'+sl.p+'</div>'+
+    (sl.setup?introSetupHTML(sl.setup):'');
+  $('intro-next').textContent=last?'Готово, працюємо':(sl.setup?'Далі':'Далі');
+  $('intro-back').disabled=introIx===0;
+  $('intro-skip').style.display=last?'none':'';
+  if(sl.setup==='car')bindIntroCar();
+}
+function bindIntroCar(){
+  const s=data.settings;
+  const paint=()=>{
+    const rent=s.carMode==='rent';
+    document.querySelectorAll('#in-car .mode').forEach(b=>b.classList.toggle('on',(b.dataset.cm==='rent')===rent));
+    $('in-rent-box').style.display=rent?'':'none';
+    document.querySelectorAll('#in-rentper .mode').forEach(b=>b.classList.toggle('on',b.dataset.rp===(s.rentPeriod||'day')));
+  };
+  document.querySelectorAll('#in-car .mode').forEach(b=>b.addEventListener('click',()=>{s.carMode=b.dataset.cm;paint();}));
+  document.querySelectorAll('#in-rentper .mode').forEach(b=>b.addEventListener('click',()=>{s.rentPeriod=b.dataset.rp;paint();}));
+  const r=$('in-rent');if(r&&+s.rentAmount>0)r.value=s.rentAmount;
+  paint();
+}
+/* Забираємо те, що вписали на кроці, який лишаємо */
+function grabIntro(){
+  const s=data.settings,sl=INTRO[introIx];
+  if(!sl.setup)return;
+  if(sl.setup==='car'){
+    if(s.carMode==='rent'){s.rentMode='sum';s.rentAmount=num(($('in-rent')||{}).value);}
+    if(s.carMode==='rent'&&(!s.serviceName||s.serviceName==='Планове ТО'))s.serviceName='Оренда наперед';
+    fitFundTarget();
+  }
+  if(sl.setup==='fuel'){
+    const c=num($('in-cons').value),pr=num($('in-price').value),tk=num($('in-tank').value);
+    if(c>0)s.consumption=c; if(pr>0)s.fuelPrice=pr; if(tk>0)s.tankLiters=tk;
+  }
+  if(sl.setup==='money'){
+    const cm=num($('in-comm').value),g=num($('in-goal').value);
+    if(cm>=0&&$('in-comm').value!=='')s.commissionPct=cm;
+    if(g>0)s.dailyGoal=g;
+  }
+}
+function openIntro(){introIx=0;renderIntro();openM('modal-intro');}
+async function finishIntro(){
+  data.settings.onboarded=1;
+  recalcAll();
+  await persist();
+  closeM('modal-intro');
+  renderSettings();renderAll();
+}
+$('intro-next').addEventListener('click',async()=>{
+  grabIntro();
+  if(introIx<INTRO.length-1){introIx++;renderIntro();return;}
+  await finishIntro();
+  toast('Готово. Тапни шашечку — і почали');
+});
+$('intro-back').addEventListener('click',()=>{if(introIx>0){grabIntro();introIx--;renderIntro();}});
+$('intro-skip').addEventListener('click',async()=>{await finishIntro();toast('Налаштування — у «Ще»');});
+$('btn-intro').addEventListener('click',openIntro);
+
 $('btn-changelog').addEventListener('click',()=>renderChangelog(false));
 $('cl-close').addEventListener('click',async()=>{
   closeM('modal-changelog');
@@ -3910,7 +4079,8 @@ function renderFunds(){
   const spent=data.fundOps.reduce((a,o)=>a+(+o.amount||0),0);
   const earned=data.entries.reduce((a,e)=>a+e.calc.fund,0);
   const bal=earned-spent;
-  $('fund-name').textContent='Авто-фонд · '+(data.settings.serviceName||'ціль');
+  $('fund-name').textContent=fundLabel()+' · '+(data.settings.serviceName||'ціль');
+  $('fund-hint').textContent=fundHint();
   $('fund-balance').textContent=fmt(bal);
   const t=data.settings.serviceTarget||0;
   const p=t>0?Math.min(100,Math.max(0,Math.round(bal/t*100))):0;
@@ -3951,6 +4121,7 @@ $('fx-save').addEventListener('click',async()=>{
 function renderSettings(){
   const s=data.settings;
   $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-tankl').value=s.tankLiters;
+  renderCarMode();
   renderRentMode();
   renderFundMode();
   renderSupport();renderCloud();
@@ -3959,9 +4130,39 @@ function renderSettings(){
 }
 /* Поле авто-фонду одне, а значень два — окремо відсотки, окремо гривні за км.
    Тримаємо обидва, щоб перемикання туди-сюди не стирало налаштоване. */
+/* Ціль запасу за замовчуванням: на своє авто — планове ТО, на оренду — місяць оренди */
+function fitFundTarget(){
+  const s=data.settings;
+  if(s.carMode==='rent'&&s.serviceTarget===20000){
+    const perDay=Math.max(0,+s.rentAmount||0)/(RENT_DAYS[s.rentPeriod]||1);
+    if(perDay>0)s.serviceTarget=Math.round(perDay*30/100)*100;
+  }
+  if(s.carMode==='own'&&!s.serviceTarget)s.serviceTarget=20000;
+}
+/* Своє авто чи орендоване: від цього залежить і назва запасу, і чи потрібна оренда */
+function renderCarMode(){
+  const rent=isRentCar();
+  document.querySelectorAll('#car-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.cm==='rent')===rent));
+  $('rent-card').style.display=rent?'':'none';
+  $('car-note').textContent=rent
+    ? 'Оренда знімається з кожної зміни, а запас збирається на неї ж — щоб гроші на авто лежали окремо від твоїх.'
+    : 'Оренда не рахується. Запас збирається на ремонт, ТО й гуму — те, що рано чи пізно все одно доведеться платити.';
+}
+document.querySelectorAll('#car-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
+  const s=data.settings;
+  s.carMode=b.dataset.cm;
+  /* назву цілі міняємо тільки поки її не чіпав власник */
+  if(s.carMode==='rent'&&(!s.serviceName||s.serviceName==='Планове ТО'))s.serviceName='Оренда наперед';
+  if(s.carMode==='own'&&s.serviceName==='Оренда наперед')s.serviceName='Планове ТО';
+  fitFundTarget();
+  $('set-sname').value=s.serviceName;
+  $('set-starget').value=s.serviceTarget;
+  renderCarMode();recalcAll();await persist();renderAll();
+}));
+
 function renderFundMode(){
   const s=data.settings,km=s.fundMode==='km';
-  $('lab-fund').textContent=km?'Авто-фонд, ₴ за кілометр':'Авто-фонд, % від чистого';
+  $('lab-fund').textContent=km?'Запас, ₴ за кілометр':'Запас, % від чистого';
   $('set-fund').value=km?s.fundPerKm:s.fundPct;
   document.querySelectorAll('#fund-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.fm==='km')===km));
   $('fund-note').textContent=km
@@ -4017,8 +4218,10 @@ $('btn-set-save').addEventListener('click',async()=>{
     consumption:num($('set-cons').value),
     dailyGoal:num($('set-goal').value),
     serviceTarget:num($('set-starget').value),
-    serviceName:$('set-sname').value.trim()||'Планове ТО'
+    serviceName:$('set-sname').value.trim()||(isRentCar()?'Оренда наперед':'Планове ТО')
   };
+  fitFundTarget();
+  $('set-starget').value=data.settings.serviceTarget;
   recalcAll(); /* нові відсотки й витрата застосовуються до всіх минулих змін */
   await persist();renderAll();toast('Налаштування збережено й застосовано до всієї історії');
 });
@@ -4128,8 +4331,13 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
       }catch(e){}
     });
   }
+  /* перший запуск — знайомство; хто вже працював, той його не бачить */
+  if(!data.settings.onboarded){
+    if(data.entries.length||data.active||data.settings.seenVer){data.settings.onboarded=1;persist();}
+    else setTimeout(openIntro,700);
+  }
   /* показуємо новинки один раз після оновлення */
-  if(data.settings.seenVer&&data.settings.seenVer!==APP_VER)setTimeout(()=>renderChangelog(true),600);
+  if(data.settings.onboarded&&data.settings.seenVer&&data.settings.seenVer!==APP_VER)setTimeout(()=>renderChangelog(true),600);
   else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
   if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
   cloudPull();
@@ -4188,6 +4396,20 @@ function dressTime(){
 dressTime();
 /* екрани й вікна малюються по ходу — одягаємо нові поля, щойно вони з'являються */
 new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:true});
+
+/* Скільки екрана лишилось видимим над клавіатурою — по цьому центруються вікна замовлення */
+(function(){
+  var vv=window.visualViewport,root=document.documentElement;
+  function sync(){
+    var h=vv?vv.height:window.innerHeight, top=vv?vv.offsetTop:0;
+    root.style.setProperty('--vvh',Math.round(h)+'px');
+    root.style.setProperty('--vvtop',Math.round(top)+'px');
+  }
+  sync();
+  if(vv){vv.addEventListener('resize',sync);vv.addEventListener('scroll',sync);}
+  window.addEventListener('resize',sync);
+  window.addEventListener('orientationchange',function(){setTimeout(sync,250);});
+})();
 
 /* Клавіатура не повинна ховати поле під нижньою панеллю.
    Плюс своя галочка «готово»: на цифровій клавіатурі iOS кнопки закриття немає взагалі. */
