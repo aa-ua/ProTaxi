@@ -183,6 +183,13 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;z-index:40;background:rgba(36,38,44,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--border)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 max(12px, env(safe-area-inset-bottom));color:var(--muted);font-size:9.5px;font-weight:800;background:none;border:none;font-family:inherit;cursor:pointer}
 .tab.active{color:var(--yellow)}
+/* «Зміна» — головна дія: посередині, піднята, завжди мʼятна, схожа на кнопку */
+.tab.tab-main{color:var(--yellow);gap:5px}
+.tab.tab-main .ico{width:54px;height:54px;border-radius:50%;background:var(--yellow);color:#101010;
+  display:flex;align-items:center;justify-content:center;margin-top:-20px;
+  box-shadow:0 0 0 5px var(--bg),0 8px 20px rgba(59,224,166,.38)}
+.tab.tab-main .ico svg{width:27px;height:27px}
+.avatar.active{color:var(--yellow);border-color:var(--yellow)}
 .tab svg{width:20px;height:20px}
 
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
@@ -306,8 +313,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
   <header class="topbar">
     <div class="logo">єТакси</div>
     <div class="logo-sub">Фінанси <span>водія</span></div>
-    <button class="avatar" id="btn-account" aria-label="Акаунт">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5"/></svg>
+    <button class="avatar" id="btn-more" data-screen="settings" aria-label="Ще">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#32363E"/><circle cx="15" cy="12" r="2" fill="#32363E"/><circle cx="8" cy="17" r="2" fill="#32363E"/></svg>
     </button>
   </header>
   <div class="checker"></div>
@@ -520,15 +527,20 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
       <div class="card-title">Розрахунок</div>
       <div class="grid2">
         <div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="set-comm"></div>
-        <div class="field"><label>Авто-фонд, % від чистого</label><input type="number" inputmode="decimal" id="set-fund"></div>
+        <div class="field"><label id="lab-fund">Авто-фонд, % від чистого</label><input type="number" inputmode="decimal" id="set-fund"></div>
       </div>
-      <div class="field"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
+      <div class="modes" id="fund-mode" style="margin-top:12px">
+        <button class="mode" data-fm="pct">Відсотком<span class="sub">від чистого</span></button>
+        <button class="mode" data-fm="km">Гривнями<span class="sub">за кілометр</span></button>
+      </div>
+      <p class="hint" id="fund-note"></p>
+      <div class="field" style="margin-top:12px"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
       <p class="hint">Податки — якщо ти ФОП. Постав 0, якщо не відкладаєш.</p>
     </div>
 
     <div class="card">
       <div class="card-title">Цілі</div>
-      <div class="field"><label>Денна ціль чистими, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
+      <div class="field"><label>Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
       <div class="grid2">
         <div class="field"><label>Ціль авто-фонду, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
         <div class="field"><label>На що збираєш</label><input type="text" id="set-sname" placeholder="Планове ТО"></div>
@@ -741,10 +753,6 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 <div class="toast" id="toast"></div>
 
 <nav class="tabbar">
-  <button class="tab active" data-screen="shift">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-    Зміна
-  </button>
   <button class="tab" data-screen="stats">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V12"/><path d="M12 20V5"/><path d="M19 20v-6"/><path d="M3 20h18"/></svg>
     Стата
@@ -752,6 +760,10 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
   <button class="tab" data-screen="map">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-6.2-5.5-6.2-10a6.2 6.2 0 1 1 12.4 0C18.2 15.5 12 21 12 21z"/><circle cx="12" cy="10.8" r="2.2"/></svg>
     Мапа
+  </button>
+  <button class="tab tab-main active" data-screen="shift">
+    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span>
+    Зміна
   </button>
   <button class="tab" data-screen="tank">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14"/><path d="M3 20h12"/><path d="M14 9h3a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0v-7l-2.5-3"/><path d="M6 9h6"/></svg>
@@ -761,14 +773,10 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 15h2"/></svg>
     Фонди
   </button>
-  <button class="tab" data-screen="settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#24262C"/><circle cx="15" cy="12" r="2" fill="#24262C"/><circle cx="8" cy="17" r="2" fill="#24262C"/></svg>
-    Ще
-  </button>
 </nav>
 
 <script>
-const APP_VER='2.8';
+const APP_VER='2.9';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -812,7 +820,7 @@ const store={
   }
 };
 
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'nav'};
+const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'nav'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -1059,6 +1067,22 @@ function recalcAll(){
   });
 }
 
+/* Авто-фонд рахуємо або відсотком від чистого, або гривнями за кілометр —
+   як зручніше водієві. Більше за чисте не відкладаємо, інакше «на руки» пішло б у мінус. */
+function fundFor(net,km,s){
+  if(net<=0)return 0;
+  const raw=s.fundMode==='km' ? (+km||0)*(+s.fundPerKm||0) : net*(+s.fundPct||0)/100;
+  return Math.max(0,Math.min(raw,net));
+}
+/* Ту саму цифру показуємо двома мірами, щоб не переводити в голові */
+function fundBoth(fund,km,net,s){
+  const pct=net>0?Math.round(fund/net*100):0;
+  const perKm=km>0?fund/km:0;
+  return s.fundMode==='km'
+    ? fmt1(+s.fundPerKm||0)+' ₴/км'+(net>0?' · це ≈'+pct+'% від чистого':'')
+    : (+s.fundPct||0)+'% від чистого'+(perKm>0?' · це ≈'+fmt1(perKm)+' ₴/км':'');
+}
+
 function calc(inp,s){
   const gross=+inp.gross||0,tips=+inp.tips||0;
   const commission=gross*s.commissionPct/100;
@@ -1067,7 +1091,7 @@ function calc(inp,s){
   const liters=+inp.liters||0;
   const fuel=liters*(+inp.fuelPrice||+s.fuelPrice||0);
   const net=gross-commission-acquiring-fuel+tips;
-  const fund=net>0?net*s.fundPct/100:0;
+  const fund=fundFor(net,+inp.km||0,s);
   const tax=(gross+tips)*s.taxPct/100;
   const personal=net-fund-tax;
   return{commission,acquiring,fuel,net,fund,tax,personal};
@@ -1190,8 +1214,8 @@ async function persist(){
 let toastT;
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
-document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+document.querySelectorAll('[data-screen]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-screen]').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   $('screen-'+b.dataset.screen).classList.add('active');
@@ -1334,16 +1358,19 @@ function renderHolidays(){
 }
 
 /* Чистими за сьогодні: закриті зміни + оцінка активної */
-function todayNet(){
+function todayTotals(){
   const t=todayStr();
-  let tn=data.entries.filter(e=>e.date===t).reduce((a,e)=>a+e.calc.net,0);
+  let net=0,personal=0;
+  data.entries.filter(e=>e.date===t).forEach(e=>{net+=e.calc.net;personal+=e.calc.personal;});
   if(data.active&&dateOf(data.active.startT)===t){
     const gross=data.active.orders.reduce((a,o)=>a+(+o.amount||0),0);
-    const ordKm=data.active.orders.reduce((a,o)=>a+oKm(o),0);
-    tn+=calc({gross,tips:0,liters:litersFor(ordKm*idleFactor(),data.settings)},data.settings).net;
+    const km=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
+    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings)},data.settings);
+    net+=c.net;personal+=c.personal;
   }
-  return tn;
+  return{net,personal};
 }
+function todayNet(){return todayTotals().net;}
 /* Фактична витрата в роботі: баки → записані зміни → налаштування */
 function workConsumption(){
   const a=avgConsumption();
@@ -1357,13 +1384,13 @@ function workConsumption(){
 function goalCardHTML(){
   const g=data.settings.dailyGoal||0;
   if(g<=0)return '';
-  const tn=todayNet();
+  const tn=todayTotals().personal; /* ціль — це те, що лишається на руки */
   const left=Math.max(0,g-tn);
   const pct=Math.min(100,Math.max(0,Math.round(tn/g*100)));
   const oc=data.entries.reduce((a,e)=>a+(e.oc||0),0);
-  const net=data.entries.reduce((a,e)=>a+e.calc.net,0);
+  const pers=data.entries.reduce((a,e)=>a+e.calc.personal,0);
   const gross=data.entries.reduce((a,e)=>a+(+e.gross||0),0);
-  const avgNetOrder=oc>0?net/oc:0;
+  const avgNetOrder=oc>0?pers/oc:0;
   const avgCheck=oc>0?gross/oc:0;
   let line;
   if(left<=0)line='<div class="goal-done">Ціль виконано · +'+fmt(tn-g)+' зверху 🏁</div>';
@@ -1374,11 +1401,11 @@ function goalCardHTML(){
   const wc=workConsumption();
   let rows='';
   if(avgCheck>0)rows+='<div class="ins"><span class="k">Середній чек · '+oc+' зам.</span><span class="v">'+fmt(avgCheck)+'</span></div>';
-  if(avgNetOrder>0)rows+='<div class="ins"><span class="k">Чистими з замовлення</span><span class="v">'+fmt(avgNetOrder)+'</span></div>';
+  if(avgNetOrder>0)rows+='<div class="ins"><span class="k">На руки з замовлення</span><span class="v">'+fmt(avgNetOrder)+'</span></div>';
   if(wc.v>0)rows+='<div class="ins"><span class="k">Витрата в роботі · '+wc.src+'</span><span class="v">'+fmt1(wc.v)+' л/100</span></div>';
   return '<div class="card"><div class="card-title">Ціль дня · '+fmt(g)+'</div>'+
     '<div class="progress"><div class="fill" style="width:'+pct+'%"></div></div>'+
-    '<div class="progress-text"><span>'+fmt(tn)+' чистими</span><span>'+pct+'%</span></div>'+
+    '<div class="progress-text"><span>'+fmt(tn)+' на руки</span><span>'+pct+'%</span></div>'+
     line+rows+'</div>';
 }
 
@@ -1422,7 +1449,7 @@ function renderShift(){
   const approx=factKm<=0;
 
   const liters=litersFor(estKm,s);
-  const c=calc({gross,tips:0,liters},s);
+  const c=calc({gross,tips:0,liters,km:estKm},s);
 
   const stale=dateOf(a.startT)!==todayStr();
   let html=
@@ -1433,13 +1460,14 @@ function renderShift(){
     '<div class="metrics">'+
     '<div class="metric"><div class="v">'+a.orders.length+'</div><div class="k">замовлень</div></div>'+
     '<div class="metric"><div class="v">'+(estKm>0?(approx?'≈':'')+fmt1(estKm):'—')+'</div><div class="k">км за зміну</div></div>'+
-    '<div class="metric"><div class="v">'+(busyMin>0?Math.round(busyMin)+' хв':'—')+'</div><div class="k">у заказах</div></div>'+
+    '<div class="metric"><div class="v">'+(busyMin>0?fmtHours(busyMin/60):'—')+'</div><div class="k">у заказах</div></div>'+
     '</div>'+
     '<div class="metrics">'+
     '<div class="metric split"><div class="v neg">−'+fmt(c.commission)+'</div><div class="k">платформі</div></div>'+
     '<div class="metric split"><div class="v neg">−'+fmt(c.fuel)+'</div><div class="k">пальне '+fmt1(liters)+' л</div></div>'+
     '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">авто-фонд</div></div>'+
     '</div>'+
+    '<div class="odo-note">Авто-фонд: '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
     (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуй заказ з одометром — і цифри стануть точними.</div>':'')+
     (stale?'<div class="warn">Сесія відкрита ще '+fmtDate(dateOf(a.startT))+' — закрий або скасуй її</div>':'')+
     '<div class="warn" id="t-nudge" style="display:none"></div>'+
@@ -2424,7 +2452,7 @@ function cmPreview(){
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
   const manual=num($('cm-liters').value);
   const liters=manual>0?manual:km/100*r.cons;
-  const c=calc({gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,cardGross:cardGrossOf(a)},data.settings);
+  const c=calc({gross,tips:num($('cm-tips').value),liters,km,fuelPrice:r.price,cardGross:cardGrossOf(a)},data.settings);
   const p=[];
   if(km>0)p.push((odoKm>0?'':'≈')+fmt1(km)+' км'+(ordKm>0&&odoKm>0?' · з пасажиром '+Math.round(ordKm/km*100)+'%':''));
   p.push('пальне '+fmt1(liters)+' л = '+fmt(c.fuel));
@@ -3073,6 +3101,14 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'2.9',d:'24.08.2026',items:[
+    'Ціль дня рахується від «на руки» — від того, що справді лишається тобі, а не від чистого',
+    'Авто-фонд можна відкладати або відсотком від чистого, або гривнями за кілометр — перемикач у «Ще»',
+    'На екрані зміни під підсумками видно обидві міри авто-фонду: і відсоток, і гривні за км',
+    '«У заказах» тепер показує години й хвилини, а не 94 хв',
+    '«Зміна» переїхала на середину нижнього ряду, стала більшою і завжди мʼятною',
+    '«Ще» переїхало у круглу кнопку вгорі праворуч; акаунт лишився всередині «Ще»'
+  ],tip:'Перемикач авто-фонду: «Ще» → «Розрахунок». Обидва значення зберігаються окремо, тож можна перемикатись туди-сюди без втрат.'},
   {v:'2.8',d:'23.08.2026',items:[
     'Вікна замовлення й закриття зміни тепер гортаються — верх більше не тікає за край екрана'
   ],tip:'Якщо вміст не вміщується — просто тягни пальцем усередині вікна.'},
@@ -3222,7 +3258,6 @@ function renderAccount(){
   }
 }
 function openAccount(){renderAccount();openM('modal-account');}
-$('btn-account').addEventListener('click',openAccount);
 $('btn-account2').addEventListener('click',openAccount);
 $('acc-cancel').addEventListener('click',()=>closeM('modal-account'));
 $('g-signin').addEventListener('click',()=>{
@@ -3607,14 +3642,36 @@ $('fx-save').addEventListener('click',async()=>{
 /* ══ НАЛАШТУВАННЯ ══ */
 function renderSettings(){
   const s=data.settings;
-  $('set-comm').value=s.commissionPct;$('set-fund').value=s.fundPct;$('set-tax').value=s.taxPct;
+  $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;
+  renderFundMode();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
 }
+/* Поле авто-фонду одне, а значень два — окремо відсотки, окремо гривні за км.
+   Тримаємо обидва, щоб перемикання туди-сюди не стирало налаштоване. */
+function renderFundMode(){
+  const s=data.settings,km=s.fundMode==='km';
+  $('lab-fund').textContent=km?'Авто-фонд, ₴ за кілометр':'Авто-фонд, % від чистого';
+  $('set-fund').value=km?s.fundPerKm:s.fundPct;
+  document.querySelectorAll('#fund-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.fm==='km')===km));
+  $('fund-note').textContent=km
+    ? 'Відкладаєш однаково з кожного кілометра — зручно, якщо думаєш про знос авто. Більше за чисте за зміну не відкладеться.'
+    : 'Відкладаєш частку від чистого — у слабкий день відкладеш менше, у сильний більше.';
+}
+function grabFundField(){
+  const s=data.settings;
+  if(s.fundMode==='km')s.fundPerKm=num($('set-fund').value); else s.fundPct=num($('set-fund').value);
+}
+document.querySelectorAll('#fund-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
+  grabFundField();                       /* спершу зберігаємо те, що людина щойно ввела */
+  data.settings.fundMode=b.dataset.fm;
+  renderFundMode();recalcAll();await persist();renderAll();
+}));
+
 $('btn-set-save').addEventListener('click',async()=>{
+  grabFundField();
   data.settings={...data.settings,
     commissionPct:num($('set-comm').value),
-    fundPct:num($('set-fund').value),
     taxPct:num($('set-tax').value),
     fuelPrice:num($('set-price').value),
     consumption:num($('set-cons').value),
