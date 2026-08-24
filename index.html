@@ -58,6 +58,11 @@ body{
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
 .card-title{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:12px}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
+.goal-warn{margin-top:10px;padding:11px 13px;border-radius:12px;font-size:14px;font-weight:700;
+  color:#FFB3AE;background:rgba(255,95,87,.12);border:1px solid rgba(255,95,87,.4);text-align:center}
+.goal-warn b{color:#FF8A82}
+.goal-warn span{display:block;margin-top:4px;font-size:11.5px;font-weight:600;opacity:.85}
+.goal-sub{margin-top:6px;font-size:11.5px;color:var(--muted);font-weight:700;text-align:center}
 
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .grid2 .field{display:flex;flex-direction:column;justify-content:flex-end;margin-bottom:0}
@@ -225,6 +230,22 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .metrics.four .metric .v{font-size:12.5px}
 .metrics.four .metric .k{font-size:9.5px}
 .metric.split .v{font-size:13.5px}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:2px}
+.gauge-cap{width:30px;height:9px;border-radius:5px 5px 0 0;background:var(--border)}
+.gauge-body{position:relative;width:100%;max-width:280px;height:62px;
+  border:2.5px solid var(--border);border-radius:14px;background:var(--surface2);overflow:hidden}
+.gauge-fill{position:absolute;left:0;top:0;bottom:0;
+  background:linear-gradient(180deg,var(--yellow),var(--yellow-deep));transition:width .45s ease}
+.gauge-fill.low{background:linear-gradient(180deg,#FF8A82,#D8443C)}
+.gauge-ticks{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px;font-size:12px;font-weight:800;color:var(--text);opacity:.75}
+.gauge-val{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:800;
+  letter-spacing:-.02em;margin-top:12px}
+.gauge-val.low{color:#FF8A82}
+.gauge-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:2px}
+.gauge-money{display:flex;justify-content:space-between;align-items:center;margin-top:16px;
+  padding-top:14px;border-top:1px solid var(--border);font-size:13.5px;font-weight:700;color:var(--muted)}
+.gauge-money b{font-family:'Unbounded',sans-serif;font-size:17px;color:var(--yellow);letter-spacing:-.02em}
 .odo-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:8px}
 .approx{color:var(--muted);font-size:11px;font-weight:700}
 .modal .row-btn{display:flex;gap:10px}
@@ -463,6 +484,11 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 
   <section class="screen" id="screen-tank">
     <div class="card">
+      <div class="card-title">Скільки в баку</div>
+      <div id="gauge-box"></div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Розрахунок пального</div>
       <div class="modes">
         <button class="mode" data-mode="std" id="mode-std">Стандартний<span class="sub">за витратою з налаштувань</span></button>
@@ -531,6 +557,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
       <div class="grid2">
         <div class="field"><label>Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
         <div class="field"><label>Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
+        <div class="field"><label>Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
       <p class="hint">Для газу став свою реальну витрату — вона зазвичай на 15–20% вища за бензинову.</p>
     </div>
@@ -546,10 +573,23 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
         <button class="mode" data-fm="km">Гривнями<span class="sub">за кілометр</span></button>
       </div>
       <p class="hint" id="fund-note"></p>
-      <div class="field" style="margin-top:12px"><label>Оренда авто, ₴ за зміну</label><input type="number" inputmode="decimal" id="set-rent" placeholder="0"></div>
-      <p class="hint">Якщо орендуєш авто — впиши, скільки коштує одна зміна. Сума знімається так само, як пальне, ще до авто-фонду. Своє авто — залиш 0.</p>
       <div class="field" style="margin-top:12px"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
       <p class="hint">Податки — якщо ти ФОП. Постав 0, якщо не відкладаєш.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Оренда авто</div>
+      <div class="modes" id="rent-mode">
+        <button class="mode" data-rm="sum">Сумою<span class="sub">фіксовано</span></button>
+        <button class="mode" data-rm="pct">Відсотком<span class="sub">від чистого</span></button>
+      </div>
+      <div class="field"><label id="lab-rent">Скільки платиш, ₴</label><input type="number" inputmode="decimal" id="set-rent" placeholder="0"></div>
+      <div class="modes" id="rent-period">
+        <button class="mode" data-rp="day">За день</button>
+        <button class="mode" data-rp="week">За тиждень</button>
+        <button class="mode" data-rp="month">За місяць</button>
+      </div>
+      <p class="hint" id="rent-note"></p>
     </div>
 
     <div class="card">
@@ -790,7 +830,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.1';
+const APP_VER='3.2';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -834,7 +874,7 @@ const store={
   }
 };
 
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,rentPerShift:0,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'nav'};
+const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'nav'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -996,6 +1036,27 @@ function idleFactor(){
    Кожна заправка забирає з папки свою вартість.
    Коли новий повний бак уточнює реальну витрату, усі зміни перераховуються —
    і баланс сам показує, скільки треба докласти або забрати. */
+/* Скільки приблизно лишилось у баку. Рахуємо від останньої заправки «до повного»:
+   мінус пальне на проїхані з того дня кілометри, плюс усі часткові доливки після неї.
+   День самої заправки не рахуємо — інакше врахували б і кілометри до неї. */
+function tankLevel(){
+  const s=data.settings,cap=Math.max(0,+s.tankLiters||0);
+  if(cap<=0)return null;
+  const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
+  let i=-1;for(let j=rs.length-1;j>=0;j--)if(rs[j].full){i=j;break;}
+  if(i<0)return null;                       /* повного бака ще не було — рахувати нема від чого */
+  const from=rs[i].date;
+  const cons=avgConsumption()||+s.consumption||0;
+  if(cons<=0)return null;
+  let km=(data.entries||[]).filter(e=>e.date>from).reduce((a,e)=>a+(+e.km||0),0);
+  if(data.active&&dateOf(data.active.startT)>from)
+    km+=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
+  const added=rs.slice(i+1).reduce((a,r)=>a+(+r.liters||0),0);
+  const left=Math.max(0,Math.min(cap,cap-km/100*cons+added));
+  return{cap,left,km,cons,pct:left/cap,range:left/cons*100,from};
+}
+
 function fuelPurse(){
   const should=(data.entries||[]).reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
   const spent=(data.refuels||[]).reduce((a,r)=>a+(+r.liters||0)*(+r.price||0),0);
@@ -1078,9 +1139,28 @@ function recalcAll(){
     e.exact=r.exact;
     e.oc=(e.orders&&e.orders.length)?e.orders.length:(+e.oc||0);
     e.cardGross=cardGrossOf(e);
+    e.rentShifts=shiftsOnDay(e.date,false);
     e.gross=(e.orders&&e.orders.length)?e.orders.reduce((a,o)=>a+(+o.amount||0),0):(+e.gross||0);
     e.calc=calc(e,data.settings);
   });
+}
+
+/* Оренда авто. Або фіксована сума за день/тиждень/місяць, або відсоток від чистого.
+   Суму за добу ділимо між змінами того самого дня — інакше дві сесії за день
+   коштували б як дві доби оренди. */
+const RENT_DAYS={day:1,week:7,month:30};
+function rentPerDay(s){
+  if(s.rentMode==='pct')return 0;
+  return Math.max(0,+s.rentAmount||0)/(RENT_DAYS[s.rentPeriod]||1);
+}
+function rentForShift(s,base,shifts){
+  if(s.rentMode==='pct')return Math.max(0,base*(+s.rentPct||0)/100);
+  return rentPerDay(s)/Math.max(1,+shifts||1);
+}
+function shiftsOnDay(ds,withActive){
+  let n=(data.entries||[]).filter(e=>e.date===ds).length;
+  if(withActive&&data.active&&dateOf(data.active.startT)===ds)n++;
+  return Math.max(1,n);
 }
 
 /* Авто-фонд рахуємо або відсотком від чистого, або гривнями за кілометр —
@@ -1106,10 +1186,11 @@ function calc(inp,s){
   const acquiring=(+inp.cardGross||0)*(+s.acquiringPct||0)/100;
   const liters=+inp.liters||0;
   const fuel=liters*(+inp.fuelPrice||+s.fuelPrice||0);
-  /* Оренда — така сама витрата, як пальне: фіксована сума за зміну.
-     У кого своє авто, там 0, і в розрахунку її просто не видно. */
-  const rent=Math.max(0,+s.rentPerShift||0);
-  const net=gross-commission-acquiring-fuel-rent+tips;
+  /* Оренда — така сама витрата, як пальне: знімається до чистого,
+     а отже й до авто-фонду. У кого своє авто, там 0, і її просто не видно. */
+  const base=gross-commission-acquiring-fuel+tips;
+  const rent=rentForShift(s,base,inp.rentShifts);
+  const net=base-rent;
   const fund=fundFor(net,+inp.km||0,s);
   const tax=(gross+tips)*s.taxPct/100;
   const personal=net-fund-tax;
@@ -1174,6 +1255,11 @@ async function load(){
     if(+s.fuelPrice===26)s.fuelPrice=43.9;
     if(+s.consumption===14)s.consumption=9;
     if(+s.fundPct===15)s.fundPct=20;
+    /* 3.0 тримала оренду як одну суму за зміну — переносимо в нову модель */
+    if(s.rentPerShift!=null){
+      if(!(+s.rentAmount>0)){s.rentAmount=+s.rentPerShift||0;s.rentMode='sum';s.rentPeriod='day';}
+      delete s.rentPerShift;
+    }
     if(+s.dailyGoal===2000)s.dailyGoal=1500;
     if(+s.serviceTarget===8000)s.serviceTarget=20000;
     s.mine=true;
@@ -1379,15 +1465,17 @@ function renderHolidays(){
 /* Чистими за сьогодні: закриті зміни + оцінка активної */
 function todayTotals(){
   const t=todayStr();
-  let net=0,personal=0;
-  data.entries.filter(e=>e.date===t).forEach(e=>{net+=e.calc.net;personal+=e.calc.personal;});
+  let net=0,personal=0,costs=0,rent=0;
+  const add=c=>{net+=c.net;personal+=c.personal;rent+=c.rent||0;
+    costs+=(c.commission||0)+(c.acquiring||0)+(c.fuel||0)+(c.rent||0);};
+  data.entries.filter(e=>e.date===t).forEach(e=>add(e.calc));
   if(data.active&&dateOf(data.active.startT)===t){
     const gross=data.active.orders.reduce((a,o)=>a+(+o.amount||0),0);
     const km=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
-    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings)},data.settings);
-    net+=c.net;personal+=c.personal;
+    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings),rentShifts:shiftsOnDay(t,true)},data.settings);
+    add(c);
   }
-  return{net,personal};
+  return{net,personal,costs,rent};
 }
 function todayNet(){return todayTotals().net;}
 /* Фактична витрата в роботі: баки → записані зміни → налаштування */
@@ -1403,7 +1491,8 @@ function workConsumption(){
 function goalCardHTML(){
   const g=data.settings.dailyGoal||0;
   if(g<=0)return '';
-  const tn=todayTotals().personal; /* ціль — це те, що лишається на руки */
+  const T=todayTotals();
+  const tn=T.personal; /* ціль — це те, що лишається на руки */
   const left=Math.max(0,g-tn);
   const pct=Math.min(100,Math.max(0,Math.round(tn/g*100)));
   const oc=data.entries.reduce((a,e)=>a+(e.oc||0),0);
@@ -1411,11 +1500,21 @@ function goalCardHTML(){
   const gross=data.entries.reduce((a,e)=>a+(+e.gross||0),0);
   const avgNetOrder=oc>0?pers/oc:0;
   const avgCheck=oc>0?gross/oc:0;
+  const ordersFor=v=>avgNetOrder>0?Math.ceil(v/avgNetOrder):0;
   let line;
-  if(left<=0)line='<div class="goal-done">Ціль виконано · +'+fmt(tn-g)+' зверху 🏁</div>';
+  if(tn<0){
+    /* Поки на руки мінус — витрати за день ще не відбиті. Це головніше за ціль. */
+    const short=-tn,n=ordersFor(short);
+    line='<div class="goal-warn">Витрати ще не відбито — бракує <b>'+fmt(short)+'</b>'+
+      (n>0?' · це ≈ <b>'+n+'</b> замовл.':'')+
+      '<span>Спершу відбий '+(T.rent>0?'оренду, пальне й комісію':'пальне й комісію')+' — аж тоді почнеш заробляти.</span></div>';
+  }
+  else if(left<=0)line='<div class="goal-done">Ціль виконано · +'+fmt(tn-g)+' зверху 🏁</div>';
   else{
-    const need=avgNetOrder>0?Math.ceil(left/avgNetOrder):0;
+    const need=ordersFor(left);
     line='<div class="goal-line">До цілі <b>'+fmt(left)+'</b>'+(need>0?' · ще ≈ <b>'+need+'</b> замовл.':'')+'</div>';
+    if(T.costs>0)line+='<div class="goal-sub">Витрати за день уже відбито · '+fmt(T.costs)+
+      (T.rent>0?' (з них оренда '+fmt(T.rent)+')':'')+'</div>';
   }
   const wc=workConsumption();
   let rows='';
@@ -1434,6 +1533,7 @@ function renderShift(){
   const s=data.settings;
   if(!data.active){
     root.innerHTML=
+      goalCardHTML()+
       '<div class="card"><div class="card-title">Нова сесія</div>'+
       '<div class="grid2">'+
       '<div class="field"><label>Час початку</label><input type="time" id="open-time" value="'+nowHM()+'"></div>'+
@@ -1445,7 +1545,7 @@ function renderShift(){
         : (lastOdoWasReset()
           ? '🔄 Після заправки ти обнулив лічильник, тож починаємо з нуля. Звірся з машиною — якщо там уже накрутилось, впиши як є.'
           : 'Впиши показник добового одометра — далі всі кілометри рахуватимуться по факту, а не по картах.'))+'</p></div>'+
-      boostCardHTML()+goalCardHTML();
+      boostCardHTML();
     $('btn-open').addEventListener('click',async()=>{
       const t=$('open-time').value||nowHM();
       data.active={id:Date.now(),startT:toMs(todayStr(),t),odoStart:num($('open-odo').value),orders:[],path:[]};
@@ -1468,7 +1568,7 @@ function renderShift(){
   const approx=factKm<=0;
 
   const liters=litersFor(estKm,s);
-  const c=calc({gross,tips:0,liters,km:estKm},s);
+  const c=calc({gross,tips:0,liters,km:estKm,rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
 
   const stale=dateOf(a.startT)!==todayStr();
   let html=
@@ -1501,7 +1601,7 @@ function renderShift(){
   }
   html+='<button class="btn btn-ghost" id="btn-close-open" style="margin-top:10px">Завершити сесію</button></div>';
 
-  html+=boostCardHTML()+goalCardHTML();
+  html+=goalCardHTML()+boostCardHTML();
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
   if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийми перше!</div>';
   html+='</div><p class="hint">Тапни по замовленню, щоб завершити або відредагувати</p></div>';
@@ -2472,7 +2572,7 @@ function cmPreview(){
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
   const manual=num($('cm-liters').value);
   const liters=manual>0?manual:km/100*r.cons;
-  const c=calc({gross,tips:num($('cm-tips').value),liters,km,fuelPrice:r.price,cardGross:cardGrossOf(a)},data.settings);
+  const c=calc({gross,tips:num($('cm-tips').value),liters,km,fuelPrice:r.price,cardGross:cardGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},data.settings);
   const p=[];
   if(km>0)p.push((odoKm>0?'':'≈')+fmt1(km)+' км'+(ordKm>0&&odoKm>0?' · з пасажиром '+Math.round(ordKm/km*100)+'%':''));
   p.push('пальне '+fmt1(liters)+' л = '+fmt(c.fuel));
@@ -2503,7 +2603,7 @@ $('cm-save').addEventListener('click',async()=>{
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
   const manual=num($('cm-liters').value);
   const liters=manual>0?manual:km/100*r.cons;
-  const inp={gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a)};
+  const inp={gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)};
   const c=calc(inp,data.settings);
   data.entries.push({
     id:a.id,date:dateOf(a.startT),startT:a.startT,endT,hours:(endT-a.startT)/3600000,
@@ -3123,6 +3223,15 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'3.2',d:'24.08.2026',items:[
+    'Оренду тепер можна задати сумою за день, тиждень чи місяць — або відсотком від чистого',
+    'Сума за добу ділиться між змінами того самого дня, а не знімається двічі',
+    'Поки витрати за день не відбиті, ціль дня пише про це червоним: скільки бракує і скільки це приблизно замовлень',
+    'Коли витрати відбито — під ціллю видно, скільки саме відбив і скільки з того оренда',
+    'На головному екрані ціль дня піднялась угору, «Нова сесія» стала посередині, підказки пішли вниз',
+    'На вкладці «Бак» зʼявився бак із наповненням: скільки літрів лишилось, на скільки кілометрів вистачить і скільки грошей відкладено на пальне',
+    'У налаштуваннях зʼявився обʼєм бака — без нього наповнення рахувати нема від чого'
+  ],tip:'Рівень у баку — оцінка від останньої заправки «до повного»: мінус пальне на проїхані кілометри, плюс усі доливки після неї.'},
   {v:'3.1',d:'24.08.2026',items:[
     'Шашечка на кнопці «Зміна» стала така, як на даху таксі — широка, у два ряди, і рівно посередині кружка'
   ],tip:'Стара стояла зі зсувом управо: у полі 23,5 крапки зліва лишалось 2, а справа нуль.'},
@@ -3447,8 +3556,33 @@ function renderPurse(){
     : 'Стільки грошей на пальне має лежати окремо. Після кожної заправки цифра зменшується, після кожної зміни — росте.')+'</p>';
   box.innerHTML=h;
 }
+function renderGauge(){
+  const box=$('gauge-box');if(!box)return;
+  const t=tankLevel(),p=fuelPurse();
+  const money='<div class="gauge-money"><span>Відкладено на пальне</span>'+
+    '<b>'+fmt(Math.max(0,p.balance))+'</b></div>';
+  if(!t){
+    box.innerHTML='<div class="empty">Впиши обʼєм бака в налаштуваннях і запиши хоч одну заправку «до повного» — і тут буде видно, скільки лишилось</div>'+money;
+    return;
+  }
+  const pc=Math.round(t.pct*100);
+  const low=t.pct<=0.18;
+  box.innerHTML=
+    '<div class="gauge">'+
+      '<div class="gauge-cap"></div>'+
+      '<div class="gauge-body">'+
+        '<div class="gauge-fill'+(low?' low':'')+'" style="width:'+Math.max(2,pc)+'%"></div>'+
+        '<div class="gauge-ticks"><span>E</span><span>F</span></div>'+
+      '</div>'+
+      '<div class="gauge-val'+(low?' low':'')+'">≈ '+fmt1(t.left)+' л · '+pc+'%</div>'+
+      '<div class="gauge-note">'+(low
+        ? 'Пора на заправку — вистачить приблизно на '+Math.round(t.range)+' км'
+        : 'Вистачить приблизно на '+Math.round(t.range)+' км. Від повного бака проїхано '+fmt1(t.km)+' км')+'</div>'+
+    '</div>'+money;
+}
+
 function renderTank(){
-  renderPurse();
+  renderPurse();renderGauge();
   const s=data.settings;
   $('mode-std').classList.toggle('on',s.calcMode!=='exact');
   $('mode-exact').classList.toggle('on',s.calcMode==='exact');
@@ -3675,7 +3809,8 @@ $('fx-save').addEventListener('click',async()=>{
 /* ══ НАЛАШТУВАННЯ ══ */
 function renderSettings(){
   const s=data.settings;
-  $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-rent').value=s.rentPerShift;
+  $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-tankl').value=s.tankLiters;
+  renderRentMode();
   renderFundMode();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
@@ -3701,11 +3836,40 @@ document.querySelectorAll('#fund-mode .mode').forEach(b=>b.addEventListener('cli
   renderFundMode();recalcAll();await persist();renderAll();
 }));
 
+/* Оренда: сума й відсоток живуть окремо, як і в авто-фонді, тож перемикання
+   туди-сюди нічого не стирає. Період має сенс лише для суми. */
+function renderRentMode(){
+  const s=data.settings,pct=s.rentMode==='pct';
+  $('lab-rent').textContent=pct?'Скільки платиш, % від чистого':'Скільки платиш, ₴';
+  $('set-rent').value=pct?s.rentPct:s.rentAmount;
+  document.querySelectorAll('#rent-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.rm==='pct')===pct));
+  $('rent-period').style.display=pct?'none':'flex';
+  document.querySelectorAll('#rent-period .mode').forEach(b=>b.classList.toggle('on',b.dataset.rp===(s.rentPeriod||'day')));
+  const perDay=rentPerDay(s);
+  $('rent-note').textContent=pct
+    ? (+s.rentPct>0?'Віддаєш '+fmt1(s.rentPct)+'% з чистого за зміну. У слабкий день заплатиш менше.'
+                   :'Постав 0, якщо авто своє.')
+    : (perDay>0?'Виходить '+fmt(perDay)+' на добу. Якщо за день дві сесії — сума ділиться між ними, а не знімається двічі.'
+               :'Постав 0, якщо авто своє — тоді оренди в розрахунку не буде видно.');
+}
+function grabRentField(){
+  const s=data.settings;
+  if(s.rentMode==='pct')s.rentPct=num($('set-rent').value); else s.rentAmount=num($('set-rent').value);
+}
+document.querySelectorAll('#rent-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
+  grabRentField();data.settings.rentMode=b.dataset.rm;
+  renderRentMode();recalcAll();await persist();renderAll();
+}));
+document.querySelectorAll('#rent-period .mode').forEach(b=>b.addEventListener('click',async()=>{
+  grabRentField();data.settings.rentPeriod=b.dataset.rp;
+  renderRentMode();recalcAll();await persist();renderAll();
+}));
+
 $('btn-set-save').addEventListener('click',async()=>{
-  grabFundField();
+  grabFundField();grabRentField();
   data.settings={...data.settings,
     commissionPct:num($('set-comm').value),
-    rentPerShift:num($('set-rent').value),
+    tankLiters:num($('set-tankl').value)||50,
     taxPct:num($('set-tax').value),
     fuelPrice:num($('set-price').value),
     consumption:num($('set-cons').value),
