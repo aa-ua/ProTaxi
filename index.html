@@ -62,6 +62,9 @@ html.in-tg .only-web{display:none}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.sect{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:800;letter-spacing:-.01em;
+  color:var(--text);margin:6px 2px 12px}
+.card+.sect,.btn+.sect{margin-top:26px}
 .card-title{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:12px}
 .hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
 .goal-warn{margin-top:10px;padding:11px 13px;border-radius:12px;font-size:14px;font-weight:700;
@@ -359,11 +362,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
     <div class="logo">ProTaxi</div>
     <div class="logo-sub">Фінанси <span>водія</span></div>
     <div class="topacts">
-      <button class="avatar" id="btn-account" aria-label="Акаунт">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.6 3.1-5.5 7-5.5s7 1.9 7 5.5"/></svg>
-      </button>
       <button class="avatar" id="btn-more" data-screen="settings" aria-label="Налаштування">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#32363E"/><circle cx="15" cy="12" r="2" fill="#32363E"/><circle cx="8" cy="17" r="2" fill="#32363E"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.1 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.87 1.2V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 7.6 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.24 15a1.7 1.7 0 0 0-1.55-1.03H1.6a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 3.24 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.24V4.1a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.87 5.5l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 18.36 9v.05a1.7 1.7 0 0 0 1.56 1.03h.18a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.1 15z"/></svg>
       </button>
     </div>
   </header>
@@ -560,6 +560,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
   </section>
 
   <section class="screen" id="screen-settings">
+    <div class="sect">Мої налаштування</div>
+
     <div class="card">
       <div class="card-title">Пальне</div>
       <div class="grid2">
@@ -611,12 +613,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 
     <button class="btn btn-primary" id="btn-set-save">Зберегти налаштування</button>
 
-    <div class="card" style="margin-top:12px">
-      <div class="card-title">Експорт у таблиці (CSV)</div>
-      <button class="btn btn-ghost" id="btn-export-shifts">Сесії у CSV</button>
-      <button class="btn btn-ghost" id="btn-export-orders">Замовлення у CSV</button>
-      <p class="hint">Для Excel і таблиць. Це не резервна копія — повний бекап нижче, однією кнопкою.</p>
-    </div>
+    <div class="sect">Застосунок</div>
 
     <div class="card">
       <div class="card-title">Підтримка</div>
@@ -631,7 +628,6 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
       <div class="ins"><span class="k">Версія</span><span class="v" id="about-ver">—</span></div>
       <div class="ins"><span class="k">Оновлено</span><span class="v" id="about-date">—</span></div>
       <button class="btn btn-ghost" id="btn-changelog" style="margin-top:12px">Що нового</button>
-      <button class="btn btn-ghost" id="btn-account2">Акаунт і синхронізація</button>
     </div>
 
     <div class="card">
@@ -640,33 +636,21 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
         <button class="wchip on" data-g="1"><span class="e">📍</span>Гео увімкнено</button>
         <button class="wchip" data-g="0"><span class="e">🚫</span>Гео вимкнено</button>
       </div>
-      <p class="hint">Геолокація живить погоду, мапу зон і шлях. iOS окремо спитає системний дозвіл — останнє слово завжди за користувачем. Дані нікуди не відправляються, окрім власного Google Drive, якщо людина сама увійшла.</p>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Резервна копія</div>
-      <button class="btn btn-primary" id="btn-backup">Повна копія — все в одному файлі</button>
-      <button class="btn btn-ghost" id="btn-restore">Відновити з файлу</button>
-      <input type="file" id="restore-file" accept=".json,application/json" style="display:none">
-      <p class="hint" id="save-state"></p>
-      <p class="hint">Один файл містить абсолютно все: сесії, замовлення, заправки, фонди, цілі й налаштування. Відновлення — кнопкою вище.</p>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Перенесення без файлів</div>
-      <button class="btn btn-ghost" id="btn-copy">Скопіювати дані в буфер</button>
-      <button class="btn btn-ghost" id="btn-paste-open">Вставити дані з буфера</button>
-      <div id="paste-box" style="display:none;margin-top:10px">
-        <textarea class="io" id="paste-area" placeholder="Встав сюди скопійований текст і натисни «Застосувати»"></textarea>
-        <button class="btn btn-primary" id="btn-paste-apply" style="margin-top:10px">Застосувати</button>
-      </div>
-      <p class="hint">Працює навіть там, де завантаження файлів заблоковане: копіюєш текст, вставляєш у нотатки або в іншу копію застосунку.</p>
+      <p class="hint">Геолокація живить погоду, мапу вулиць і шлях за зміну. Телефон окремо спитає дозвіл — останнє слово завжди за тобою. Вимкнеш — усе інше працюватиме, лише мапа лишиться порожньою.</p>
     </div>
 
     <div class="card">
       <div class="card-title">Діагностика сховища</div>
       <p class="hint" id="storage-note" style="margin:0 0 10px"></p>
       <div id="diag-list"></div>
+      <p class="hint" id="save-state" style="margin-top:10px"></p>
+      <button class="btn btn-ghost" id="btn-copy" style="margin-top:12px">Скопіювати дані</button>
+      <button class="btn btn-ghost" id="btn-paste-open">Вставити дані</button>
+      <div id="paste-box" style="display:none;margin-top:10px">
+        <textarea class="io" id="paste-area" placeholder="Встав сюди скопійований текст і натисни «Застосувати»"></textarea>
+        <button class="btn btn-primary" id="btn-paste-apply" style="margin-top:10px">Застосувати</button>
+      </div>
+      <p class="hint">Знадобиться, лише якщо треба перенести записи вручну.</p>
     </div>
 
     <div class="card danger">
@@ -846,7 +830,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='4.0';
+const APP_VER='4.1';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3281,6 +3265,11 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'4.1',d:'24.08.2026',items:[
+    'Записи тепер зберігаються в хмарі й привʼязані до твого Telegram — відкрив з іншого телефона, і всі зміни на місці',
+    'Налаштування розділені на дві групи: «Мої налаштування» і «Застосунок»',
+    'Кнопка налаштувань угорі стала шестернею'
+  ],tip:'Синхронізація працює сама, поки застосунок відкрито через бота. Стан видно в «Підтримці».'},
   {v:'4.0',d:'24.08.2026',items:[
     'Зміни й замовлення: відкривай скільки завгодно сесій за день, кожне замовлення з часом та одометром',
     'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й відкладеного на авто',
@@ -3417,37 +3406,6 @@ $('btn-support').addEventListener('click',()=>{
   if(SUPPORT_BOT)window.open('https://t.me/'+SUPPORT_BOT,'_blank','noopener');
 });
 
-$('btn-account').addEventListener('click',openAccount);
-$('btn-account2').addEventListener('click',openAccount);
-$('acc-cancel').addEventListener('click',()=>closeM('modal-account'));
-$('g-signin').addEventListener('click',()=>{
-  const cid=$('g-cid').value.trim();
-  if(!cid){toast('Спершу встав Client ID — інструкція в чаті');return;}
-  if(cid!==data.settings.gClientId){data.settings.gClientId=cid;persist();}
-  gisReady(ok=>{
-    if(!ok){toast('Не вдалося звязатися з Google');return;}
-    try{
-      const tc=google.accounts.oauth2.initTokenClient({
-        client_id:cid,
-        scope:'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email',
-        callback:async r=>{
-          if(r&&r.access_token){
-            gToken=r.access_token;
-            gExp=Date.now()+(((+r.expires_in)||3600)-60)*1000;
-            try{
-              const u=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gToken}}).then(x=>x.json());
-              gMail=u.email||'';
-            }catch(e){}
-            data.settings.gAuto=true;await persist();
-            renderAccount();toast('Google підключено');
-            syncWithDrive(true); /* одразу підтягуємо і зливаємо дані */
-          }else toast('Вхід скасовано');
-        }
-      });
-      tc.requestAccessToken();
-    }catch(e){toast('Помилка Google: перевір Client ID');}
-  });
-});
 $('g-out').addEventListener('click',async()=>{gToken=null;gExp=0;gMail='';data.settings.gAuto=false;await persist();renderAccount();toast('Вихід виконано');});
 
 async function driveApi(url,opt){
@@ -3962,60 +3920,6 @@ function downloadFile(name,content,type){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
   document.body.appendChild(a);a.click();a.remove();
 }
-$('btn-export-shifts').addEventListener('click',()=>{
-  if(!data.entries.length){toast('Немає даних');return;}
-  const head='Дата;Початок;Кінець;Годин;Замовлень;Погода;Одометр_старт;Одометр_кінець;Км;Виручка;Чайові;Літрів;Платформі;Пальне;Оренда;Чистими;Авто-фонд;Податки;На_руки';
-  const rows=[...data.entries].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>[
-    e.date,e.startT?hm(e.startT):'',e.endT?hm(e.endT):'',fmt1(e.hours).replace(',','.'),e.oc||0,
-    e.weather?WNAME[e.weather]:'',e.odoStart||'',e.odoEnd||'',e.km||'',
-    e.gross,e.tips,fmt1(e.liters).replace(',','.'),
-    Math.round(e.calc.commission),Math.round(e.calc.fuel),Math.round(e.calc.rent||0),Math.round(e.calc.net),
-    Math.round(e.calc.fund),Math.round(e.calc.tax),Math.round(e.calc.personal)
-  ].join(';'));
-  downloadFile('ye-taksyst-shifts.csv','\uFEFF'+head+'\n'+rows.join('\n'),'text/csv;charset=utf-8');
-  toast('CSV сформовано');
-});
-$('btn-export-orders').addEventListener('click',()=>{
-  const rows=[];
-  [...data.entries].sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{
-    (e.orders||[]).forEach(o=>rows.push([
-      e.date,hm(o.t),o.endT?hm(o.endT):'',oMin(o)?Math.round(oMin(o)):'',
-      o.amount,o.odoStart||'',o.odoEnd||'',oKm(o)?fmt1(oKm(o)).replace(',','.'):'',
-      oKm(o)>0?fmt1(o.amount/oKm(o)).replace(',','.'):''
-    ].join(';')));
-  });
-  if(!rows.length){toast('Немає замовлень');return;}
-  downloadFile('ye-taksyst-orders.csv','\uFEFF'+'Дата;Початок;Кінець;Хвилин;Сума;Одометр_старт;Одометр_кінець;Км;Грн_км\n'+rows.join('\n'),'text/csv;charset=utf-8');
-  toast('CSV сформовано');
-});
-$('btn-backup').addEventListener('click',()=>{
-  data.backupAt=Date.now();persist();
-  downloadFile('ye-taksyst-backup-'+todayStr()+'.json',
-    JSON.stringify({app:'ye-taksyst',ver:APP_VER,schema:SCHEMA,exportedAt:Date.now(),...data},null,1),
-    'application/json');
-  toast('Копію збережено');
-});
-$('btn-restore').addEventListener('click',()=>$('restore-file').click());
-$('restore-file').addEventListener('change',e=>{
-  const f=e.target.files&&e.target.files[0];
-  if(!f)return;
-  const r=new FileReader();
-  r.onload=async()=>{
-    const p=parseSave(r.result);
-    if(!p){toast('Файл не підходить');return;}
-    data.settings={...DEFAULTS,...(p.settings||{})};
-    data.entries=p.entries||[];data.fundOps=p.fundOps||[];data.refuels=p.refuels||[];data.active=p.active||null;
-    data.entries.forEach(en=>{
-      if(!Array.isArray(en.orders))en.orders=[];
-      en.oc=en.orders.length;
-      if(!en.calc)en.calc=calc(en,data.settings);
-    });
-    await persist();renderSettings();renderAll();
-    toast('Відновлено: '+data.entries.length+' змін');
-  };
-  r.readAsText(f);e.target.value='';
-});
-
 /* ── Стирання у три ходи: тап → повзунок → утримання ── */
 let wipeResetT=0,holdT=0,holdInt=0;
 function wipeReset(){
