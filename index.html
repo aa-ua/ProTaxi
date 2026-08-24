@@ -67,7 +67,7 @@ html.in-tg .only-web{display:none}
   color:var(--text);margin:6px 2px 12px}
 .card+.sect,.btn+.sect{margin-top:26px}
 .card-title{font-size:13.5px;letter-spacing:-.005em;color:var(--muted);font-weight:700;margin-bottom:12px}
-.hint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600}
+.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45;font-weight:600}
 .goal-warn{margin-top:10px;padding:11px 13px;border-radius:12px;font-size:14px;font-weight:700;
   color:#FFB3AE;background:rgba(255,95,87,.12);border:1px solid rgba(255,95,87,.4);text-align:center}
 .goal-warn b{color:#FF8A82}
@@ -84,6 +84,7 @@ html.in-tg .only-web{display:none}
 .field+.wchips{margin-top:4px} /* у поля вже є 10px знизу — разом виходить ті самі 14 */
 .grid2+.wchips{margin-top:14px}  /* у сітки свого відступу знизу немає */
 .btn+.hint{margin-top:14px}
+.hint+.btn,.hint+.modes,.hint+.grid2,.hint+.field{margin-top:14px}
 .field{margin-bottom:10px}
 .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
 .field input{width:100%;height:48px;background:var(--surface2);border:1px solid transparent;border-radius:12px;padding:0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal}
@@ -127,6 +128,7 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r .a{color:var(--red)}
 /* Знайомство: спершу кілька екранів «навіщо це», далі три кроки налаштування */
 .modal.intro{padding:16px 18px 18px}
+.modal.intro #intro-next{margin-top:16px}
 .intro-dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px}
 .intro-dots i{width:22px;height:3px;border-radius:2px;background:var(--surface2);transition:background .2s}
 .intro-dots i.on{background:var(--yellow)}
@@ -633,6 +635,12 @@ html.map-full .tabbar{display:none}
         <div class="field"><label>Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
       <p class="hint">Для газу став свою реальну витрату — вона зазвичай на 15–20% вища за бензинову.</p>
+      <div class="modes" id="disc-mode">
+        <button class="mode" data-dm="uah">Знижка ₴<span class="sub">з літра</span></button>
+        <button class="mode" data-dm="pct">Знижка %<span class="sub">від ціни</span></button>
+      </div>
+      <div class="field"><label id="lab-disc">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="set-disc" step="0.01" placeholder="0"></div>
+      <p class="hint" id="disc-note"></p>
     </div>
 
     <div class="card">
@@ -928,7 +936,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='4.4';
+const APP_VER='4.5';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -972,7 +980,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -1180,7 +1188,7 @@ function lastRefuelInfo(){
 function tankSaving(){
   const s=data.settings;
   const cap=Math.max(0,+s.tankLiters||0);
-  const price=lastPrice()||+s.fuelPrice||0;
+  const price=lastPrice()||netPrice(s);
   const target=cap*price;
   const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
@@ -1195,7 +1203,7 @@ function tankSaving(){
 
 function fuelPurse(){
   let should=(data.entries||[]).reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
-  if(data.active)should+=litersFor(activeKmEst(),data.settings)*(lastPrice()||+data.settings.fuelPrice||0);
+  if(data.active)should+=litersFor(activeKmEst(),data.settings)*(lastPrice()||netPrice());
   const spent=(data.refuels||[]).reduce((a,r)=>a+(+r.liters||0)*(+r.price||0),0);
   return{should:should,spent:spent,balance:should-spent};
 }
@@ -1284,11 +1292,18 @@ function rateFor(e){
     let hit=null;
     if(+e.odoStart>0)hit=ps.find(p=>!p.viaReset&&e.odoStart>=p.fromOdo&&e.odoStart<=p.toOdo);
     if(!hit&&e.date)hit=ps.find(p=>p.fromDate<=e.date&&e.date<=p.toDate);
-    if(hit)return{cons:hit.cons,price:hit.price||s.fuelPrice,exact:true};
+    if(hit)return{cons:hit.cons,price:hit.price||netPrice(s),exact:true};
     const avg=avgConsumption();
-    if(avg)return{cons:avg,price:lastPrice()||s.fuelPrice,exact:false};
+    if(avg)return{cons:avg,price:lastPrice()||netPrice(s),exact:false};
   }
-  return{cons:+s.consumption||0,price:+s.fuelPrice||0,exact:false};
+  return{cons:+s.consumption||0,price:netPrice(s),exact:false};
+}
+/* Ціна літра з таксистською знижкою — саме за нею рахуємо, поки немає чеків */
+function netPrice(s){
+  s=s||data.settings;
+  const p=Math.max(0,+s.fuelPrice||0);
+  const cut=s.discMode==='pct' ? p*(Math.max(0,+s.discPct||0))/100 : Math.max(0,+s.discUah||0);
+  return Math.max(0,p-cut);
 }
 function lastPrice(){
   const rs=[...(data.refuels||[])].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
@@ -1358,7 +1373,7 @@ function calc(inp,s){
   /* еквайринг береться лише з тих замовлень, що прийшли карткою — понад комісію */
   const acquiring=(+inp.cardGross||0)*(+s.acquiringPct||0)/100;
   const liters=+inp.liters||0;
-  const fuel=liters*(+inp.fuelPrice||+s.fuelPrice||0);
+  const fuel=liters*(+inp.fuelPrice||netPrice(s));
   /* Оренда — така сама витрата, як пальне: знімається до чистого,
      а отже й до авто-фонду. У кого своє авто, там 0, і її просто не видно. */
   const base=gross-commission-acquiring-fuel+tips;
@@ -3087,7 +3102,7 @@ function renderMileage(es){
   }
   if(gross>0)add('Виручка на кілометр',fmt1(gross/tot)+' ₴/км');
   const liters=withOdo.reduce((a,e)=>a+(+e.liters||0),0);
-  if(liters>0)add('Пальне за період',fmt1(liters)+' л · '+fmt(liters*data.settings.fuelPrice));
+  if(liters>0)add('Пальне за період',fmt1(liters)+' л · '+fmt(liters*(lastPrice()||netPrice())));
   if(ord>0){
     const note=document.createElement('div');note.className='hint';note.style.marginTop='8px';
     note.textContent='На кожні 100 км з пасажиром ти проїжджаєш '+Math.round(idle/ord*100)+' км порожняком.';
@@ -3867,7 +3882,7 @@ function renderGauge(){
 }
 /* Витрата одним рядком: факт по баках, якщо він є, інакше цифра з налаштувань. */
 function consLine(){
-  const s=data.settings,avg=avgConsumption(),lp=lastPrice()||+s.fuelPrice||0;
+  const s=data.settings,avg=avgConsumption(),lp=lastPrice()||netPrice(s);
   const v=avg||+s.consumption||0;
   if(v<=0)return '—';
   return fmt1(v)+' л/100'+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
@@ -3990,7 +4005,7 @@ function openRefuel(id){
   const r=id?data.refuels.find(x=>x.id===id):null;
   $('rf-title').textContent=r?'Редагувати заправку':'Заправка';
   $('rf-liters').value=r?r.liters:'';
-  $('rf-price').value=r?(+r.price).toFixed(2):(lastPrice()?lastPrice().toFixed(2):'');
+  $('rf-price').value=r?(+r.price).toFixed(2):(lastPrice()?lastPrice().toFixed(2):(netPrice()>0?netPrice().toFixed(2):''));
   $('rf-odo').value=r?r.odo:(lastOdometer()>0?fmt1(lastOdometer()).replace(',','.'):'');
   $('rf-date').value=r?r.date:todayStr();
   const full=r?!!r.full:true;
@@ -4124,6 +4139,7 @@ function renderSettings(){
   renderCarMode();
   renderRentMode();
   renderFundMode();
+  renderDiscMode();
   renderSupport();renderCloud();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
@@ -4158,6 +4174,28 @@ document.querySelectorAll('#car-mode .mode').forEach(b=>b.addEventListener('clic
   $('set-sname').value=s.serviceName;
   $('set-starget').value=s.serviceTarget;
   renderCarMode();recalcAll();await persist();renderAll();
+}));
+
+/* Знижка на пальне: у гривнях з літра або відсотком. Обидва значення тримаємо
+   окремо, щоб перемикання туди-сюди не стирало набране. */
+function renderDiscMode(){
+  const s=data.settings,pct=s.discMode==='pct';
+  $('lab-disc').textContent=pct?'Знижка, % від ціни':'Знижка з літра, ₴';
+  $('set-disc').value=pct?(+s.discPct||''):(+s.discUah||'');
+  document.querySelectorAll('#disc-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.dm==='pct')===pct));
+  const np=netPrice(s),full=+s.fuelPrice||0;
+  $('disc-note').textContent=(np<full&&full>0)
+    ? 'Платиш по факту '+fmt1(np)+' ₴/л замість '+fmt1(full)+'. Саме за цією ціною рахується пальне, поки немає чеків заправок.'
+    : 'Таксистська знижка на АЗС. Немає — лиши нуль. Коли запишеш заправку, рахунок піде за ціною з чека.';
+}
+function grabDiscField(){
+  const s=data.settings;
+  if(s.discMode==='pct')s.discPct=num($('set-disc').value); else s.discUah=num($('set-disc').value);
+}
+document.querySelectorAll('#disc-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
+  grabDiscField();
+  data.settings.discMode=b.dataset.dm;
+  renderDiscMode();recalcAll();await persist();renderAll();
 }));
 
 function renderFundMode(){
@@ -4209,7 +4247,7 @@ document.querySelectorAll('#rent-period .mode').forEach(b=>b.addEventListener('c
 }));
 
 $('btn-set-save').addEventListener('click',async()=>{
-  grabFundField();grabRentField();
+  grabFundField();grabRentField();grabDiscField();
   data.settings={...data.settings,
     commissionPct:num($('set-comm').value),
     tankLiters:num($('set-tankl').value)||50,
@@ -4222,6 +4260,7 @@ $('btn-set-save').addEventListener('click',async()=>{
   };
   fitFundTarget();
   $('set-starget').value=data.settings.serviceTarget;
+  renderDiscMode();
   recalcAll(); /* нові відсотки й витрата застосовуються до всіх минулих змін */
   await persist();renderAll();toast('Налаштування збережено й застосовано до всієї історії');
 });
