@@ -844,7 +844,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 </nav>
 
 <script>
-const APP_VER='3.9';
+const APP_VER='4.0';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3235,7 +3235,8 @@ function renderDiag(){
   const rows=[];
   const add=(k,v)=>rows.push('<div class="ins"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>');
   add('Активні сховища',real.length?real.join(', '):'немає');
-  add('Адреса',isFileProtocol()?'локальний файл':'вебадреса');
+  add('Адреса',isFileProtocol()?'локальний файл':location.host);
+  add('Сторінка',isFileProtocol()?'—':(location.pathname||'/'));
   add('Перевірка збереження',persistOK===true?'✅ працює':persistOK===false?'❌ обнуляється':'⏳ перевіримо при наступному запуску');
   add('Записів у пам\'яті',data.entries.length+' сесій · '+data.refuels.length+' заправок');
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
@@ -3303,6 +3304,9 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
+  {v:'4.0',d:'24.08.2026',items:[
+    'У «Ще» → «Діагностика сховища» тепер видно точну адресу, з якої відкрито застосунок'
+  ],tip:'Записи браузер тримає окремо для кожної адреси. Якщо смін раптом немає — спершу подивись цей рядок: найчастіше застосунок просто відкрито з іншої адреси.'},
   {v:'3.9',d:'24.08.2026',items:[
     'ProTaxi тепер працює прямо в Telegram — відкривається з бота, нічого встановлювати не треба',
     'Зʼявилась кнопка «Написати в підтримку»: «Ще» → «Підтримка»'
