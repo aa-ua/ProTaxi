@@ -132,6 +132,12 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r .a{color:var(--red)}
 /* Адмінка: та сама шапка, ті самі плитки, що й у застосунку */
 .adm-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+html.in-admin .topbar,html.in-admin .app>.checker{display:none}
+.adm-out{margin-left:auto;width:34px;height:34px;border-radius:11px;flex-shrink:0;
+  background:var(--surface2);border:none;color:var(--muted);display:flex;align-items:center;
+  justify-content:center;cursor:pointer;padding:0}
+.adm-out svg{width:17px;height:17px}
+.adm-head .adm-live{margin-left:0}
 #admin-tabs{gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 #admin-tabs::-webkit-scrollbar{display:none}
 #admin-tabs .chip{padding:9px 13px;font-size:13px;flex-shrink:0}
@@ -695,6 +701,9 @@ html.map-full .tabbar{display:none}
       <span class="logo">ProTaxi</span>
       <span class="adm-word">Admin</span>
       <span class="adm-live" id="admin-live"></span>
+      <button class="adm-out" id="admin-out" data-screen="shift" aria-label="Вийти з панелі">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 20.5H6.5a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2H14"/><path d="M15.5 16.5 20 12l-4.5-4.5M20 12H9"/></svg>
+      </button>
     </div>
     <div class="checker adm-checker"></div>
     <div class="chips" id="admin-tabs">
@@ -1037,7 +1046,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.3';
+const APP_VER='5.4';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1595,6 +1604,8 @@ document.querySelectorAll('[data-screen]').forEach(b=>b.addEventListener('click'
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
   $('screen-'+b.dataset.screen).classList.add('active');
+  /* у панелі своя шапка з логотипом — застосункова там зайва */
+  document.documentElement.classList.toggle('in-admin',b.dataset.screen==='admin');
   window.scrollTo(0,0);
   if(b.dataset.screen==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();setTimeout(buildStreetMap,400);}
 }));
@@ -3897,7 +3908,7 @@ function admDash(d){
     admTile('live',d.active_7d||0,'заходили за тиждень','сьогодні '+(d.active_1d||0))+
     '</div><div class="metrics two">'+
     admTile('shift',d.shifts||0,'змін заведено','у середньому '+(d.users?Math.round((d.shifts||0)/d.users*10)/10:0)+' на водія')+
-    admTile('ord',d.orders||0,'замовлень записано','')+
+    admTile('ord',d.orders||0,'замовлень записано',((d.setup&&d.setup.online)||0)+' зараз на лінії')+
     '</div>';
 
   h+='<div class="card"><div class="card-title">Воронка</div>';
@@ -3910,6 +3921,7 @@ function admDash(d){
 
   const k=d.keep||{};
   h+='<div class="card"><div class="card-title">Чи повертаються</div>'+
+     admRow('Працюють цього тижня',(d.live||0)+' з '+(d.users||0)+' · '+admPct(d.live,d.users)+'%')+
      admRow('Прийшли понад тиждень тому',(k.w1_live||0)+' з '+(k.w1_all||0)+' · '+admPct(k.w1_live,k.w1_all)+'%')+
      admRow('Понад два тижні',(k.w2_live||0)+' з '+(k.w2_all||0)+' · '+admPct(k.w2_live,k.w2_all)+'%')+
      admRow('Понад місяць',(k.m1_live||0)+' з '+(k.m1_all||0)+' · '+admPct(k.m1_live,k.m1_all)+'%')+
@@ -3956,14 +3968,14 @@ function admAna(d){
      admRow('Середня витрата',(st.avg_cons||0)+' л/100')+
      admRow('Середня ціна літра',fmt1(st.avg_price||0)+' ₴')+
      admRow('Середній бак',(st.avg_tank||0)+' л')+
-     admRow('Зі знижкою на АЗС',(st.disc||0)+' з '+(d.users||0))+
-     '</div>';
+     admRow('Середній запас',(st.avg_fund||0)+'% від чистого')+
+     '<p class="hint">Реальні цифри ринку, зібрані самі собою. Комісія й ціна літра тут — те, що водії бачать у себе, а не те, що пишуть у новинах.</p></div>';
 
+  const use=d.use||[],un=d.users||0;
   h+='<div class="card"><div class="card-title">Чим користуються</div>'+
-     admRow('Пройшли знайомство',(st.onboarded||0)+' з '+(d.users||0))+
-     admRow('Записують заправки',(st.refuels||0)+' з '+(d.users||0))+
-     admRow('Витрачають із запасу',(st.fundops||0)+' з '+(d.users||0))+
-     '<p class="hint">Видно, які частини застосунку живі, а які ніхто не відкриває.</p></div>';
+     use.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(x.k)+'</span><b>'+x.n+' · '+admPct(x.n,un)+'%</b></div>'+
+       admBar(admPct(x.n,un))+'</div>').join('')+
+     '<p class="hint">Кожен рядок — частка від усіх водіїв. Видно, які частини застосунку живі, а які ніхто не відкриває.</p></div>';
 
   h+='<div class="card"><div class="card-title">Версії в ходу</div>'+
      (vs.length?vs.map(v=>admRow(v.v==='—'?'не оновлювались':'версія '+v.v,v.n)).join(''):'<div class="empty">—</div>')+
