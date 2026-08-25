@@ -474,7 +474,9 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 #wipe-final:disabled{opacity:.55}
 /* v6.0: свята */
 .boost{border-color:rgba(59,224,166,.4)}
-.boost .b-line{font-size:14px;font-weight:700;line-height:1.45;padding:4px 0}
+.boost .b-line{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;font-weight:400;line-height:1.5;padding:6px 0}
+.boost .b-ic{flex-shrink:0;color:var(--yellow);line-height:0;margin-top:2px}
+.boost .b-ic svg{width:17px;height:17px;display:block}
 .boost .b-line b{color:var(--yellow)}
 /* Мапа */
 #map{width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#E8E6E1}
@@ -1102,7 +1104,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.8';
+const APP_VER='1.2';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1159,7 +1161,8 @@ const IDLE_K=1.35; /* базовий коефіцієнт холостого п�
 const $=id=>document.getElementById(id);
 /* iOS може віддавати число з комою — парсимо надійно */
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:0;};
-const verNum=v=>parseFloat(v)||0;
+/* 1.10 має бути новішою за 1.2, тому порівнюємо по частинах, а не як дріб */
+const verNum=v=>{const p=String(v||'0').split('.');return (+p[0]||0)*1000+(+p[1]||0);};
 /* Мінус ставимо перед гривнею, а не між нею й числом: «−₴80», а не «₴-80».
    З орендою від'ємний день — звичайна річ, тож це видно часто. */
 const fmt=n=>{const v=Math.round(n||0);return (v<0?'−₴':'₴')+Math.abs(v).toLocaleString('uk-UA');};
@@ -1627,6 +1630,8 @@ async function load(){
   if(!data.streets||typeof data.streets!=='object')data.streets={};
   /* 1.7: мапа стала мапою даних — на «Навігації» кольорові вулиці не читаються */
   if(!data.settings.stMig17){data.settings.stMig17=1;if(data.settings.mapStyle==='nav')data.settings.mapStyle='light';}
+  /* нумерація версій почалась заново з 1.0 — хто бачив стару, той бачив усе */
+  if(data.settings.seenVer&&verNum(data.settings.seenVer)>=verNum('3.0'))data.settings.seenVer=APP_VER;
   if(!data.settings.carMig43){
     data.settings.carMig43=1;
     if(+data.settings.rentAmount>0||+data.settings.rentPct>0)data.settings.carMode='rent';
@@ -1755,17 +1760,18 @@ function weekdayHint(){
 /* Картка-підказка на екрані Зміна */
 function boostCardHTML(){
   const lines=[];
+  const ic={cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5" width="16.8" height="15.4" rx="2.6"/><path d="M3.6 9.6h16.8M8 3v3.4M16 3v3.4"/></svg>',trend:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.6 15.6 9 10.2l3.4 3.4L20.4 6"/><path d="M15.4 6h5v5"/></svg>',save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v11.2"/><path d="M7.6 10.6 12 15l4.4-4.4"/><path d="M4.4 17.6v1.4a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-1.4"/></svg>'};
   const today=holidayFor(todayStr());
-  if(today)lines.push('Сьогодні <b>'+today.n+'</b> — '+today.note+'. Очікується більше замовлень.');
+  if(today)lines.push([ic.cal,'Сьогодні <b>'+today.n+'</b> — '+today.note+'. Очікується більше замовлень.']);
   const wh=weekdayHint();
-  if(wh)lines.push(wh);
+  if(wh)lines.push([ic.trend,wh]);
   const nx=nextHoliday();
-  if(nx&&nx.i<=3&&!today)lines.push('⏳ '+(nx.i===1?'Завтра':'Через '+nx.i+' дні(в)')+' — <b>'+nx.n+'</b>: заплануй вихід.');
+  if(nx&&nx.i<=3&&!today)lines.push([ic.cal,(nx.i===1?'Завтра':'Через '+nx.i+' дні(в)')+' — <b>'+nx.n+'</b>. Варто запланувати вихід.']);
   const bAge=data.backupAt?(Date.now()-data.backupAt)/86400000:99;
-  if(data.entries.length>=3&&bAge>7)lines.push('Повній копії вже '+(data.backupAt?Math.floor(bAge)+' дн.':'0 днів — її ще немає')+' — зайди у «Ще» і збережи файл.');
+  if(data.entries.length>=3&&bAge>7)lines.push([ic.save,'Повній копії вже '+(data.backupAt?Math.floor(bAge)+' дн.':'0 днів — її ще немає')+'. Збережіть файл у розділі «Ще».']);
   if(!lines.length)return '';
   return '<div class="card boost"><div class="card-title">Сьогодні на лінії</div>'+
-    lines.map(l=>'<div class="b-line">'+l+'</div>').join('')+'</div>';
+    lines.map(l=>'<div class="b-line"><i class="b-ic">'+l[0]+'</i><span>'+l[1]+'</span></div>').join('')+'</div>';
 }
 /* Ретро: свята проти звичайних днів */
 function renderHolidays(){
@@ -3628,7 +3634,7 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
-  {v:'5.7',d:'25.08.2026',items:[
+  {v:'1.2',d:'25.08.2026',items:[
     'Ціль дня показує, скільки ще замовлень і скільки часу лишилось — за вашою статистикою в цей день тижня',
     'Завершення замовлення за кілька секунд: сума, одометр і здача на одному екрані',
     'Знижка на АЗС враховується в розрахунку пального',
@@ -3638,11 +3644,11 @@ const CHANGELOG=[
     'Перший місяць — безкоштовно. Стан підписки видно в розділі «Ще»',
     'Оновлено вигляд застосунку'
   ],tip:'Знижку на АЗС і обʼєм бака вкажіть у «Ще» → «Пальне». Ціль дня почне показувати темп після кількох закритих змін.'},
-  {v:'4.1',d:'24.08.2026',items:[
+  {v:'1.1',d:'24.08.2026',items:[
     'Записи зберігаються в хмарі й привʼязані до Telegram — з іншого пристрою все на місці',
     'Підтримка й резервне копіювання в розділі «Ще»'
   ],tip:'Синхронізація працює автоматично, поки застосунок відкрито через бота.'},
-  {v:'4.0',d:'24.08.2026',items:[
+  {v:'1.0',d:'24.08.2026',items:[
     'Зміни й замовлення: скільки завгодно сесій за день, кожне замовлення з часом і одометром',
     'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й запасу',
     'Оцінка замовлень: зелене — вигідніше за середній темп, червоне — гірше',
