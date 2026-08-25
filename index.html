@@ -130,7 +130,17 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r{border-left-color:var(--red);background:linear-gradient(90deg,rgba(255,95,87,.10),transparent 62%)}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
-/* Адмінка */
+/* Адмінка: та сама шапка, ті самі плитки, що й у застосунку */
+.adm-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.adm-word{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.02em}
+.adm-checker{margin:0 0 14px}
+.adm .metric{display:flex;flex-direction:column;align-items:center;gap:2px}
+.adm .metric svg{width:17px;height:17px;color:var(--muted);margin-bottom:2px}
+.adm .metric .v{font-family:'Unbounded',sans-serif;font-size:17px;letter-spacing:-.02em}
+.adm .metric.hi{background:rgba(59,224,166,.10)}
+.adm .metric.hi .v{color:var(--yellow)}
+.adm .metric.hi svg{color:var(--yellow)}
+.adm-sect{font-size:13.5px;font-weight:700;color:var(--muted);margin:16px 0 2px}
 .adm-days{display:flex;align-items:flex-end;gap:3px;height:56px;margin:14px 0 4px}
 .adm-days .b{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
 .adm-days .f{background:var(--yellow);border-radius:3px;min-height:2px;opacity:.85}
@@ -728,8 +738,12 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="support-note"></p>
     </div>
 
-    <div class="card" id="admin-card" style="display:none">
-      <div class="card-title">Статистика застосунку</div>
+    <div class="card adm" id="admin-card" style="display:none">
+      <div class="adm-head">
+        <span class="logo">ProTaxi</span>
+        <span class="adm-word">Admin</span>
+      </div>
+      <div class="checker adm-checker"></div>
       <div id="admin-rows"></div>
       <div id="admin-days"></div>
       <div id="admin-list"></div>
@@ -984,7 +998,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='4.8';
+const APP_VER='4.9';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1699,6 +1713,7 @@ function todayNet(){return todayTotals().net;}
 /* Скільки замовлень і скільки часу треба, щоб дійти до цілі.
    Рахуємо за твоєю ж історією цього самого дня тижня, а як її мало — за останніми змінами. */
 const DOW_IN=['у неділю','у понеділок','у вівторок','у середу','у четвер','у пʼятницю','у суботу'];
+const plShift=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'змін':(b===1?'зміна':((b>=2&&b<=4)?'зміни':'змін'));};
 const plOrd=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'замовлень':((b>=2&&b<=4)?'замовлення':(b===1?'замовлення':'замовлень'));};
 function goalPace(){
   const done=(data.entries||[]).filter(e=>+e.oc>0&&+e.hours>0&&e.calc);
@@ -3792,15 +3807,32 @@ async function renderAdmin(){
   try{
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
     if(!st){card.style.display='none';return;}
-    const row=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
+    /* плитки — такі самі, як на екрані зміни */
+    const ico={
+      users:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c0-3 2.6-5 5.5-5s5.5 2 5.5 5"/><path d="M16 11.2a3 3 0 1 0-1.6-5.5"/><path d="M17 19c0-2.3-.9-3.9-2.3-4.8"/>',
+      today:'<rect x="3.5" y="4.8" width="17" height="15.7" rx="2.6"/><path d="M3.5 9.6h17M8 3v3.4M16 3v3.4"/><path d="M8.5 14.4h7"/>',
+      week :'<rect x="3.5" y="4.8" width="17" height="15.7" rx="2.6"/><path d="M3.5 9.6h17M8 3v3.4M16 3v3.4"/><path d="M7.5 13.4h3M7.5 17h9M13.5 13.4h3"/>',
+      newu :'<circle cx="10" cy="8" r="3.2"/><path d="M4 19c0-3 2.7-5 6-5"/><path d="M17.5 13.5v6M14.5 16.5h6"/>',
+      keep :'<path d="M12 20.5s-7.2-4.3-7.2-9.6A4.1 4.1 0 0 1 12 8.4a4.1 4.1 0 0 1 7.2 2.5c0 5.3-7.2 9.6-7.2 9.6z"/>',
+      shift:'<path d="M4.5 15.5h15M6.5 15.5V12l1.8-4.2c.3-.7 1-1.2 1.8-1.2h3.8c.8 0 1.5.5 1.8 1.2L17.5 12v3.5"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/>',
+      mail :'<rect x="3.5" y="5.5" width="17" height="13" rx="2.6"/><path d="M4.5 7.5l7.5 5.2 7.5-5.2"/>'
+    };
+    const sv=k=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+ico[k]+'</svg>';
+    const tile=(k,v,lab,hi)=>'<div class="metric'+(hi?' hi':'')+'">'+sv(k)+'<div class="v">'+v+'</div><div class="k">'+lab+'</div></div>';
     $('admin-rows').innerHTML=
-      row('Усього водіїв',st.users||0)+
-      row('Заходили за добу',st.active_1d||0)+
-      row('Заходили за тиждень',st.active_7d||0)+
-      row('Нових за добу · тиждень',(st.new_1d||0)+' · '+(st.new_7d||0))+
-      row('Прижилися',(st.regular||0)+' з '+(st.users||0))+
-      row('Змін заведено всього',st.shifts||0)+
-      row('Звернень у підтримку',st.tickets||0);
+      '<div class="metrics">'+
+        tile('users',st.users||0,'усього водіїв',true)+
+        tile('today',st.active_1d||0,'сьогодні')+
+        tile('week',st.active_7d||0,'за тиждень')+
+      '</div>'+
+      '<div class="metrics">'+
+        tile('newu',(st.new_1d||0)+' · '+(st.new_7d||0),'нових · тиждень')+
+        tile('keep',(st.regular||0),'прижилися')+
+        tile('shift',st.shifts||0,'змін усього')+
+      '</div>'+
+      '<div class="metrics" style="grid-template-columns:1fr">'+
+        tile('mail',st.tickets||0,'звернень у підтримку')+
+      '</div>';
 
     /* два тижні: скільки заходило й скільки прийшло вперше */
     const d=st.days||[];
@@ -3828,11 +3860,11 @@ async function renderAdmin(){
     };
     const u=st.recent||[];
     $('admin-list').innerHTML=u.length
-      ? '<div class="card-title" style="margin:6px 0 2px">Останні водії</div>'+
+      ? '<div class="adm-sect">Останні водії</div>'+
         u.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x.name||'')+
           (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
           '<span>з '+esc(x.joined||'')+' · '+seenAgo(x.seen)+'</span></div>'+
-          '<div class="s">'+(+x.shifts||0)+' змін</div></div>').join('')
+          '<div class="s">'+(+x.shifts||0)+' '+plShift(+x.shifts||0)+'</div></div>').join('')
       : '';
     card.style.display='';
   }catch(e){card.style.display='none';}
