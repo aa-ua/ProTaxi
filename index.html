@@ -322,12 +322,13 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal-bg.open{display:flex}
-/* Замовлення — по центру видимої частини екрана, трохи вище середини.
-   Знизу вікно штовхала клавіатура; тут вона просто з'їдає низ, а вікно стоїть. */
-.modal-bg.mid{align-items:center;padding:0 12px 5vh;top:var(--vvtop,0px);bottom:auto;height:var(--vvh,100dvh)}
-.modal-bg.mid .modal{border-radius:20px;border:1px solid var(--border);animation:popin .2s ease;
-  padding:18px;max-height:100%}
-html.in-tg .modal-bg.mid .modal{max-height:100%}
+/* Вікна вводу стоять угорі й нікуди не рухаються: клавіатура просто з'їдає низ.
+   Центрування виглядало так, ніби екран підстрибує на кожне відкриття клавіатури. */
+.modal-bg.mid{align-items:flex-start;padding:calc(10px + env(safe-area-inset-top)) 12px 12px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg.mid .modal{border-radius:20px;border:1px solid var(--border);animation:popin .18s ease;
+  padding:18px;max-height:none}
+html.in-tg .modal-bg.mid .modal{max-height:none}
 @keyframes popin{from{transform:scale(.97);opacity:0}to{transform:none;opacity:1}}
 .modal{background:var(--surface);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));border:1px solid var(--border);border-bottom:none;animation:slideup .25s ease;
   max-height:92vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
@@ -339,13 +340,6 @@ html.in-tg .modal-bg.mid .modal{max-height:100%}
 
 /* Поки відкрита клавіатура, нижня панель їде вниз — інакше вона накриває поле вводу */
 html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
-/* Своя кнопка «готово» біля поля: на цифровій клавіатурі iOS закрити її нема чим */
-#kb-done{position:fixed;display:none;z-index:80;transform:translate(-100%,-50%);
-  width:36px;height:36px;padding:0;border:none;border-radius:10px;cursor:pointer;
-  background:var(--yellow);color:#101010;align-items:center;justify-content:center;
-  box-shadow:0 3px 12px rgba(0,0,0,.35)}
-#kb-done.on{display:flex}
-#kb-done svg{width:18px;height:18px}
 .tabbar{transition:transform .18s ease;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;z-index:40;background:rgba(34,37,43,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--line)}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 max(12px, env(safe-area-inset-bottom));color:var(--muted);font-size:9.5px;font-weight:800;background:none;border:none;font-family:inherit;cursor:pointer}
 .tab.active{color:var(--yellow)}
@@ -482,8 +476,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 #map{width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#E8E6E1}
 #map.punchy .leaflet-tile-pane{filter:saturate(1.35) contrast(1.08) brightness(1.02)}
 /* Нічні тайли самі по собі пласкі — піднімаємо дорогам яскравість і додаємо синього */
-#map.dark{background:#131A22}
-#map.dark .leaflet-tile-pane{filter:brightness(1.22) contrast(1.3) saturate(1.55) hue-rotate(-6deg)}
+#map.dark{background:#1E252F}
+#map.dark .leaflet-tile-pane{filter:brightness(1.9) contrast(.92) saturate(1.4) hue-rotate(-6deg)}
 .map-card{position:relative;padding:8px}
 .map-fs{position:absolute;top:16px;right:16px;z-index:5;width:38px;height:38px;border-radius:11px;
   background:rgba(34,37,43,.86);border:none;color:#fff;display:flex;align-items:center;justify-content:center;
@@ -1104,7 +1098,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.2';
+const APP_VER='1.3';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2351,7 +2345,20 @@ function captureFinishPoint(id){
 /* ── МАПА ЗОН ── */
 let map=null,zoneLayer=null,pathLayer=null,raionLayer=null,mapMode='rate',showPath=false;
 let leafletState='idle',leafletCbs=[]; /* idle|loading|ready|failed — правильна черга замість забудькуватого прапорця */
-const CITY_CENTER=[48.4647,35.0462]; /* Дніпро */
+const CITY_CENTER=[48.4647,35.0462]; /* запасний варіант, поки немає жодної точки */
+/* Центр беремо з власних замовлень водія: застосунок працює в будь-якому місті */
+function homeCenter(){
+  const pts=[];
+  allOrders().forEach(x=>{
+    const o=x.o||x;
+    if(o.lat&&o.lon)pts.push([o.lat,o.lon]);
+    if(o.lat2&&o.lon2)pts.push([o.lat2,o.lon2]);
+  });
+  if(!pts.length)return CITY_CENTER;
+  const la=pts.map(p=>p[0]).sort((a,b)=>a-b),lo=pts.map(p=>p[1]).sort((a,b)=>a-b);
+  const m=a=>a[Math.floor(a.length/2)];
+  return [m(la),m(lo)];
+}
 function gridKey(lat,lon){const gs=0.012;return Math.round(lat/gs)+'_'+Math.round(lon/gs);}
 function zoneStats(){
   const z={};
@@ -2436,7 +2443,13 @@ function ensureMap(){
       renderZonesList();return;
     }
     holder.innerHTML='';
-    map=L.map('map',{zoomControl:false}).setView(CITY_CENTER,12);
+    map=L.map('map',{zoomControl:false}).setView(homeCenter(),12);
+    /* перший запуск без жодного замовлення — показуємо місто, де людина зараз */
+    if(homeCenter()===CITY_CENTER&&navigator.geolocation&&data.settings.geoOn!==false){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        if(map&&!allOrders().length)map.setView([pos.coords.latitude,pos.coords.longitude],12);
+      },()=>{},{timeout:5000,maximumAge:600000});
+    }
     applyMapStyle();
     renderMapLayers();
     setTimeout(()=>map.invalidateSize(),60);
@@ -2885,9 +2898,9 @@ function renderZonesList(){
   const top=[...zs].filter(z=>z.n>=2).sort((a,b)=>b.rate-a.rate).slice(0,5);
   const list=top.length?top:[...zs].sort((a,b)=>b.n-a.n).slice(0,5);
   list.forEach((z,i)=>{
-    const d=distKm(CITY_CENTER[0],CITY_CENTER[1],z.lat,z.lon);
+    const hc=homeCenter();const d=distKm(hc[0],hc[1],z.lat,z.lon);
     const r=document.createElement('div');r.className='ins';
-    const fallback=dirName(z.lat-CITY_CENTER[0],z.lon-CITY_CENTER[1])+' · '+fmt1(d)+' км від центру';
+    const fallback=dirName(z.lat-hc[0],z.lon-hc[1])+' · '+fmt1(d)+' км від центру';
     r.innerHTML='<span class="k"><span class="zn">'+fallback+'</span> · '+z.n+' зам.</span>'+
       '<span class="v">'+(z.rate>0?fmt(z.rate)+'/год':fmt(z.avg)+'/зам')+'</span>';
     box.appendChild(r);
@@ -2896,7 +2909,7 @@ function renderZonesList(){
   const slow=[...zs].filter(z=>z.n>=2&&z.minAvg>=25).sort((a,b)=>b.minAvg-a.minAvg)[0];
   if(slow){
     const d=document.createElement('div');d.className='hint';d.style.marginTop='8px';
-    d.textContent='⏳ Обережно: зона '+dirName(slow.lat-CITY_CENTER[0],slow.lon-CITY_CENTER[1])+' — у середньому '+Math.round(slow.minAvg)+' хв на поїздку.';
+    const hc2=homeCenter();d.textContent='Обережно: зона '+dirName(slow.lat-hc2[0],slow.lon-hc2[1])+' — у середньому '+Math.round(slow.minAvg)+' хв на поїздку.';
     box.appendChild(d);
   }
 }
@@ -3976,11 +3989,12 @@ const subPrice=b=>{
 const subBeta=()=>!!(bill&&bill.beta);
 const subActive=()=>!bill||subBeta()||bill.active!==false;
 const SUB_FEATURES=[
-  ['Облік змін і замовлень','Без обмежень за кількістю сесій. Час, одометр і спосіб оплати в кожному замовленні'],
-  ['Пальне за фактом','Витрата від повного бака до повного, залишок у баку, накопичення на заправку'],
-  ['Аналітика заробітку','Дохідність вулиць у ₴/год, найкращі години та дні тижня'],
-  ['Резервне копіювання','Дані привʼязані до Telegram-акаунта і відновлюються на будь-якому пристрої'],
-  ['Підтримка','Звернення прямо із застосунку. Відповідає автор, а не автовідповідач']
+  ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й запас віднімаються автоматично. Видно, скільки залишилось на руки'],
+  ['Оцінка кожного замовлення','Замовлення порівнюється з вашим середнім темпом: видно, на чому ви заробляєте, а на чому втрачаєте час'],
+  ['Пальне за фактом','Витрата рахується від повного бака до повного за вашими ж чеками, а не за паспортом авто'],
+  ['Дохідність вулиць і годин','Мапа показує, де ваш ₴/год вищий, а статистика — у які години та дні виходити вигідніше'],
+  ['Скільки ще до цілі','Застосунок рахує, скільки лишилось замовлень і часу до денної цілі — за вашою статистикою в цей день тижня'],
+  ['Запас на ремонт і оренду','Частина кожної зміни відкладається окремо, щоб ремонт або оренда не били по кишені']
 ];
 const SUB_OK='<svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6 9.5 17.5 19.5 6.8"/></svg>';
 function subTable(){
@@ -5107,38 +5121,12 @@ new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:tr
   var root=document.documentElement;
   var isField=function(el){return !!el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');};
   /* час і дату iOS показує власним підбирачем — там своя кнопка «Готово» */
-  var needsDone=function(el){return isField(el)&&el.tagName!=='SELECT'&&el.type!=='time'&&el.type!=='date';};
-  var tShow=null,tHide=null,raf=null;
-
-  var done=document.createElement('button');
-  done.type='button';done.id='kb-done';done.setAttribute('aria-label','Готово');
-  done.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12.5 9.5 18 20 6.5"></polyline></svg>';
-  document.body.appendChild(done);
-  /* галочку тримаємо біля самого поля — тоді не треба вгадувати висоту клавіатури */
-  function place(){
-    var el=document.activeElement;
-    if(!needsDone(el)){done.classList.remove('on');raf=null;return;}
-    var r=el.getBoundingClientRect();
-    if(r.height<=0){done.classList.remove('on');}
-    else{
-      done.style.top=(r.top+r.height/2)+'px';
-      done.style.left=(r.right-7)+'px';
-      done.classList.add('on');
-    }
-    raf=requestAnimationFrame(place);
-  }
-  /* натиснення по галочці не повинно спершу знімати фокус — прибираємо його самі */
-  done.addEventListener('pointerdown',function(e){
-    e.preventDefault();
-    var el=document.activeElement;
-    if(el&&el.blur)el.blur();
-  });
+  var tShow=null,tHide=null;
 
   document.addEventListener('focusin',function(e){
     if(!isField(e.target))return;
     clearTimeout(tHide);
     root.classList.add('kbd');
-    if(raf===null)raf=requestAnimationFrame(place);
     clearTimeout(tShow);
     tShow=setTimeout(function(){
       if(document.activeElement!==e.target)return;
@@ -5148,7 +5136,6 @@ new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:tr
   });
   document.addEventListener('focusout',function(e){
     if(!isField(e.target))return;
-    done.classList.remove('on');
     clearTimeout(tHide);
     tHide=setTimeout(function(){
       if(!isField(document.activeElement))root.classList.remove('kbd');
