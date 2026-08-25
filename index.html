@@ -1157,7 +1157,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.7';
+const APP_VER='1.8';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3747,6 +3747,7 @@ function renderDiag(){
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
   const tu=tgUser();
   if(tu)add('Telegram ID',tu.id);
+  add('Адмін-панель',admWhy);
   box.innerHTML=rows.join('');
 
   top.className='diag';
@@ -4432,18 +4433,31 @@ function admPaint(){
 }
 document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.addEventListener('click',()=>{admTab=c.dataset.at;admPaint();window.scrollTo(0,0);}));
 
+/* Чому немає щита в шапці — питання, на яке інакше не відповісти:
+   кнопка ховається на будь-яку відмову сервера. Причину кладемо в
+   діагностику, щоб не гадати. */
+let admWhy='перевіряємо…';
 async function renderAdmin(){
   const btn=$('btn-admin');if(!btn)return;
-  if(!TG||!TG.initData){btn.style.display='none';return;}
+  const done=()=>{if($('diag-list'))renderDiag();};
+  if(!TG||!TG.initData){btn.style.display='none';admWhy='працює лише в Telegram';done();return;}
   try{
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
-    if(!st){btn.style.display='none';return;}
+    if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
     await loadAdminBilling();
     btn.style.display='';
+    admWhy='доступ є';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
     admPaint();
-  }catch(e){btn.style.display='none';}
+  }catch(e){
+    btn.style.display='none';
+    const t=String((e&&e.message)||e);
+    admWhy=/не власник/i.test(t) ? 'база не впізнала ваш Telegram ID (admin_id)'
+         : /404|PGRST202|Could not find/i.test(t) ? 'функції admin_stats немає в базі'
+         : t.slice(0,140);
+  }
+  done();
 }
 
 $('btn-changelog').addEventListener('click',()=>renderChangelog(false));
