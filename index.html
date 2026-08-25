@@ -999,7 +999,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.1';
+const APP_VER='5.2';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3799,22 +3799,22 @@ $('sup-send').addEventListener('click',async function(){
   $('sup-state').textContent='';
   try{
     /* Якщо знімки не приймаються — це не привід губити саме звернення */
-    const urls=[];let shotsLost=false;
+    const urls=[];let shotsLost='';
     for(let i=0;i<supShots.length;i++){
       this.textContent='Надсилаю знімок '+(i+1)+' з '+supShots.length+'…';
       try{urls.push(await uploadShot(supShots[i].blob));}
-      catch(e){shotsLost=true;break;}
+      catch(e){shotsLost=String((e&&e.message)||e).slice(0,24);break;}
     }
     this.textContent='Надсилаю…';
     if(shotsLost&&t.length<3){
-      $('sup-state').textContent='Знімки поки не приймаються. Опиши словами — текст дійде.';
+      $('sup-state').textContent='Знімки поки не приймаються ('+shotsLost+'). Опиши словами — текст дійде.';
       this.disabled=false;this.textContent='Надіслати';
       return;
     }
     await sendSupport(t.slice(0,2000),urls);
     closeM('modal-support');
     supClearShots();
-    toast(shotsLost?'Текст надіслано. Знімки не пройшли':'Надіслано. Відповідь прийде в цей же бот');
+    toast(shotsLost?'Текст надіслано. Знімки не пройшли ('+shotsLost+')':'Надіслано. Відповідь прийде в цей же бот');
   }catch(e){
     $('sup-state').textContent='Не вийшло надіслати. Перевір інтернет і спробуй ще раз.';
     this.disabled=false;this.textContent='Надіслати';
