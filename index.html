@@ -15,7 +15,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <title>ProTaxi · Фінанси водія</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#22252B; --surface:#31353E; --surface2:#3B404A; --border:#464C58;
@@ -28,7 +28,7 @@ body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area
 body{
   overscroll-behavior-y:none;
   background:var(--bg);color:var(--text);
-  font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
   font-size:15px;line-height:1.45;padding-bottom:96px;
 }
 .app{max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px 0;min-height:100vh;min-height:100dvh}
@@ -64,11 +64,11 @@ html.in-tg .only-web{display:none}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 .card{background:var(--surface);border-radius:var(--radius);padding:16px;margin-bottom:12px}
-.sect{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:800;letter-spacing:-.01em;
+.sect{font-variant-numeric:tabular-nums;font-size:13px;font-weight:800;letter-spacing:-.01em;
   color:var(--text);margin:6px 2px 12px}
 .card+.sect,.btn+.sect{margin-top:26px}
-.card-title{font-size:13.5px;letter-spacing:-.005em;color:var(--muted);font-weight:700;margin-bottom:12px}
-.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.45;font-weight:600}
+.card-title{font-size:13.5px;letter-spacing:-.005em;color:var(--muted);font-weight:500;margin-bottom:12px}
+.hint{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.5;font-weight:400}
 .goal-warn{margin-top:10px;padding:11px 13px;border-radius:12px;font-size:14px;font-weight:700;
   color:#FFB3AE;background:rgba(255,95,87,.12);border:1px solid rgba(255,95,87,.4);text-align:center}
 .goal-warn b{color:#FF8A82}
@@ -87,7 +87,7 @@ html.in-tg .only-web{display:none}
 .btn+.hint{margin-top:14px}
 .hint+.btn,.hint+.modes,.hint+.grid2,.hint+.field{margin-top:14px}
 .field{margin-bottom:10px}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:700}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:7px;font-weight:400}
 .field textarea{width:100%;background:var(--surface2);border:1px solid transparent;border-radius:12px;padding:12px;
   color:var(--text);font-size:16px;font-weight:600;font-family:inherit;line-height:1.45;resize:none;display:block}
 .field textarea:focus{outline:none;border-color:var(--yellow)}
@@ -113,12 +113,12 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .live-line{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(53,208,124,.55)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
-.hero-big{font-family:'Unbounded',sans-serif;font-size:36px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;line-height:1.15}
+.hero-big{font-variant-numeric:tabular-nums;font-size:36px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;line-height:1.15}
 .hero-sub{font-size:13px;color:var(--muted);font-weight:700;margin-top:6px}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .metric{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
 .metric .v{font-weight:800;font-size:14.5px;font-variant-numeric:tabular-nums}
-.metric .k{font-size:10.5px;color:var(--muted);font-weight:700;margin-top:2px}
+.metric .k{font-size:10.5px;color:var(--muted);font-weight:400;margin-top:3px}
 .warn{color:var(--amber);font-size:13px;font-weight:700;text-align:center;margin-top:10px}
 
 .orow{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px dashed var(--border);font-size:16px;font-weight:700}
@@ -131,22 +131,31 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
 /* Підписка */
-.sub-card{text-align:center}
-.sub-pill{display:inline-block;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;
-  background:var(--surface2);color:var(--muted);margin-bottom:12px}
-.sub-pill.on{background:rgba(59,224,166,.14);color:var(--yellow)}
-.sub-pill.off{background:rgba(255,107,107,.14);color:var(--red)}
-.sub-big{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
-.sub-note{font-size:13.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.5}
-.sub-l{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);text-align:left}
-.sub-l:last-child{border-bottom:none}
-.sub-l>span{font-size:19px;line-height:1.25;flex-shrink:0}
-.sub-l b{display:block;font-size:14px;font-weight:800;margin-bottom:2px}
-.sub-l div{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.45}
-.sub-warn{margin-bottom:12px;padding:12px 14px;border-radius:14px;background:rgba(255,176,32,.12);
-  color:var(--amber);font-size:13.5px;font-weight:700;line-height:1.45;cursor:pointer}
-.sub-warn.hot{background:rgba(255,107,107,.13);color:var(--red)}
-.sub-warn b{font-weight:800}
+.screen.sub{padding-top:6px}
+.sub-hero{text-align:center;padding:16px 6px 24px}
+.sub-mark{width:54px;height:54px;margin:0 auto 20px;border-radius:17px;display:flex;align-items:center;
+  justify-content:center;background:rgba(59,224,166,.12);color:var(--yellow)}
+.sub-mark svg{width:27px;height:27px}
+.sub-pill{display:inline-block;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;
+  background:var(--surface2);color:var(--muted);margin-bottom:16px}
+.sub-pill.on{background:rgba(59,224,166,.13);color:var(--yellow)}
+.sub-pill.off{background:rgba(255,107,107,.13);color:var(--red)}
+.sub-title{font-size:30px;line-height:1.15;font-weight:700;letter-spacing:-.035em;margin:0 0 14px}
+.sub-sub{font-size:14.5px;color:var(--muted);font-weight:400;line-height:1.55;margin:0 auto;max-width:320px}
+.sub-sub b{color:var(--text);font-weight:600}
+.sub-table{background:var(--surface);border-radius:var(--radius);padding:2px 16px;margin-bottom:22px}
+.sub-row{display:flex;align-items:flex-start;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
+.sub-row:last-child{border-bottom:none}
+.sub-row .t{flex:1;min-width:0}
+.sub-row .t b{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.sub-row .t span{display:block;font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.45;margin-top:3px}
+.sub-row .ok{flex-shrink:0;width:19px;height:19px;color:var(--yellow);margin-top:2px}
+.sub-cta{border-radius:999px;height:56px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.sub-fine{font-size:12.5px;color:var(--muted);font-weight:400;text-align:center;line-height:1.5;margin-top:12px}
+.sub-warn{margin-bottom:12px;padding:13px 15px;border-radius:14px;background:rgba(255,176,32,.11);
+  color:var(--amber);font-size:13.5px;font-weight:500;line-height:1.5;cursor:pointer}
+.sub-warn.hot{background:rgba(255,107,107,.11);color:var(--red)}
+.sub-warn b{font-weight:700}
 /* Адмінка: та сама шапка, ті самі плитки, що й у застосунку */
 .adm-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 html.in-admin .topbar,html.in-admin .app>.checker{display:none}
@@ -174,7 +183,8 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 /* Події і звернення */
 .adm-e{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
 .adm-e:last-child{border-bottom:none}
-.adm-e .i{font-size:17px;line-height:1}
+.adm-e .dot{width:7px;height:7px;border-radius:50%;background:var(--yellow);flex-shrink:0}
+.adm-e .dot.n{background:var(--amber)}
 .adm-e .n b{display:block;font-size:13.5px;font-weight:800}
 .adm-e .n b span,.adm-e .n>span{font-size:11.5px;color:var(--muted);font-weight:700}
 .adm-t{padding:10px 0;border-bottom:1px solid var(--line)}
@@ -186,11 +196,11 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
   color:var(--yellow);font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer}
 .adm-give:disabled{opacity:.5}
 .adm-u .s i{font-style:normal;font-size:10.5px;color:var(--muted);font-weight:700}
-.adm-word{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.02em}
+.adm-word{font-variant-numeric:tabular-nums;font-weight:800;font-size:15px;letter-spacing:-.02em}
 .adm-checker{margin:0 0 14px}
 .adm .metric{display:flex;flex-direction:column;align-items:center;gap:2px}
 .adm .metric svg{width:17px;height:17px;color:var(--muted);margin-bottom:2px}
-.adm .metric .v{font-family:'Unbounded',sans-serif;font-size:17px;letter-spacing:-.02em}
+.adm .metric .v{font-variant-numeric:tabular-nums;font-size:17px;letter-spacing:-.02em}
 .adm .metric.hi{background:rgba(59,224,166,.10)}
 .adm .metric.hi .v{color:var(--yellow)}
 .adm .metric.hi svg{color:var(--yellow)}
@@ -222,7 +232,9 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .intro-dots{display:flex;gap:5px;justify-content:center;margin-bottom:16px}
 .intro-dots i{width:22px;height:3px;border-radius:2px;background:var(--surface2);transition:background .2s}
 .intro-dots i.on{background:var(--yellow)}
-.intro-ico{font-size:40px;text-align:center;line-height:1;margin-bottom:14px}
+.intro-ico{width:52px;height:52px;margin:0 auto 18px;border-radius:17px;display:flex;align-items:center;
+  justify-content:center;background:rgba(59,224,166,.12);color:var(--yellow)}
+.intro-ico svg{width:26px;height:26px}
 .intro-t{font-size:20px;font-weight:800;text-align:center;line-height:1.25;margin-bottom:10px}
 .intro-p{font-size:14.5px;line-height:1.55;color:var(--muted);text-align:center;margin-bottom:18px}
 .intro-p b{color:var(--text);font-weight:800}
@@ -266,8 +278,8 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;margin-bottom:12px}
 .stat{background:var(--surface);border:1px solid transparent;border-radius:var(--radius);padding:14px;
   display:flex;flex-direction:column;justify-content:center}
-.stat .v{font-family:'Unbounded',sans-serif;font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
-.stat .k{font-size:12.5px;color:var(--muted);font-weight:700;margin-top:3px}
+.stat .v{font-variant-numeric:tabular-nums;font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.stat .k{font-size:12.5px;color:var(--muted);font-weight:400;margin-top:4px}
 .stat.stat-main{background:rgba(59,224,166,.10)}
 .stat.stat-main .v{color:#3BE0A6}
 .stat.stat-main .k{color:#8FE7C8}
@@ -303,7 +315,7 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .daynav input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-size:15px;font-weight:800;font-family:inherit}
 .navbtn{width:48px;height:48px;flex-shrink:0;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:18px;font-weight:800;font-family:inherit;cursor:pointer}
 
-.fund-balance{font-family:'Unbounded',sans-serif;font-size:30px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
+.fund-balance{font-variant-numeric:tabular-nums;font-size:30px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
 
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal-bg.open{display:flex}
@@ -352,7 +364,7 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .donut{width:132px;height:132px;border-radius:50%;position:relative;flex-shrink:0;background:var(--surface2)}
 .donut::after{content:"";position:absolute;inset:22px;border-radius:50%;background:var(--surface)}
 .donut .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;text-align:center}
-.donut .mid .b{font-family:'Unbounded',sans-serif;font-weight:800;font-size:14px;letter-spacing:-.02em}
+.donut .mid .b{font-variant-numeric:tabular-nums;font-weight:800;font-size:14px;letter-spacing:-.02em}
 .donut .mid .s{font-size:9.5px;color:var(--muted);font-weight:700;margin-top:1px}
 .legend{flex:1;min-width:0}
 .lrow{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12.5px;font-weight:700}
@@ -363,7 +375,8 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .wchips{align-items:stretch}
 .wchip{flex:1;min-width:62px;padding:10px 4px;border-radius:12px;background:var(--surface2);border:1px solid transparent;color:var(--text);font-family:inherit;font-weight:800;font-size:12px;cursor:pointer;text-align:center;
   display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;line-height:1.25}
-.wchip .e{font-size:18px;display:block;margin:0;line-height:1}
+.wchip .e{display:block;margin:0 auto 3px;line-height:0}
+.wchip .e svg{width:19px;height:19px;display:block;margin:0 auto}
 .wchip.on{border-color:var(--yellow);background:rgba(59,224,166,.12);color:var(--yellow)}
 /* v4: заказ у два етапи, одометр */
 .orow{align-items:center;flex-wrap:nowrap;cursor:pointer}
@@ -385,7 +398,7 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .gauge{display:flex;align-items:center;gap:18px}
 .can{width:96px;height:126px;flex-shrink:0}
 .gauge-side{min-width:0;flex:1}
-.gauge-val{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.gauge-val{font-variant-numeric:tabular-nums;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
 .gauge-val.low{color:#FF8A82}
 .gauge-pct{font-size:13px;font-weight:800;color:var(--yellow);margin-top:3px}
 .gauge-pct.low{color:#FF8A82}
@@ -398,7 +411,7 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
   padding:6px 8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;text-align:center}
 .gauge-row input:focus{outline:none;border-color:var(--yellow)}
 .save-block{margin-top:4px}
-.save-block .gauge-row b{font-family:'Unbounded',sans-serif;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
+.save-block .gauge-row b{font-variant-numeric:tabular-nums;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
 .save-block .gauge-row b.ok{color:var(--green)}
 .save-block .progress{margin:4px 0 6px}
 .save-block .progress .fill.done{background:linear-gradient(90deg,var(--green),#9CF2C4)}
@@ -413,7 +426,7 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .mode.on{background:var(--yellow);color:#101010;border-color:var(--yellow)}
 .mode .sub{display:block;font-size:10px;font-weight:700;opacity:.75;margin-top:2px}
 .tank-hero{text-align:center;padding:6px 0 14px}
-.tank-hero .big{font-family:'Unbounded',sans-serif;font-size:32px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
+.tank-hero .big{font-variant-numeric:tabular-nums;font-size:32px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
 .tank-hero .k{font-size:13.5px;color:var(--muted);font-weight:700;margin-bottom:6px}
 .trend{font-size:12.5px;font-weight:800;margin-top:8px}
 .trend.up{color:var(--red)} .trend.down{color:var(--green)} .trend.flat{color:var(--muted)}
@@ -439,7 +452,7 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .rel{padding:14px 0;border-bottom:1px solid var(--border)}
 .rel:last-child{border-bottom:none}
 .rel-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
-.rel-v{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;color:var(--yellow);letter-spacing:-.02em}
+.rel-v{font-variant-numeric:tabular-nums;font-weight:800;font-size:15px;color:var(--yellow);letter-spacing:-.02em}
 .rel-d{font-size:11px;color:var(--muted);font-weight:700}
 .rel-now{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:999px;background:var(--yellow);color:#101010}
 .rel li{list-style:none;font-size:13.5px;font-weight:600;padding:4px 0 4px 16px;position:relative;line-height:1.4}
@@ -716,23 +729,22 @@ html.map-full .tabbar{display:none}
     </div>
   </section>
 
-  <section class="screen" id="screen-sub">
-    <div class="card sub-card">
+  <section class="screen sub" id="screen-sub">
+    <div class="sub-hero">
+      <div class="sub-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2.6 4.6 5.8v6.1c0 4.5 3.1 8.6 7.4 10.1 4.3-1.5 7.4-5.6 7.4-10.1V5.8L12 2.6z"/>
+          <path d="M8.9 12.1 11.2 14.4 15.4 10.2"/>
+        </svg>
+      </div>
       <div class="sub-pill" id="sub-pill">—</div>
-      <div class="sub-big" id="sub-big">—</div>
-      <div class="sub-note" id="sub-note"></div>
-      <button class="btn btn-primary" id="sub-go" style="margin-top:16px">Продовжити</button>
-      <p class="hint" id="sub-hint" style="text-align:center"></p>
+      <h1 class="sub-title" id="sub-big">—</h1>
+      <p class="sub-sub" id="sub-note"></p>
     </div>
-    <div class="card">
-      <div class="card-title">Що входить</div>
-      <div class="sub-l"><span>🚕</span><div><b>Зміни й замовлення без обмежень</b>Скільки завгодно сесій за день, кожне замовлення з часом і одометром</div></div>
-      <div class="sub-l"><span>⛽</span><div><b>Пальне по чеках</b>Витрата від бака до бака, рівень у баку, накопичення на заправку</div></div>
-      <div class="sub-l"><span>🗺️</span><div><b>Мапа заробітку</b>Вулиці за твоїм ₴/год, найкращі години й дні тижня</div></div>
-      <div class="sub-l"><span>☁️</span><div><b>Хмара</b>Записи привʼязані до Telegram — телефон загубився, дані на місці</div></div>
-      <div class="sub-l"><span>💬</span><div><b>Підтримка</b>Пишеш прямо із застосунку, відповідає жива людина</div></div>
-    </div>
-    <p class="hint" style="text-align:center">Твої записи нікуди не зникнуть навіть після закінчення підписки — і копію у файл можна забрати будь-коли.</p>
+    <div class="sub-table" id="sub-table"></div>
+    <button class="btn btn-primary sub-cta" id="sub-go">Продовжити</button>
+    <p class="sub-fine" id="sub-hint"></p>
+    <p class="sub-fine">Записи зберігаються незалежно від стану підписки. Резервну копію у файл можна вивантажити будь-коли.</p>
   </section>
 
   <section class="screen adm" id="screen-admin">
@@ -889,7 +901,7 @@ html.map-full .tabbar{display:none}
     <p class="hint" style="margin:0 0 12px">Що не так або чого бракує? Пиши як є — це читає жива людина, автор застосунку.</p>
     <div class="field"><textarea id="sup-text" rows="5" placeholder="Опиши, що сталося…"></textarea></div>
     <input type="file" id="sup-file" accept="image/*" multiple hidden>
-    <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">📷 Додати знімок екрана</button>
+    <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">Додати знімок екрана</button>
     <div class="shots" id="sup-shots"></div>
     <div class="hint" id="sup-state" style="margin:0 0 4px"></div>
     <button class="btn btn-primary" id="sup-send">Надіслати</button>
@@ -921,8 +933,8 @@ html.map-full .tabbar{display:none}
       <div class="field"><label>Одометр зараз, км</label><input type="number" inputmode="decimal" id="om-odo" step="0.1" placeholder="0"></div>
     </div>
     <div class="wchips" id="om-pay">
-      <button class="wchip on" data-pay="cash"><span class="e">💵</span>Готівка</button>
-      <button class="wchip" data-pay="card"><span class="e">💳</span>Картка</button>
+      <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
+      <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
     </div>
     <div class="hint" id="om-hint" style="margin:0 0 12px"></div>
     <button class="btn btn-primary" id="om-save">Прийняти</button>
@@ -948,8 +960,8 @@ html.map-full .tabbar{display:none}
       <div class="field"><label>Одометр в кінці</label><input type="number" inputmode="decimal" id="fin-odo-end" step="0.1"></div>
     </div>
     <div class="wchips" id="fin-pay">
-      <button class="wchip on" data-pay="cash"><span class="e">💵</span>Готівка</button>
-      <button class="wchip" data-pay="card"><span class="e">💳</span>Картка</button>
+      <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
+      <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
     </div>
     <div class="field" id="fin-cash-row"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
@@ -1087,7 +1099,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.6';
+const APP_VER='5.7';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1164,6 +1176,7 @@ const fmtHours=hr=>{
   if(mm<=0)return hh+' год';
   return hh+' год '+mm+' хв';
 };
+const fmtFull=ds=>{const d=new Date(ds+'T00:00:00');return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear();};
 const fmtDate=ds=>{const d=new Date(ds+'T00:00:00');return pad(d.getDate())+'.'+pad(d.getMonth()+1)+' · '+WD[d.getDay()];};
 
 /* ── Замовлення ── */
@@ -1894,13 +1907,13 @@ function renderShift(){
       '</div>'+
       '<button class="btn btn-primary" id="btn-open">Розпочати сесію</button>'+
       '<p class="hint">'+(lastKnownOdo()>0
-        ? '⚠️ Підставив показник з минулої зміни — <b>'+fmt1(lastKnownOdo())+' км</b>. <b>Звірся з лічильником у машині</b> і виправ, якщо не збігається: від цієї цифри рахується весь пробіг і пальне.'
+        ? 'Підставлено показник з минулої зміни — <b>'+fmt1(lastKnownOdo())+' км</b>. Звірте з лічильником в авто: від цієї цифри рахується весь пробіг і пальне.'
         : (lastOdoWasReset()
-          ? '🔄 Після заправки ти обнулив лічильник, тож починаємо з нуля. Звірся з машиною — якщо там уже накрутилось, впиши як є.'
-          : 'Впиши показник добового одометра — далі всі кілометри рахуватимуться по факту, а не по картах.'))+'</p></div>'+
+          ? 'Після заправки лічильник обнулено, тож відлік починається з нуля. Якщо на панелі вже є кілометри — вкажіть їх.'
+          : 'Вкажіть показник добового одометра. Далі кілометраж рахується за фактом, а не за картами.'))+'</p></div>'+
       boostCardHTML();
     $('btn-open').addEventListener('click',async()=>{
-      if(!subActive()){goScreen('sub');toast('Продовж підписку — і працюємо далі');return;}
+      if(!subActive()){goScreen('sub');toast('Для нової зміни потрібна активна підписка');return;}
       const t=$('open-time').value||nowHM();
       data.active={id:Date.now(),startT:toMs(todayStr(),t),odoStart:num($('open-odo').value),orders:[],path:[]};
       await persist();renderShift();startTrack();toast('Сесію розпочато о '+t);
@@ -2057,7 +2070,7 @@ function odoWasReset(){
 /* Час прийняття одним рядком — розгортається тапом */
 function omTimeLine(){
   const el=$('om-time-line');
-  if(el)el.innerHTML='🕐 Прийнято о <b>'+($('om-time').value||nowHM())+'</b> <span class="ed">· змінити</span>';
+  if(el)el.innerHTML='Прийнято о <b>'+($('om-time').value||nowHM())+'</b> <span class="ed">· змінити</span>';
 }
 $('om-time-line').addEventListener('click',()=>{
   const box=$('om-time-box');
@@ -2165,7 +2178,7 @@ function finCalc(){
 
   /* Час одним рядком: видно завжди, редагується тапом */
   const tl=$('fin-time-line');
-  if(tl)tl.innerHTML='🕐 <b>'+(a||'--:--')+' → '+(b||'--:--')+'</b>'+
+  if(tl)tl.innerHTML='<b>'+(a||'--:--')+' → '+(b||'--:--')+'</b>'+
     (m>0?' · '+Math.round(m)+' хв':'')+' <span class="ed">· змінити</span>';
 
   /* Готівку й здачу питаємо лише тоді, коли платять готівкою */
@@ -3655,17 +3668,23 @@ function renderChangelog(onlyNew){
 /* ══ ЗНАЙОМСТВО ══
    Спершу коротко пояснюємо, навіщо це все, а далі одразу питаємо те, без чого
    рахунок буде брехати: авто, пальне, комісія й ціль. */
+const SVI=(function(){
+  const d={money:'<path d="M12 3.4v17.2"/><path d="M16.4 7.1c-.6-1.3-2.2-2.1-4.4-2.1-2.6 0-4.4 1.2-4.4 3s1.6 2.6 4.4 3.1c2.8.5 4.6 1.3 4.6 3.2s-1.9 3.2-4.6 3.2c-2.4 0-4-.9-4.6-2.3"/>',car:'<path d="M4.5 15.5h15M6.5 15.5V12l1.8-4.2c.3-.7 1-1.2 1.8-1.2h3.8c.8 0 1.5.5 1.8 1.2L17.5 12v3.5"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="18" r="1.6"/>',fuel:'<path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5M5.5 9.5h7.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/>',map:'<path d="M9.2 4.2 3.6 6.6v13.2l5.6-2.4 5.6 2.4 5.6-2.4V4.2l-5.6 2.4z"/><path d="M9.2 4.2v13.2M14.8 6.6v13.2"/>',lock:'<rect x="4.6" y="10.4" width="14.8" height="10" rx="2.6"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/>'};
+  const o={};
+  Object.keys(d).forEach(k=>{o[k]='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+d[k]+'</svg>';});
+  return o;
+})();
 const INTRO=[
- {ico:'💸',t:'Виручка — це не твої гроші',
-  p:'З кожної тисячі частина йде платформі, частина згорає в баку, частина — на ремонт, який колись усе одно настане.<br><br>ProTaxi віднімає це все сам і показує одну чесну цифру — <b>скільки лишилось тобі</b>.'},
- {ico:'🚕',t:'Один день у застосунку',
-  p:'Вранці тапни <b>зелену шашечку</b> й впиши одометр.<br>На кожному замовленні — «Прийняти», в кінці — сума й одометр.<br>Увечері закрий зміну. Усе.'},
- {ico:'⛽',t:'Пальне по факту, не «приблизно»',
-  p:'Заправився — запиши чек. Витрата рахується <b>від повного бака до повного</b>, по твоїх же чеках.<br><br>Видно, скільки лишилось у баку і скільки грошей уже відкладено на наступну заправку.'},
- {ico:'🗺️',t:'Де ти справді заробляєш',
-  p:'Вулиці на мапі фарбуються за твоїм заробітком на годину: <b>зелена — вигідна, червона — ні</b>.<br><br>Плюс видно найкращі години й дні тижня — за твоєю власною статистикою.'},
- {ico:'🔒',t:'Твої гроші — твоя справа',
-  p:'Записи живуть на твоєму телефоні. Копія в хмарі <b>привʼязана до твого Telegram</b>: з чужого акаунта її не відкрити.<br><br>Нікуди більше вони не йдуть: ні в таксі, ні в податкову, ні рекламникам. Ми нічого не продаємо й нічого про тебе не питаємо — ні прізвища, ні номера авто, ні картки.'},
+ {ico:SVI.money,t:'Виручка — це не твої гроші',
+  p:'Частина кожної тисячі йде платформі, частина згорає в баку, частина — на ремонт, який рано чи пізно настане.<br><br>ProTaxi віднімає це автоматично й показує одну цифру — <b>скільки залишилось вам</b>.'},
+ {ico:SVI.car,t:'Один день у застосунку',
+  p:'На початку зміни — <b>зелена кнопка</b> і показник одометра.<br>На кожному замовленні — «Прийняти», в кінці — сума й одометр.<br>Наприкінці дня зміна закривається одним дотиком.'},
+ {ico:SVI.fuel,t:'Пальне по факту, не «приблизно»',
+  p:'Заправка записується з чека. Витрата рахується <b>від повного бака до повного</b> — за фактом, а не за паспортом авто.<br><br>Видно залишок у баку й скільки вже відкладено на наступну заправку.'},
+ {ico:SVI.map,t:'Де ти справді заробляєш',
+  p:'Вулиці на мапі забарвлені за вашим заробітком на годину: <b>зелена — прибуткова, червона — ні</b>.<br><br>Окремо — найкращі години та дні тижня за вашою власною статистикою.'},
+ {ico:SVI.lock,t:'Твої гроші — твоя справа',
+  p:'Записи зберігаються на вашому телефоні. Копія в хмарі <b>привʼязана до вашого Telegram</b> — з чужого акаунта її не відкрити.<br><br>Дані не передаються нікому: ні службі таксі, ні податковій, ні рекламодавцям. Ми не питаємо ні прізвища, ні номера авто, ні платіжних даних.'},
  {setup:'car',t:'Авто',p:'Від цього залежить, що застосунок віднімає й на що збирає запас.'},
  {setup:'fuel',t:'Пальне',p:'Без цих трьох цифр пальне рахуватиметься навмання.'},
  {setup:'money',t:'Гроші',p:'Останній крок — і можна працювати.'}
@@ -3817,8 +3836,8 @@ function renderShots(){
     d.appendChild(im);d.appendChild(x);box.appendChild(d);
   });
   $('sup-pick').textContent=supShots.length
-    ? '📷 Ще знімок · '+supShots.length+' з '+SUP_MAX_SHOTS
-    : '📷 Додати знімок екрана';
+    ? 'Ще знімок · '+supShots.length+' з '+SUP_MAX_SHOTS
+    : 'Додати знімок екрана';
   $('sup-pick').disabled=supShots.length>=SUP_MAX_SHOTS;
 }
 $('sup-pick').addEventListener('click',()=>$('sup-file').click());
@@ -3943,40 +3962,54 @@ const subPrice=b=>{
 /* поки триває бета — не замикаємо нікого */
 const subBeta=()=>!!(bill&&bill.beta);
 const subActive=()=>!bill||subBeta()||bill.active!==false;
+const SUB_FEATURES=[
+  ['Облік змін і замовлень','Без обмежень за кількістю сесій. Час, одометр і спосіб оплати в кожному замовленні'],
+  ['Пальне за фактом','Витрата від повного бака до повного, залишок у баку, накопичення на заправку'],
+  ['Аналітика заробітку','Дохідність вулиць у ₴/год, найкращі години та дні тижня'],
+  ['Резервне копіювання','Дані привʼязані до Telegram-акаунта і відновлюються на будь-якому пристрої'],
+  ['Підтримка','Звернення прямо із застосунку. Відповідає автор, а не автовідповідач']
+];
+const SUB_OK='<svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.6 9.5 17.5 19.5 6.8"/></svg>';
+function subTable(){
+  $('sub-table').innerHTML=SUB_FEATURES.map(f=>
+    '<div class="sub-row"><div class="t"><b>'+f[0]+'</b><span>'+f[1]+'</span></div>'+SUB_OK+'</div>').join('');
+}
 function renderSub(){
   if(!$('sub-pill'))return;
+  subTable();
   const b=bill;
   if(!b){
     $('sub-pill').className='sub-pill';$('sub-pill').textContent='поза Telegram';
+    $('sub-title')&&0;
     $('sub-big').textContent='Підписка не потрібна';
-    $('sub-note').textContent='Тут застосунок працює без обмежень, але й хмари немає. Відкрий через бота, щоб записи зберігались.';
+    $('sub-note').textContent='У браузері застосунок працює без обмежень, але без хмари. Щоб записи зберігались, відкрийте ProTaxi через бота в Telegram.';
     $('sub-go').style.display='none';$('sub-hint').textContent='';
     return;
   }
   if(b.beta){
     $('sub-pill').className='sub-pill on';
-    $('sub-pill').textContent='бета-тестування';
-    $('sub-big').textContent='Зараз безкоштовно';
-    $('sub-note').innerHTML='Застосунок ще тестується — <b>платити не треба</b>. Користуйся як є, а якщо щось не так — напиши в підтримку, це справді допомагає.'+
-      '<br><br>🎁 Усім, хто з нами на цьому етапі, після запуску подаруємо <b>ще місяць</b> понад безкоштовний.';
+    $('sub-pill').textContent='тестова версія';
+    $('sub-big').textContent='Доступ відкрито';
+    $('sub-note').innerHTML='ProTaxi працює в режимі відкритого тестування: <b>оплата не потрібна</b>, усі можливості доступні без обмежень.'+
+      '<br><br>Учасникам тестування після запуску нараховується <b>додатковий місяць</b> підписки.';
     $('sub-go').style.display='none';
-    $('sub-hint').textContent='';
+    $('sub-hint').textContent='Помітили помилку в розрахунку або незручність — напишіть у підтримку. Кожне звернення читає автор.';
     return;
   }
   const left=+b.left||0,act=b.active!==false;
   $('sub-pill').className='sub-pill '+(act?'on':'off');
-  $('sub-pill').textContent=b.paid?'підписка активна':(act?'пробний період':'доступ закінчився');
-  $('sub-big').textContent=act
-    ? (left+' '+plDay(left)+' попереду')
-    : 'Час продовжити';
+  $('sub-pill').textContent=b.paid?'підписка активна':(act?'ознайомчий період':'підписка неактивна');
+  $('sub-big').textContent=act?(left+' '+plDay(left)+' доступу'):'Доступ призупинено';
   $('sub-note').innerHTML=act
-    ? (b.paid?'Оплачено до <b>'+fmtDate(b.until)+'</b>.':'Безкоштовний місяць діє до <b>'+fmtDate(b.until)+'</b>. Далі — '+subPrice(b)+' на місяць.')
-    : 'Записи на місці, їх видно й можна забрати копією. Щоб відкривати нові зміни — продовж підписку за <b>'+subPrice(b)+' на місяць</b>.';
+    ? (b.paid
+        ? 'Підписка діє до <b>'+fmtFull(b.until)+'</b>. Продовження — '+subPrice(b)+' на місяць.'
+        : 'Ознайомчий період діє до <b>'+fmtFull(b.until)+'</b>. Далі — '+subPrice(b)+' на місяць.')
+    : 'Історія змін, статистика й резервна копія лишаються доступними. Для відкриття нових змін потрібна активна підписка.';
   $('sub-go').style.display='';
-  $('sub-go').textContent=act&&b.paid?'Продовжити ще на місяць':'Продовжити за '+subPrice(b);
+  $('sub-go').textContent=b.paid?'Продовжити на місяць':'Оформити за '+subPrice(b);
   $('sub-hint').textContent=b.link
-    ? 'Оплата відкриється в новому вікні. Після оплати доступ вмикається протягом кількох хвилин.'
-    : 'Натисни — і автор увімкне тобі доступ. Він отримає повідомлення одразу.';
+    ? 'Оплата відкриється в окремому вікні. Доступ активується протягом кількох хвилин після зарахування.'
+    : 'Запит надійде автору застосунку. Доступ активують вручну, зазвичай того ж дня.';
 }
 const plDay=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'днів':(b===1?'день':((b>=2&&b<=4)?'дні':'днів'));};
 $('sub-go').addEventListener('click',async function(){
@@ -3993,9 +4026,9 @@ function subWarnHTML(){
   if(!bill||bill.beta)return '';
   const left=+bill.left||0;
   if(bill.active===false)
-    return '<div class="sub-warn hot" data-screen="sub">🔒 <b>Доступ закінчився.</b> Записи на місці, нову зміну відкрити не вийде. Тапни, щоб продовжити.</div>';
+    return '<div class="sub-warn hot" data-screen="sub"><b>Підписка неактивна.</b> Дані збережені, нова зміна недоступна. Натисніть, щоб оформити доступ.</div>';
   if(!bill.paid&&left<=7)
-    return '<div class="sub-warn" data-screen="sub">⏳ Безкоштовний місяць закінчується: лишилось <b>'+left+' '+plDay(left)+'</b>. Тапни, щоб подивитись умови.</div>';
+    return '<div class="sub-warn" data-screen="sub"><b>Ознайомчий період завершується</b> — лишилось '+left+' '+plDay(left)+'. Натисніть, щоб переглянути умови.</div>';
   return '';
 }
 
@@ -4056,7 +4089,7 @@ function admDash(d){
 
   const e=d.events||[];
   h+='<div class="card"><div class="card-title">Події</div>'+
-    (e.length?e.map(x=>'<div class="adm-e"><span class="i">'+(x.kind==='new'?'🆕':'🚕')+'</span>'+
+    (e.length?e.map(x=>'<div class="adm-e"><span class="dot'+(x.kind==='new'?' n':'')+'"></span>'+
       '<div class="n"><b>'+esc(x.name||'')+(x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
       '<span>'+(x.kind==='new'?'новий водій':'перше замовлення')+' · '+admAgo(x.at)+'</span></div></div>').join('')
       :'<div class="empty">Подій ще не було</div>')+'</div>';
@@ -4129,7 +4162,7 @@ function admTalk(d){
     '<div class="card"><div class="card-title">Останні звернення</div>'+
     (t.length?t.map(x=>'<div class="adm-t"><div class="h"><b>'+esc(x.name||'')+
       (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
-      '<div class="b">'+esc(x.body||'')+(x.shot?' 📷':'')+'</div></div>').join('')
+      '<div class="b">'+esc(x.body||'')+(x.shot?' <i style="font-style:normal;color:var(--muted)">· зі знімком</i>':'')+'</div></div>').join('')
       :'<div class="empty">Звернень ще не було</div>')+
     '<p class="hint">Повний текст із фото приходить тобі в бот. Тут — щоб не губилось.</p></div>';
 }
@@ -4276,9 +4309,9 @@ function cloudPush(){
 function renderCloud(){
   const el=$('cloud-state');if(!el)return;
   el.textContent=!TG?'працює лише в Telegram'
-    :cloudState==='ok'?'✅ дані в хмарі'
-    :cloudState==='sync'?'⏳ синхронізую…'
-    :cloudState==='err'?'❌ не вдалося — спробую пізніше':'—';
+    :cloudState==='ok'?'збережено в хмарі'
+    :cloudState==='sync'?'синхронізація…'
+    :cloudState==='err'?'не вдалося — повторимо пізніше':'—';
 }
 
 /* Бот підтримки. Усередині Telegram кнопка просто повертає людину в чат з ним,
