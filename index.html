@@ -29,7 +29,7 @@ body{
   overscroll-behavior-y:none;
   background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
-  font-size:15px;line-height:1.45;padding-bottom:96px;
+  font-size:15px;line-height:1.45;padding-bottom:calc(112px + env(safe-area-inset-bottom));
 }
 .app{max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 16px 0;min-height:100vh;min-height:100dvh}
 /* Усередині Telegram висоту вікна дає сам Telegram — 100dvh там показує не те */
@@ -259,7 +259,10 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 #fin-verdict .vr{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;padding:4px 0}
 #fin-verdict .vr .n{color:var(--muted);font-weight:600}
 #fin-verdict .vr .z{font-weight:800;font-variant-numeric:tabular-nums}
-#fin-verdict .vsum{margin-top:6px;font-size:14.5px;font-weight:800}
+#fin-verdict .vsum{margin-top:8px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px}
+#fin-verdict .vdot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0}
+#fin-verdict .vsum.pos .vdot{background:var(--yellow)}
+#fin-verdict .vsum.neg .vdot{background:var(--red)}
 .orow .t{color:var(--muted);font-size:13px;width:88px;flex-shrink:0;font-variant-numeric:tabular-nums}
 .orow .a{flex:1}
 .orow .pk{color:var(--muted);font-size:13px;text-align:right;line-height:1.35}
@@ -552,7 +555,7 @@ html.map-full .tabbar{display:none}
     </div>
 
     <div class="stat-grid">
-      <div class="stat stat-main"><div class="v" id="s-personal">₴0</div><div class="k">На руки · твої гроші</div></div>
+      <div class="stat stat-main"><div class="v" id="s-personal">₴0</div><div class="k">На руки</div></div>
       <div class="stat"><div class="v" id="s-gross">₴0</div><div class="k">Виручка</div></div>
       <div class="stat"><div class="v" id="s-orders">0</div><div class="k">Замовлень</div></div>
       <div class="stat hours-tile"><div class="v" id="s-hours">0 хв</div><div class="k">На лінії</div></div>
@@ -644,7 +647,7 @@ html.map-full .tabbar{display:none}
         </svg>
       </button>
     </div>
-    <p class="hint" style="margin:-4px 2px 12px">Вулиці пофарбовані за твоєю статистикою: зелена — вигідна, червона — ні. Рахується із завершених замовлень, де є точка початку й кінця. Тапни лінію — покаже назву вулиці й цифри.</p>
+    <p class="hint" style="margin:-4px 2px 12px">Вулиці забарвлені за вашою статистикою: зелена — прибуткова, червона — ні. Розрахунок за завершеними замовленнями з відомими точками початку й кінця. Дотик до лінії показує назву вулиці та цифри.</p>
     <div id="rt-status" class="hint" style="margin:-6px 2px 12px"></div>
     <div id="geo-diag" class="hint" style="margin:-6px 2px 10px"></div>
     <button class="btn btn-ghost" id="geo-check" style="margin:0 2px 14px;width:auto;padding:9px 18px">Перевірити геолокацію</button>
@@ -704,7 +707,7 @@ html.map-full .tabbar{display:none}
     <div class="card">
       <div class="card-title">Історія заправок</div>
       <div id="refuel-list"></div>
-      <p class="hint">Тапни по заправці, щоб відредагувати</p>
+      <p class="hint">Дотик до заправки відкриває її для редагування</p>
     </div>
   </section>
 
@@ -766,7 +769,7 @@ html.map-full .tabbar{display:none}
     </div>
     <div id="admin-body"></div>
     <button class="btn btn-ghost btn-sm" id="admin-refresh">Оновити</button>
-    <p class="hint" style="text-align:center">Цю сторінку бачиш тільки ти. Сум і маршрутів окремих водіїв тут немає — лише середні по всіх.</p>
+    <p class="hint" style="text-align:center">Сторінка доступна лише власнику. Сум і маршрутів окремих водіїв тут немає — тільки середні показники.</p>
   </section>
 
   <section class="screen" id="screen-settings">
@@ -801,7 +804,7 @@ html.map-full .tabbar{display:none}
       </div>
       <p class="hint" id="fund-note"></p>
       <div class="field" style="margin-top:12px"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
-      <p class="hint">Податки — якщо ти ФОП. Постав 0, якщо не відкладаєш.</p>
+      <p class="hint">Актуально для ФОП. Якщо податки не відкладаються — залиште 0.</p>
     </div>
 
     <div class="card">
@@ -843,7 +846,7 @@ html.map-full .tabbar{display:none}
 
     <div class="card">
       <div class="card-title">Підтримка</div>
-      <div class="ins" id="tg-who" style="display:none"><span class="k">Ти увійшов як</span><span class="v" id="tg-name">—</span></div>
+      <div class="ins" id="tg-who" style="display:none"><span class="k">Обліковий запис</span><span class="v" id="tg-name">—</span></div>
       <div class="ins"><span class="k">Синхронізація</span><span class="v" id="cloud-state">—</span></div>
       <button class="btn btn-primary" id="btn-support" style="margin-top:12px">Написати в підтримку</button>
       <p class="hint" id="support-note"></p>
@@ -862,8 +865,8 @@ html.map-full .tabbar{display:none}
     <div class="card">
       <div class="card-title">Приватність</div>
       <div class="wchips" id="geo-tgl">
-        <button class="wchip on" data-g="1"><span class="e">📍</span>Гео увімкнено</button>
-        <button class="wchip" data-g="0"><span class="e">🚫</span>Гео вимкнено</button>
+        <button class="wchip on" data-g="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21.2s6.6-5.4 6.6-10.6a6.6 6.6 0 1 0-13.2 0c0 5.2 6.6 10.6 6.6 10.6z"/><circle cx="12" cy="10.4" r="2.4"/></svg></span>Гео увімкнено</button>
+        <button class="wchip" data-g="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 4.4 19.6 19.6"/><path d="M17.6 14.4c.7-1.4 1-2.7 1-3.8a6.6 6.6 0 0 0-9.9-5.7"/><path d="M6.2 7.6a6.6 6.6 0 0 0-.8 3c0 5.2 6.6 10.6 6.6 10.6s1.6-1.3 3.3-3.3"/></svg></span>Гео вимкнено</button>
       </div>
       <p class="hint">Геолокація живить погоду, мапу вулиць і шлях за зміну. Телефон окремо спитає дозвіл — останнє слово завжди за тобою. Вимкнеш — усе інше працюватиме, лише мапа лишиться порожньою.</p>
     </div>
@@ -898,7 +901,7 @@ html.map-full .tabbar{display:none}
 <div class="modal-bg mid" id="modal-support">
   <div class="modal">
     <h3>Написати в підтримку</h3>
-    <p class="hint" style="margin:0 0 12px">Що не так або чого бракує? Пиши як є — це читає жива людина, автор застосунку.</p>
+    <p class="hint" style="margin:0 0 12px">Опишіть проблему або пропозицію. Звернення читає автор застосунку, відповідь надійде в Telegram.</p>
     <div class="field"><textarea id="sup-text" rows="5" placeholder="Опиши, що сталося…"></textarea></div>
     <input type="file" id="sup-file" accept="image/*" multiple hidden>
     <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">Додати знімок екрана</button>
@@ -992,10 +995,10 @@ html.map-full .tabbar{display:none}
     </div>
     <div class="field" style="margin-bottom:6px"><label>Погода за сесію</label></div>
     <div class="wchips" id="cm-weather">
-      <button class="wchip" data-w="clear"><span class="e">☀️</span>Ясно</button>
-      <button class="wchip" data-w="cloud"><span class="e">☁️</span>Хмарно</button>
-      <button class="wchip" data-w="rain"><span class="e">🌧️</span>Дощ</button>
-      <button class="wchip" data-w="snow"><span class="e">❄️</span>Сніг</button>
+      <button class="wchip" data-w="clear"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.4M12 18.8v2.4M4.5 12H2.1M21.9 12h-2.4M6.7 6.7 5 5M19 19l-1.7-1.7M6.7 17.3 5 19M19 5l-1.7 1.7"/></svg></span>Ясно</button>
+      <button class="wchip" data-w="cloud"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.2 18.4h9.6a3.8 3.8 0 0 0 .4-7.6 5.6 5.6 0 0 0-10.7-1.4A3.9 3.9 0 0 0 7.2 18.4z"/></svg></span>Хмарно</button>
+      <button class="wchip" data-w="rain"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.4 15.6h9.2a3.6 3.6 0 0 0 .4-7.2 5.4 5.4 0 0 0-10.3-1.3 3.7 3.7 0 0 0 .7 8.5z"/><path d="M8.6 18.4l-.8 2M12 18.4l-.8 2M15.4 18.4l-.8 2"/></svg></span>Дощ</button>
+      <button class="wchip" data-w="snow"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v17.2M4.5 7.8l15 8.4M19.5 7.8l-15 8.4"/></svg></span>Сніг</button>
     </div>
     <div class="hint" id="cm-wnote" style="display:none;margin:-4px 0 10px;text-align:center"></div>
     <div class="hint" id="cm-preview" style="margin:0 0 12px;text-align:center"></div>
@@ -1016,12 +1019,12 @@ html.map-full .tabbar{display:none}
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
     </div>
     <div class="wchips" id="rf-full">
-      <button class="wchip on" data-full="1"><span class="e">⛽</span>До повного</button>
-      <button class="wchip" data-full="0"><span class="e">🫗</span>Частково</button>
+      <button class="wchip on" data-full="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5M5.5 9.5h7.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/></svg></span>До повного</button>
+      <button class="wchip" data-full="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.6h8.2l1.4 5.2-5.5 11.6H8.4L3.9 8.8z"/><path d="M4.6 11.4h11"/></svg></span>Частково</button>
     </div>
     <div class="wchips" id="rf-reset">
-      <button class="wchip on" data-reset="0"><span class="e">➡️</span>Лічильник далі</button>
-      <button class="wchip" data-reset="1"><span class="e">🔄</span>Обнулив лічильник</button>
+      <button class="wchip on" data-reset="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14"/><path d="M13.4 6.6 18.8 12l-5.4 5.4"/></svg></span>Лічильник далі</button>
+      <button class="wchip" data-reset="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8a8 8 0 1 1-2.6-5.9"/><path d="M20.4 4.2v5h-5"/></svg></span>Лічильник обнулено</button>
     </div>
     <div class="hint" id="rf-calc" style="margin:0 0 6px;text-align:center"></div>
     <div class="hint" id="rf-days" style="display:none;margin:0 0 12px;text-align:center"></div>
@@ -1099,7 +1102,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.7';
+const APP_VER='5.8';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1149,7 +1152,7 @@ let period='week';
 let dayCursor='';
 
 const WNAME={clear:'Ясно',cloud:'Хмарно',rain:'Дощ',snow:'Сніг'};
-const WEMO={clear:'☀️',cloud:'☁️',rain:'🌧️',snow:'❄️'};
+const WEMO={clear:'',cloud:'',rain:'',snow:''};
 const WLOC={clear:'ясну погоду',cloud:'хмарну погоду',rain:'дощ',snow:'сніг'};
 const IDLE_K=1.35; /* базовий коефіцієнт холостого пробігу, поки немає своєї статистики */
 
@@ -1279,7 +1282,7 @@ function oMeta(o,e){
     const f=+e.calc.fuel*(k/+e.km);
     if(f>0.5)p.push('пальне '+fmt(f));
   }
-  if(o.pay==='card')p.push('💳');
+  if(o.pay==='card')p.push('картка');
   if(+o.tip>0)p.push('чай '+fmt(+o.tip));
   return p.join(' · ')||'—';
 }
@@ -1753,13 +1756,13 @@ function weekdayHint(){
 function boostCardHTML(){
   const lines=[];
   const today=holidayFor(todayStr());
-  if(today)lines.push('🎉 Сьогодні <b>'+today.n+'</b> — '+today.note+'. Очікуй більше замовлень.');
+  if(today)lines.push('Сьогодні <b>'+today.n+'</b> — '+today.note+'. Очікується більше замовлень.');
   const wh=weekdayHint();
-  if(wh)lines.push('📅 '+wh);
+  if(wh)lines.push(wh);
   const nx=nextHoliday();
   if(nx&&nx.i<=3&&!today)lines.push('⏳ '+(nx.i===1?'Завтра':'Через '+nx.i+' дні(в)')+' — <b>'+nx.n+'</b>: заплануй вихід.');
   const bAge=data.backupAt?(Date.now()-data.backupAt)/86400000:99;
-  if(data.entries.length>=3&&bAge>7)lines.push('💾 Повній копії вже '+(data.backupAt?Math.floor(bAge)+' дн.':'0 днів — її ще немає')+' — зайди у «Ще» і збережи файл.');
+  if(data.entries.length>=3&&bAge>7)lines.push('Повній копії вже '+(data.backupAt?Math.floor(bAge)+' дн.':'0 днів — її ще немає')+' — зайди у «Ще» і збережи файл.');
   if(!lines.length)return '';
   return '<div class="card boost"><div class="card-title">Сьогодні на лінії</div>'+
     lines.map(l=>'<div class="b-line">'+l+'</div>').join('')+'</div>';
@@ -1786,7 +1789,7 @@ function renderHolidays(){
   hDays.sort((a,b)=>b.ds.localeCompare(a.ds)).slice(0,6).forEach(hd=>{
     const r=document.createElement('div');r.className='ins';
     const pct=avgN>0?Math.round(hd.net/avgN*100-100):null;
-    r.innerHTML='<span class="k">🎉 '+hd.n+' · '+fmtDate(hd.ds)+'</span>'+
+    r.innerHTML='<span class="k">'+hd.n+' · '+fmtDate(hd.ds)+'</span>'+
       '<span class="v">'+fmt(hd.net)+(pct!==null?' · '+(pct>=0?'+':'')+pct+'%':'')+'</span>';
     box.appendChild(r);
   });
@@ -1795,7 +1798,7 @@ function renderHolidays(){
     const p=Math.round(tot/avgN*100-100);
     const d=document.createElement('div');d.className='hint';d.style.marginTop='8px';
     d.textContent=Math.abs(p)>=5
-      ?'У свята ти заробляєш у середньому на '+Math.abs(p)+'% '+(p>0?'більше':'менше')+', ніж у звичайний день.'
+      ?'У свята заробіток у середньому на '+Math.abs(p)+'% '+(p>0?'вищий':'нижчий')+', ніж у звичайний день.'
       :'Свята поки що йдуть нарівні зі звичайними днями.';
     box.appendChild(d);
   }
@@ -1837,7 +1840,7 @@ function goalPace(){
     p:arr.reduce((a,e)=>a+(+e.calc.personal||0),0)
   });
   const same=done.filter(e=>new Date(e.date+'T12:00:00').getDay()===dow).slice(-8);
-  let st=sum(same),src=DOW_IN[dow]+' у тебе';
+  let st=sum(same),src=DOW_IN[dow];
   if(same.length<2||st.n<3||st.p<=0||st.h<=0){st=sum(done.slice(-14));src='за останніми змінами';}
   if(st.n<2||st.p<=0||st.h<=0)return null;
   return{perOrder:st.p/st.n,perHour:st.p/st.h,src:src};
@@ -1875,7 +1878,7 @@ function goalCardHTML(){
       '<span>Спершу відбий '+(T.rent>0?'оренду, пальне й комісію':'пальне й комісію')+' — аж тоді почнеш заробляти.</span></div>'+
       paceFor(short+g);
   }
-  else if(left<=0)line='<div class="goal-done">Ціль виконано · +'+fmt(tn-g)+' зверху 🏁</div>';
+  else if(left<=0)line='<div class="goal-done">Ціль виконано · +'+fmt(tn-g)+' понад план</div>';
   else{
     const need=ordersFor(left);
     line='<div class="goal-line">До цілі <b>'+fmt(left)+'</b></div>';
@@ -1971,7 +1974,7 @@ function renderShift(){
   html+=goalCardHTML()+boostCardHTML();
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
   if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийми перше!</div>';
-  html+='</div><p class="hint">Тапни по замовленню, щоб завершити або відредагувати</p></div>';
+  html+='</div><p class="hint">Дотик до замовлення завершує або відкриває його для редагування</p></div>';
   root.innerHTML=html;
 
   const box=$('active-orders');
@@ -2080,16 +2083,16 @@ $('om-time').addEventListener('input',omTimeLine);
 function omHint(){
   const lo=lastOdometer();
   if(odoWasReset()){
-    $('om-hint').textContent='Ти обнулив лічильник на заправці. Впиши, скільки на ньому зараз — зазвичай 1–3 км після виїзду з АЗС.';
+    $('om-hint').textContent='Лічильник обнулено на заправці. Вкажіть поточне значення — зазвичай 1–3 км після виїзду з АЗС.';
     return;
   }
-  $('om-hint').textContent=lo>0?'Попередній показник: '+fmt1(lo)+' км':'Впиши поточний показник добового одометра';
+  $('om-hint').textContent=lo>0?'Попередній показник: '+fmt1(lo)+' км':'Вкажіть поточний показник добового одометра';
 }
 $('om-cancel').addEventListener('click',()=>closeM('modal-order'));
 $('om-save').addEventListener('click',async()=>{
   const a=data.active;if(!a)return;
   const amount=num($('om-amount').value);
-  if(amount<=0){toast('Вкажи суму замовлення');return;}
+  if(amount<=0){toast('Вкажіть суму замовлення');return;}
   const odo=num($('om-odo').value);
   const t=toMs(dateOf(a.startT),$('om-time').value||nowHM());
   const o={id:Date.now(),t,endT:0,amount,odoStart:odo,odoEnd:0,pay:payOf('om-pay'),tip:0};
@@ -2130,7 +2133,7 @@ function renderFinVerdict(o){
   if(b.avgMin>0)
     h+='<div class="vr"><span class="n">Тривалість</span><span class="z">'+Math.round(m)+' хв <span class="n" style="font-weight:600">· у середньому '+Math.round(b.avgMin)+'</span></span></div>';
   const verdict=k>=1.15?['Вигідне замовлення','pos']:(k<=0.85?['Невигідне — довго за ці гроші','neg']:['Звичайне, близьке до середнього','']);
-  h+='<div class="vsum '+verdict[1]+'">'+(k>=1.15?'🟢 ':(k<=0.85?'🔴 ':'🟡 '))+verdict[0]+'</div>';
+  h+='<div class="vsum '+verdict[1]+'"><i class="vdot"></i>'+verdict[0]+'</div>';
   box.innerHTML=h; box.style.display='block';
 }
 function openFinish(id){
@@ -2174,7 +2177,7 @@ function finCalc(){
   const tip=num($('fin-tip').value),cash=num($('fin-cash').value);
   if(tip>0)p.push('чайові '+fmt(tip));
   if(payOf('fin-pay')==='card'&&amt>0)p.push('еквайринг −'+fmt(amt*(+data.settings.acquiringPct||0)/100));
-  $('fin-calc').textContent=p.join(' · ')||'Впиши одометр в кінці — і я порахую кілометраж';
+  $('fin-calc').textContent=p.join(' · ')||'Вкажіть кінцевий одометр — кілометраж порахується автоматично';
 
   /* Час одним рядком: видно завжди, редагується тапом */
   const tl=$('fin-time-line');
@@ -2213,9 +2216,9 @@ $('fin-save').addEventListener('click',function(){
   const f=findOrder(finId);if(!f)return;
   const o=f.o,open=isOpen(o);
   const amount=num($('fin-amount').value);
-  if(amount<=0){toast('Вкажи суму');return;}
+  if(amount<=0){toast('Вкажіть суму');return;}
   const os=num($('fin-odo-start').value), oe=num($('fin-odo-end').value);
-  if(oe>0&&os>0&&oe<os&&!resetValueFor(os,dateOf(o.t||Date.now()))){toast('Одометр в кінці менший за початковий. Якщо ти обнулив лічильник — спочатку впиши заправку з позначкою «Обнулив лічильник»');return;}
+  if(oe>0&&os>0&&oe<os&&!resetValueFor(os,dateOf(o.t||Date.now()))){toast('Кінцевий одометр менший за початковий. Якщо лічильник обнулено — спершу додайте заправку з відповідною позначкою');return;}
   arm(this,open?'Точно завершити?':'Точно зберегти?',async()=>{
     const ds=f.entry?f.entry.date:dateOf(data.active.startT);
     o.amount=amount;
@@ -2556,7 +2559,7 @@ function renderGeoDiag(){
   if(!g.total){box.style.display='none';return;}
   box.style.display='block';
   let t='Завершених замовлень: '+g.total+' · з точкою подачі: '+g.start+' · з обома точками: '+g.both;
-  if(!g.both)t+=' — мапа вулиць порожня саме тому. Натисни кнопку нижче й дозволь геолокацію.';
+  if(!g.both)t+=' — саме тому мапа вулиць порожня. Натисніть кнопку нижче й надайте доступ до геолокації.';
   box.textContent=t;
 }
 function renderRtStatus(){
@@ -2572,7 +2575,7 @@ function renderRtStatus(){
     box.textContent='Вулиці зʼявляться, коли будуть замовлення з точкою початку й кінця. Працюй з увімкненою геолокацією — мапа намалюється сама.';
     return;
   }
-  if(need){box.textContent='Ще не оброблено замовлень: '+need+'. Зайди на мапу ще раз — дорахую.';return;}
+  if(need){box.textContent='Не оброблено замовлень: '+need+'. Відкрийте мапу ще раз, щоб завершити розрахунок.';return;}
   const solid=streetStats().filter(s=>s.n>=3).length;
   if(have&&solid<8){box.textContent='Даних поки мало — показую всі вулиці, навіть з одним замовленням. Кольори стануть чесними, коли по вулиці набереться 3+ поїздки.';return;}
   box.style.display='none';
@@ -2588,14 +2591,14 @@ function renderStreetsList(){
   const list=streetsToShow(all).slice().sort((a,b)=>b.rate-a.rate);
   list.slice(0,6).forEach(s=>{
     const r=document.createElement('div');r.className='ins';
-    r.innerHTML='<span class="k">🛣 '+esc(s.name)+' · '+s.n+' зам.</span>'+
+    r.innerHTML='<span class="k">'+esc(s.name)+' · '+s.n+' зам.</span>'+
       '<span class="v">'+fmt(s.rate)+'/год</span>';
     box.appendChild(r);
   });
   const worst=list[list.length-1];
   if(list.length>=4&&worst&&worst.rate>0){
     const d=document.createElement('div');d.className='hint';d.style.marginTop='8px';
-    d.textContent='⚠️ Найповільніша за грошима: '+worst.name+' — '+fmt(worst.rate)+'/год.';
+    d.textContent='Найповільніша за грошима: '+worst.name+' — '+fmt(worst.rate)+'/год.';
     box.appendChild(d);
   }
 }
@@ -2879,7 +2882,7 @@ function renderZonesList(){
     const d=distKm(CITY_CENTER[0],CITY_CENTER[1],z.lat,z.lon);
     const r=document.createElement('div');r.className='ins';
     const fallback=dirName(z.lat-CITY_CENTER[0],z.lon-CITY_CENTER[1])+' · '+fmt1(d)+' км від центру';
-    r.innerHTML='<span class="k">📍 <span class="zn">'+fallback+'</span> · '+z.n+' зам.</span>'+
+    r.innerHTML='<span class="k"><span class="zn">'+fallback+'</span> · '+z.n+' зам.</span>'+
       '<span class="v">'+(z.rate>0?fmt(z.rate)+'/год':fmt(z.avg)+'/зам')+'</span>';
     box.appendChild(r);
     raionFor(z.lat,z.lon,name=>{if(name){const zn=r.querySelector('.zn');if(zn)zn.textContent=name;}});
@@ -3192,7 +3195,7 @@ function renderDayDetail(){
     if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
     h+='<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(e.calc.net)+'</span></div>';
     h+='<div class="ins"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
-    h+='<div class="ins"><span class="k"><b>На руки</b> · твої гроші</span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
+    h+='<div class="ins"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
     h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
     if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
     if(e.hours>=0.5)h+='<div class="ins"><span class="k">Ставка за зміну</span><span class="v">'+fmt(e.calc.net/e.hours)+'/год</span></div>';
@@ -3201,7 +3204,7 @@ function renderDayDetail(){
       const w=document.createElement('div');
       w.className='hint';
       w.style.cssText='margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,95,87,.4);background:rgba(255,95,87,.10);color:#FFB3AE';
-      w.innerHTML='⚠️ <b>Помилка збереження даних.</b> Підсумки зміни збереглись, а список із '+(+e.oc)+' замовлень втрачено — відновити його нема звідки.';
+      w.innerHTML='<b>Помилка збереження даних.</b> Підсумки зміни збереглись, а список із '+(+e.oc)+' замовлень втрачено — відновити його нема звідки.';
       card.appendChild(w);
     }
     if((e.orders||[]).length){
@@ -3213,7 +3216,7 @@ function renderDayDetail(){
         row.addEventListener('click',()=>openFinish(o.id));
         card.appendChild(row);
       });
-      const hint=document.createElement('p');hint.className='hint';hint.textContent='Тапни по замовленню, щоб відредагувати';
+      const hint=document.createElement('p');hint.className='hint';hint.textContent='Дотик до замовлення відкриває його для редагування';
       card.appendChild(hint);
     }
     box.appendChild(card);
@@ -3282,7 +3285,7 @@ function renderMileage(es){
   if(liters>0)add('Пальне за період',fmt1(liters)+' л · '+fmt(liters*(lastPrice()||netPrice())));
   if(ord>0){
     const note=document.createElement('div');note.className='hint';note.style.marginTop='8px';
-    note.textContent='На кожні 100 км з пасажиром ти проїжджаєш '+Math.round(idle/ord*100)+' км порожняком.';
+    note.textContent='На кожні 100 км з пасажиром припадає '+Math.round(idle/ord*100)+' км порожнього пробігу.';
     box.appendChild(note);
   }
 }
@@ -3301,7 +3304,7 @@ function renderHourly(es){
   box.innerHTML='';
   const hrs=Object.keys(cover).map(Number);
   if(!hrs.length){
-    box.innerHTML='<div class="empty" style="width:100%">Закрий першу зміну — і я покажу твої найкращі години</div>';
+    box.innerHTML='<div class="empty" style="width:100%">Найкращі години зʼявляться після першої закритої зміни</div>';
     top.textContent='';return;
   }
   const h0=Math.min(...hrs),h1=Math.max(...hrs);
@@ -3420,7 +3423,7 @@ function renderQuality(es){
   const costKm=fuelCost(1,s)*idleFactor();
   const be=costKm/(1-s.commissionPct/100);
   const bh=document.createElement('div');bh.className='hint';bh.style.margin='0 0 8px';
-  bh.textContent='Усі цифри тут — за сумою, яку ти бачиш у замовленні до прийняття (до комісії та пального).';
+  bh.textContent='Розрахунок за сумою, яку видно в замовленні до прийняття: без урахування комісії та пального.';
   box.appendChild(bh);
   add('Вигідно від','≈ '+fmt1(be)+' ₴/км');
   if(!ords.length){
@@ -3496,7 +3499,7 @@ function renderInsights(es){
   data.entries.forEach(e=>{byDate[e.date]=(byDate[e.date]||0)+e.calc.net;});
   const topDays=Object.entries(byDate).sort((a,b)=>b[1]-a[1]).slice(0,3);
   if(topDays.length>=2){
-    const medals=['🏆 Рекорд','🥈 Друге місце','🥉 Третє місце'];
+    const medals=['Рекорд','Друге місце','Третє місце'];
     topDays.forEach((d,i)=>add(medals[i]+' · '+fmtDate(d[0]),fmt(d[1])));
   }
   const now=new Date();
@@ -3556,7 +3559,7 @@ function renderDiag(){
   add('Активні сховища',real.length?real.join(', '):'немає');
   add('Адреса',isFileProtocol()?'локальний файл':location.host);
   add('Сторінка',isFileProtocol()?'—':(location.pathname||'/'));
-  add('Перевірка збереження',persistOK===true?'✅ працює':persistOK===false?'❌ обнуляється':'⏳ перевіримо при наступному запуску');
+  add('Перевірка збереження',persistOK===true?'працює':persistOK===false?'обнуляється':'перевіримо при наступному запуску');
   add('Записів у пам\'яті',data.entries.length+' сесій · '+data.refuels.length+' заправок');
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
   const tu=tgUser();
@@ -3566,7 +3569,7 @@ function renderDiag(){
   top.className='diag';
   if(persistOK===false||!real.length){
     top.className='diag bad';
-    top.innerHTML='<b>Дані тут не зберігаються</b>Це середовище стирає записи після закриття. Веди зміни там, де перевірка показує ✅, або одразу після зміни тисни «Скопіювати дані в буфер» у розділі «Ще».'+
+    top.innerHTML='<b>Дані тут не зберігаються</b>Це середовище стирає записи після закриття. Веди зміни там, де перевірка показує «працює», або одразу після зміни тисни «Скопіювати дані в буфер» у розділі «Ще».'+
       (isFileProtocol()?'<div class="mini">Файл відкрито напряму з «Файлів» — iOS дає йому тимчасове сховище. Потрібна вебадреса.</div>':'');
   }else if(persistOK===true){
     top.className='diag good';
@@ -3625,27 +3628,31 @@ $('btn-paste-apply').addEventListener('click',function(){
 /* ══ ІСТОРІЯ ВЕРСІЙ ══ */
 const APP_DATE='23.08.2026';
 const CHANGELOG=[
-  {v:'4.2',d:'24.08.2026',items:[
-    'Вигляд став спокійнішим: картки відділяються тоном, а не рамками, підписи — звичайним шрифтом замість розрядженого капсу'
-  ],tip:'Нічого не переставляли — усе на своїх місцях, змінилась лише подача.'},
+  {v:'5.7',d:'25.08.2026',items:[
+    'Ціль дня показує, скільки ще замовлень і скільки часу лишилось — за вашою статистикою в цей день тижня',
+    'Завершення замовлення за кілька секунд: сума, одометр і здача на одному екрані',
+    'Знижка на АЗС враховується в розрахунку пального',
+    'Підтримка прямо із застосунку — можна додати до пʼяти знімків екрана',
+    'Мапа розгортається на весь екран, зʼявилась темна підкладка',
+    'Знайомство для нових водіїв: коротке пояснення й перше налаштування',
+    'Перший місяць — безкоштовно. Стан підписки видно в розділі «Ще»',
+    'Оновлено вигляд застосунку'
+  ],tip:'Знижку на АЗС і обʼєм бака вкажіть у «Ще» → «Пальне». Ціль дня почне показувати темп після кількох закритих змін.'},
   {v:'4.1',d:'24.08.2026',items:[
-    'Записи тепер зберігаються в хмарі й привʼязані до твого Telegram — відкрив з іншого телефона, і всі зміни на місці',
-    'Налаштування розділені на дві групи: «Мої налаштування» і «Застосунок»',
-    'Кнопка налаштувань угорі стала шестернею'
-  ],tip:'Синхронізація працює сама, поки застосунок відкрито через бота. Стан видно в «Підтримці».'},
+    'Записи зберігаються в хмарі й привʼязані до Telegram — з іншого пристрою все на місці',
+    'Підтримка й резервне копіювання в розділі «Ще»'
+  ],tip:'Синхронізація працює автоматично, поки застосунок відкрито через бота.'},
   {v:'4.0',d:'24.08.2026',items:[
-    'Зміни й замовлення: відкривай скільки завгодно сесій за день, кожне замовлення з часом та одометром',
-    'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й відкладеного на авто',
-    'Світлофор замовлень: зелене — вигідніше за твій середній темп, червоне — гірше',
+    'Зміни й замовлення: скільки завгодно сесій за день, кожне замовлення з часом і одометром',
+    'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й запасу',
+    'Оцінка замовлень: зелене — вигідніше за середній темп, червоне — гірше',
     'Оренда авто: сумою за день, тиждень чи місяць — або відсотком від чистого',
-    'Авто-фонд: відсотком від чистого або гривнями за кілометр',
-    'Бак: скільки пального лишилось, на скільки кілометрів вистачить і скільки вже накопичено на наступну заправку',
-    'Витрата пального рахується від бака до бака, з реальних чеків',
-    'Мапа вулиць: кожна дорога пофарбована за твоїм заробітком на годину',
-    'Ціль дня, аналітика по годинах і днях тижня, календар свят',
-    'Повна резервна копія одним файлом або через буфер обміну',
-    'Працює прямо в Telegram — відкривається з бота, встановлювати нічого не треба'
-  ],tip:'Почни з «Ще»: перевір витрату пального, ціну літра й комісію платформи. Орендуєш авто — там же вкажи оренду. Далі просто відкривай зміну щоранку.'}
+    'Запас: відсотком від чистого або гривнями за кілометр',
+    'Бак: залишок пального, запас ходу й накопичення на наступну заправку',
+    'Витрата пального рахується від повного бака до повного, за чеками',
+    'Мапа вулиць за заробітком на годину, аналітика по годинах і днях тижня',
+    'Резервна копія одним файлом'
+  ],tip:'Почніть з розділу «Ще»: витрата пального, ціна літра й комісія платформи.'}
 ];
 
 function renderChangelog(onlyNew){
@@ -3715,7 +3722,7 @@ function introSetupHTML(kind){
     '<div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
     '<div class="field"><label>Ціль на день, ₴ на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
     '</div>'+
-    '<p class="hint">Ціль — це чисто твої гроші, вже після пального, комісії та запасу.</p>';
+    '<p class="hint">Ціль рахується від суми на руки — після пального, комісії та запасу.</p>';
 }
 function renderIntro(){
   const sl=INTRO[introIx],last=introIx===INTRO.length-1;
@@ -3775,7 +3782,7 @@ $('intro-next').addEventListener('click',async()=>{
   grabIntro();
   if(introIx<INTRO.length-1){introIx++;renderIntro();return;}
   await finishIntro();
-  toast('Готово. Тапни шашечку — і почали');
+  toast('Готово. Можна відкривати першу зміну');
 });
 $('intro-back').addEventListener('click',()=>{if(introIx>0){grabIntro();introIx--;renderIntro();}});
 $('intro-skip').addEventListener('click',async()=>{await finishIntro();toast('Налаштування — у «Ще»');});
@@ -3935,7 +3942,7 @@ $('sup-send').addEventListener('click',async function(){
     supClearShots();
     toast(shotsLost?'Текст надіслано. Знімки не пройшли ('+shotsLost+')':'Надіслано. Відповідь прийде в цей же бот');
   }catch(e){
-    $('sup-state').textContent='Не вийшло надіслати. Перевір інтернет і спробуй ще раз.';
+    $('sup-state').textContent='Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.';
     this.disabled=false;this.textContent='Надіслати';
   }
 });
@@ -4139,7 +4146,7 @@ function admAna(d){
 
   h+='<div class="card"><div class="card-title">Версії в ходу</div>'+
      (vs.length?vs.map(v=>admRow(v.v==='—'?'не оновлювались':'версія '+v.v,v.n)).join(''):'<div class="empty">—</div>')+
-     '<p class="hint">Хто застряг на старій версії — у того може не працювати те, що ти вже полагодив.</p></div>';
+     '<p class="hint">У кого стара версія — у того може не працювати вже виправлене.</p></div>';
   return h;
 }
 
@@ -4164,7 +4171,7 @@ function admTalk(d){
       (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
       '<div class="b">'+esc(x.body||'')+(x.shot?' <i style="font-style:normal;color:var(--muted)">· зі знімком</i>':'')+'</div></div>').join('')
       :'<div class="empty">Звернень ще не було</div>')+
-    '<p class="hint">Повний текст із фото приходить тобі в бот. Тут — щоб не губилось.</p></div>';
+    '<p class="hint">Повний текст зі знімками надходить у бот. Тут — щоб звернення не губились.</p></div>';
 }
 
 let admBill=null;
@@ -4324,8 +4331,8 @@ function renderSupport(){
     $('tg-name').textContent=[u.first_name,u.last_name].filter(Boolean).join(' ')||('@'+(u.username||u.id));
   }else who.style.display='none';
   $('support-note').textContent=TG
-    ? 'Повідомлення прийде автору застосунку в Telegram, відповість він тобі там же, у боті.'
-    : 'Відкриється чат у Telegram. Пиши про будь-яку помилку — це справді допомагає.';
+    ? 'Звернення надійде автору застосунку в Telegram. Відповідь прийде в цей самий чат.'
+    : 'Звернення відкриється в Telegram. Повідомляйте про будь-яку помилку — це впливає на наступні оновлення.';
   $('btn-support').disabled=!TG&&!SUPPORT_BOT;
 }
 $('btn-support').addEventListener('click',openSupport);
@@ -4366,7 +4373,7 @@ async function driveUp(silent){
     data.driveAt=Date.now();
     await persist();
     renderAccount();
-    if(!silent)toast('Збережено у твій Drive');
+    if(!silent)toast('Збережено в Google Drive');
     return true;
   }catch(e){if(!silent)toast('Drive: не вдалося ('+e.message+')');return false;}
 }
@@ -4452,7 +4459,7 @@ function renderPurse(){
   if(last&&last.calc&&+last.calc.fuel>0)
     h+='<div class="ins"><span class="k">За останню зміну відклади</span><span class="v">'+fmt(+last.calc.fuel)+'</span></div>';
   h+='<p class="hint" style="margin:8px 0 0">'+(bal<0
-    ? 'Ти заправив більше, ніж відкладено — папка в мінусі на <b>'+fmt(-bal)+'</b>. Це нормально одразу після великої заправки: наступні зміни її наповнять.'
+    ? 'Заправлено більше, ніж відкладено — баланс мінусовий на <b>'+fmt(-bal)+'</b>. Це нормально одразу після великої заправки: наступні зміни його вирівняють.'
     : 'Стільки грошей на пальне має лежати окремо. Після кожної заправки цифра зменшується, після кожної зміни — росте.')+'</p>';
   box.innerHTML=h;
 }
@@ -4530,7 +4537,7 @@ function savingHTML(){
     '<div class="progress"><div class="fill'+(done?' done':'')+'" style="width:'+Math.max(2,pc)+'%"></div></div>'+
     '<div class="progress-text"><span>'+(done?'вистачає на повний бак':'з '+fmt(g.target)+' за бак')+'</span><span>'+pc+'%</span></div>'+
     (done
-      ? '<p class="hint" style="margin-top:8px">🏁 <b>Накопичив на повний бак.</b> Поки їдеш на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — твої, можеш забирати.</p>'
+      ? '<p class="hint" style="margin-top:8px"><b>Накопичено на повний бак.</b> Поки їдеш на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — твої, можеш забирати.</p>'
       : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Рахунок пішов від останньої заправки й обнулиться на наступній.</p>');
 }
 function bindGauge(){
@@ -4550,7 +4557,7 @@ function renderTank(){
   const avg=avgConsumption();
   $('mode-note').textContent=s.calcMode==='exact'
     ? (ps.length?'Витрата береться з реальних чеків: '+ps.length+' завершених баків. Простій на світлофорах уже врахований.'
-               :'Додай ще одну заправку до повного — і почнеться точний облік. Поки рахую за налаштуваннями.')
+               :'Додайте ще одну заправку до повного бака — після цього почнеться точний облік. Поки розрахунок за налаштуваннями.')
     : 'Рахую за витратою '+fmt1(s.consumption)+' л/100 км з налаштувань. Для точності перейди на облік по баках.';
 
   /* динаміка ціни */
@@ -4662,7 +4669,7 @@ function rfCalc(){
     const km=prev.reset?odo:(odo-prev.odo);
     if(km>0)p.push('за '+fmt1(km)+' км → '+fmt1(l/km*100)+' л/100');
   }
-  $('rf-calc').textContent=p.join(' · ')||'Впиши літри з копійками та одометр';
+  $('rf-calc').textContent=p.join(' · ')||'Вкажіть літри з копійками та показник одометра';
   const db=$('rf-days');
   if(db){
     const d=daysSinceRefuel();
@@ -4689,8 +4696,8 @@ $('btn-refuel').addEventListener('click',()=>openRefuel(null));
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
 $('rf-save').addEventListener('click',function(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
-  if(l<=0){toast('Вкажи літри з чека');return;}
-  if(pr<=0){toast('Вкажи ціну за літр');return;}
+  if(l<=0){toast('Вкажіть літри з чека');return;}
+  if(pr<=0){toast('Вкажіть ціну за літр');return;}
   const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
   if(dup){toast('Заправка з таким одометром уже є');return;}
   arm(this,rfId?'Точно зберегти?':'Точно записати?',async()=>{
@@ -4861,9 +4868,9 @@ function renderRentMode(){
   const perDay=rentPerDay(s);
   $('rent-note').textContent=pct
     ? (+s.rentPct>0?'Віддаєш '+fmt1(s.rentPct)+'% з чистого за зміну. У слабкий день заплатиш менше.'
-                   :'Постав 0, якщо авто своє.')
+                   :'Для власного авто залиште 0.')
     : (perDay>0?'Виходить '+fmt(perDay)+' на добу. Якщо за день дві сесії — сума ділиться між ними, а не знімається двічі.'
-               :'Постав 0, якщо авто своє — тоді оренди в розрахунку не буде видно.');
+               :'Для власного авто залиште 0 — оренда не враховуватиметься.');
 }
 function grabRentField(){
   const s=data.settings;
@@ -4970,7 +4977,7 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
   const real=store.names.filter(n=>n!=='memory');
   $('storage-note').textContent=real.length
     ? 'Дані пишуться одразу в кілька сховищ ('+real.join(', ')+') — відкрита сесія нікуди не дінеться.'
-    : 'Увага: тимчасове сховище. Роби копію у файл.';
+    : 'Увага: тимчасове сховище. Зробіть копію у файл.';
   if(!real.length)toast('Тимчасовий режим: зроби копію у файл');
   $('save-state').textContent=data.savedAt
     ? 'Останнє збереження: '+fmtDate(dateOf(data.savedAt))+' '+hm(data.savedAt)+' · версія '+APP_VER
@@ -5008,8 +5015,13 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
     else setTimeout(openIntro,700);
   }
   /* показуємо новинки один раз після оновлення */
-  if(data.settings.onboarded&&data.settings.seenVer&&data.settings.seenVer!==APP_VER)setTimeout(()=>renderChangelog(true),600);
-  else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
+  /* вікно «Що нового» показуємо лише тоді, коли справді зʼявився новий запис,
+     а не на кожне оновлення версії: більшість випусків — це виправлення */
+  if(data.settings.onboarded&&data.settings.seenVer){
+    const fresh=CHANGELOG.some(r=>verNum(r.v)>verNum(data.settings.seenVer));
+    if(fresh)setTimeout(()=>renderChangelog(true),600);
+    else if(data.settings.seenVer!==APP_VER){data.settings.seenVer=APP_VER;persist();}
+  }else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
   if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
   cloudPull();
   setTimeout(loadBilling,1200);
