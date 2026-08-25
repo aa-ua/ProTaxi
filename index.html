@@ -1161,7 +1161,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.9';
+const APP_VER='1.10';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1669,7 +1669,7 @@ const isRentCar=()=>data.settings.carMode==='rent';
 const fundLabel=()=>isRentCar()?'Запас на оренду':'Запас на авто';
 const fundHint=()=>isRentCar()
   ? 'Сюди з кожної зміни падає частка, щоб оренду завжди було чим заплатити — навіть у слабкий тиждень.'
-  : 'Сюди з кожної зміни падає частка. Витрачай тільки на авто: ТО, гума, ремонт.';
+  : 'Сюди з кожної зміни падає частка. Витрачайте тільки на авто: ТО, гума, ремонт.';
 
 /* Авто-фонд рахуємо або відсотком від чистого, або гривнями за кілометр —
    як зручніше водієві. Більше за чисте не відкладаємо, інакше «на руки» пішло б у мінус. */
@@ -1914,7 +1914,7 @@ function weekdayHint(){
     const stats=Object.keys(grp).map(k=>({w:+k,avg:grp[k].reduce((a,b)=>a+b,0)/grp[k].length})).sort((a,b)=>b.avg-a.avg);
     const rank=stats.findIndex(s=>s.w===w);
     if(rank===0&&stats[0].avg>0)return 'Сьогодні '+WDFULL[w].toLowerCase()+' — за твоєю статистикою найприбутковіший день (~<b>'+fmt(stats[0].avg)+'</b> чистими).';
-    if(rank===1&&stats[1].avg>0)return WDFULL[w]+' — у топ-2 твоїх днів (~<b>'+fmt(stats[1].avg)+'</b>). Гарний день для повної зміни.';
+    if(rank===1&&stats[1].avg>0)return WDFULL[w]+' — у топ-2 ваших днів (~<b>'+fmt(stats[1].avg)+'</b>). Гарний день для повної зміни.';
   }
   if(w===5||w===6||w===0)return WDFULL[w]+' — традиційно високий попит, особливо ввечері.';
   return '';
@@ -2126,7 +2126,7 @@ function renderShift(){
     '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">у запас</div></div>'+
     '</div>'+
     '<div class="odo-note">'+fundLabel()+': '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
-    (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуй заказ з одометром — і цифри стануть точними.</div>':'')+
+    (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуйте замовлення з одометром — і цифри стануть точними.</div>':'')+
     (stale?'<div class="warn">Сесія відкрита ще '+fmtDate(dateOf(a.startT))+' — закрий або скасуй її</div>':'')+
     '<div class="warn" id="t-nudge" style="display:none"></div>'+
     '</div>';
@@ -3363,7 +3363,7 @@ function renderDayDetail(){
     const oc=list.reduce((a,e)=>a+(e.oc||0),0);
     const sum=document.createElement('div');sum.className='card';
     sum.innerHTML='<div class="card-title">Зміна за '+fmtDate(dsel)+' · '+list.length+' сесії(й)</div>'+
-      '<div class="ins"><span class="k"><b>На руки</b> · твої гроші</span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(S('personal'))+'</span></div>'+
+      '<div class="ins"><span class="k"><b>На руки</b> · ваші гроші</span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(S('personal'))+'</span></div>'+
       '<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(gross)+'</span></div>'+
       (tips>0?'<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(tips)+'</span></div>':'')+
       '<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(S('net'))+'</span></div>'+
@@ -3455,7 +3455,7 @@ function renderMileage(es){
   const add=(k,v)=>{const r=document.createElement('div');r.className='ins';r.innerHTML='<span class="k">'+k+'</span><span class="v">'+v+'</span>';box.appendChild(r);};
   const withOdo=es.filter(e=>+e.km>0);
   if(!withOdo.length){
-    box.innerHTML='<div class="empty">Записуй одометр на старті й у кінці зміни — і побачиш, скільки з\'їдає холостий хід</div>';
+    box.innerHTML='<div class="empty">Записуйте одометр на старті й у кінці зміни — і буде видно, скільки з\'їдає холостий хід</div>';
     return;
   }
   const tot=withOdo.reduce((a,e)=>a+ +e.km,0);
@@ -3615,7 +3615,7 @@ function renderQuality(es){
   add('Вигідно від','≈ '+fmt1(be)+' ₴/км');
   if(!ords.length){
     const n=document.createElement('div');n.className='hint';n.style.marginTop='8px';
-    n.textContent='Поріг рахую з витрати '+fmt1(s.consumption)+' '+FK(s).per+' і холостого ходу. Завершуй заказ з одометром — і додам розбивку по дистанціях.';
+    n.textContent='Поріг рахую з витрати '+fmt1(s.consumption)+' '+FK(s).per+' і холостого ходу. Завершуйте замовлення з одометром — і додам розбивку по дистанціях.';
     box.appendChild(n);return;
   }
   const pk=o=>o.amount/oKm(o);
@@ -3870,7 +3870,7 @@ const SVI=(function(){
   return o;
 })();
 const INTRO=[
- {ico:SVI.money,t:'Виручка — це не твої гроші',
+ {ico:SVI.money,t:'Виручка — це ще не ваші гроші',
   p:'Частина кожної тисячі йде платформі, частина згорає в баку, частина — на ремонт, який рано чи пізно настане.<br><br>ProTaxi віднімає це автоматично й показує одну цифру — <b>скільки залишилось вам</b>.'},
  {ico:SVI.car,t:'Один день у застосунку',
   p:'На початку зміни — <b>зелена кнопка</b> і показник одометра.<br>На кожному замовленні — «Прийняти», в кінці — сума й одометр.<br>Наприкінці дня зміна закривається одним дотиком.'},
@@ -3878,7 +3878,7 @@ const INTRO=[
   p:'Заправка записується з чека. Витрата рахується <b>від повного бака до повного</b> — за фактом, а не за паспортом авто.<br><br>Видно залишок у баку й скільки вже відкладено на наступну заправку.'},
  {ico:SVI.map,t:'Де ти справді заробляєш',
   p:'Вулиці на мапі забарвлені за вашим заробітком на годину: <b>зелена — прибуткова, червона — ні</b>.<br><br>Окремо — найкращі години та дні тижня за вашою власною статистикою.'},
- {ico:SVI.lock,t:'Твої гроші — твоя справа',
+ {ico:SVI.lock,t:'Ваші гроші — ваша справа',
   p:'Записи зберігаються на вашому телефоні. Копія в хмарі <b>привʼязана до вашого Telegram</b> — з чужого акаунта її не відкрити.<br><br>Дані не передаються нікому: ні службі таксі, ні податковій, ні рекламодавцям. Ми не питаємо ні прізвища, ні номера авто, ні платіжних даних.'},
  {setup:'car',t:'Авто',p:'Від цього залежить, що застосунок віднімає й на що збирає запас.'},
  {setup:'fuel',t:'Пальне',p:'Без цих трьох цифр пальне рахуватиметься навмання.'},
