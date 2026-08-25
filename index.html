@@ -130,9 +130,28 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r{border-left-color:var(--red);background:linear-gradient(90deg,rgba(255,95,87,.10),transparent 62%)}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
-/* Знімок екрана у зверненні */
-#sup-shot{margin-top:10px;text-align:center}
-#sup-prev{max-width:100%;max-height:190px;border-radius:12px;display:block;margin:0 auto 4px}
+/* Адмінка */
+.adm-days{display:flex;align-items:flex-end;gap:3px;height:56px;margin:14px 0 4px}
+.adm-days .b{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%}
+.adm-days .f{background:var(--yellow);border-radius:3px;min-height:2px;opacity:.85}
+.adm-days .f.n{background:var(--amber)}
+.adm-dl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);font-weight:700;margin-bottom:10px}
+.adm-leg{display:flex;gap:14px;font-size:11.5px;color:var(--muted);font-weight:700;margin-bottom:12px}
+.adm-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.adm-u{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.adm-u:last-child{border-bottom:none}
+.adm-u .n{flex:1;min-width:0}
+.adm-u .n b{display:block;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm-u .n span{font-size:11.5px;color:var(--muted);font-weight:700}
+.adm-u .s{font-size:12px;font-weight:800;color:var(--yellow);white-space:nowrap}
+/* Знімки екрана у зверненні */
+.shots{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.shots:empty{margin-top:0}
+.shot{position:relative;width:74px;height:74px;border-radius:12px;overflow:hidden;background:var(--surface2)}
+.shot img{width:100%;height:100%;object-fit:cover;display:block}
+.shot button{position:absolute;top:3px;right:3px;width:22px;height:22px;padding:0;border:none;border-radius:50%;
+  background:rgba(0,0,0,.66);color:#fff;font:800 13px/1 inherit;font-family:inherit;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
 /* Знайомство: спершу кілька екранів «навіщо це», далі три кроки налаштування */
 .modal.intro{padding:16px 18px 18px}
 .modal.intro #intro-next{margin-top:16px}
@@ -712,6 +731,8 @@ html.map-full .tabbar{display:none}
     <div class="card" id="admin-card" style="display:none">
       <div class="card-title">Статистика застосунку</div>
       <div id="admin-rows"></div>
+      <div id="admin-days"></div>
+      <div id="admin-list"></div>
       <button class="btn btn-ghost btn-sm" id="admin-refresh">Оновити</button>
     </div>
 
@@ -764,12 +785,9 @@ html.map-full .tabbar{display:none}
     <h3>Написати в підтримку</h3>
     <p class="hint" style="margin:0 0 12px">Що не так або чого бракує? Пиши як є — це читає жива людина, автор застосунку.</p>
     <div class="field"><textarea id="sup-text" rows="5" placeholder="Опиши, що сталося…"></textarea></div>
-    <input type="file" id="sup-file" accept="image/*" hidden>
+    <input type="file" id="sup-file" accept="image/*" multiple hidden>
     <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">📷 Додати знімок екрана</button>
-    <div id="sup-shot" style="display:none">
-      <img id="sup-prev" alt="">
-      <button class="lnk" id="sup-drop" type="button">Прибрати знімок</button>
-    </div>
+    <div class="shots" id="sup-shots"></div>
     <div class="hint" id="sup-state" style="margin:0 0 4px"></div>
     <button class="btn btn-primary" id="sup-send">Надіслати</button>
     <button class="btn btn-ghost" id="sup-cancel">Назад</button>
@@ -966,7 +984,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='4.7';
+const APP_VER='4.8';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3642,7 +3660,8 @@ async function sbRpc(fn,body){
   return await r.json();
 }
 /* Знімок стискаємо просто на телефоні: у бот має летіти картинка, а не 8 мегабайт */
-let supBlob=null;
+const SUP_MAX_SHOTS=5;
+let supShots=[];
 function shrinkImage(file,maxSide,quality){
   return new Promise(function(res,rej){
     const fr=new FileReader();
@@ -3662,38 +3681,57 @@ function shrinkImage(file,maxSide,quality){
     fr.readAsDataURL(file);
   });
 }
-function supClearShot(){
-  supBlob=null;
+function supClearShots(){
+  supShots.forEach(s=>{try{URL.revokeObjectURL(s.url);}catch(e){}});
+  supShots=[];
   $('sup-file').value='';
-  $('sup-shot').style.display='none';
-  $('sup-prev').removeAttribute('src');
-  $('sup-pick').textContent='📷 Додати знімок екрана';
+  renderShots();
+}
+function renderShots(){
+  const box=$('sup-shots');
+  box.innerHTML='';
+  supShots.forEach(function(s,i){
+    const d=document.createElement('div');d.className='shot';
+    const im=document.createElement('img');im.src=s.url;im.alt='';
+    const x=document.createElement('button');x.type='button';x.textContent='✕';x.setAttribute('aria-label','Прибрати');
+    x.addEventListener('click',function(){
+      try{URL.revokeObjectURL(s.url);}catch(e){}
+      supShots.splice(i,1);renderShots();
+    });
+    d.appendChild(im);d.appendChild(x);box.appendChild(d);
+  });
+  $('sup-pick').textContent=supShots.length
+    ? '📷 Ще знімок · '+supShots.length+' з '+SUP_MAX_SHOTS
+    : '📷 Додати знімок екрана';
+  $('sup-pick').disabled=supShots.length>=SUP_MAX_SHOTS;
 }
 $('sup-pick').addEventListener('click',()=>$('sup-file').click());
-$('sup-drop').addEventListener('click',supClearShot);
 $('sup-file').addEventListener('change',async function(){
-  const f=this.files&&this.files[0];
-  if(!f)return;
-  try{
-    supBlob=await shrinkImage(f,1600,0.75);
-    $('sup-prev').src=URL.createObjectURL(supBlob);
-    $('sup-shot').style.display='';
-    $('sup-pick').textContent='📷 Інший знімок';
-    $('sup-state').textContent='';
-  }catch(e){
-    supClearShot();
-    $('sup-state').textContent='Не вдалося прочитати картинку. Спробуй інший знімок.';
+  const files=[...(this.files||[])];
+  this.value='';
+  if(!files.length)return;
+  let over=false;
+  for(const f of files){
+    if(supShots.length>=SUP_MAX_SHOTS){over=true;break;}
+    try{
+      const b=await shrinkImage(f,1600,0.75);
+      supShots.push({blob:b,url:URL.createObjectURL(b)});
+    }catch(e){
+      $('sup-state').textContent='Один зі знімків прочитати не вдалося.';
+    }
   }
+  renderShots();
+  if(over)$('sup-state').textContent='Більше '+SUP_MAX_SHOTS+' знімків за раз не надішлеш.';
 });
 /* Кладемо знімок у сховище й повертаємо адресу, дійсну кілька хвилин */
-async function uploadShot(){
+async function uploadShot(blob){
   const slot=await sbRpc('support_slot',{p_init_data:TG.initData});
   const path=slot&&slot.path;
   if(!path)throw new Error('slot');
   const up=await fetch(SB_URL+'/storage/v1/object/support/'+path,{
     method:'POST',
     headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},
-    body:supBlob
+    body:blob
   });
   if(!up.ok)throw new Error('upload '+up.status);
   const sg=await fetch(SB_URL+'/storage/v1/object/sign/support/'+path,{
@@ -3715,7 +3753,7 @@ function openSupport(){
   }
   $('sup-text').value='';
   $('sup-state').textContent='';
-  supClearShot();
+  supClearShots();
   const b=$('sup-send');b.disabled=false;b.textContent='Надіслати';
   openM('modal-support');
   setTimeout(()=>$('sup-text').focus(),150);
@@ -3723,16 +3761,19 @@ function openSupport(){
 $('sup-cancel').addEventListener('click',()=>closeM('modal-support'));
 $('sup-send').addEventListener('click',async function(){
   const t=$('sup-text').value.trim();
-  if(t.length<3&&!supBlob){toast('Напиши хоч кілька слів');return;}
+  if(t.length<3&&!supShots.length){toast('Напиши хоч кілька слів');return;}
   this.disabled=true;this.textContent='Надсилаю…';
   $('sup-state').textContent='';
   try{
-    let url=null;
-    if(supBlob){this.textContent='Надсилаю знімок…';url=await uploadShot();}
+    const urls=[];
+    for(let i=0;i<supShots.length;i++){
+      this.textContent='Надсилаю знімок '+(i+1)+' з '+supShots.length+'…';
+      urls.push(await uploadShot(supShots[i].blob));
+    }
     this.textContent='Надсилаю…';
-    await sbRpc('support',{p_init_data:TG.initData,p_text:t.slice(0,2000),p_photo:url});
+    await sbRpc('support',{p_init_data:TG.initData,p_text:t.slice(0,2000),p_photos:urls.length?urls:null});
     closeM('modal-support');
-    supClearShot();
+    supClearShots();
     toast('Надіслано. Відповідь прийде в цей же бот');
   }catch(e){
     $('sup-state').textContent='Не вийшло надіслати. Перевір інтернет і спробуй ще раз.';
@@ -3754,12 +3795,45 @@ async function renderAdmin(){
     const row=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
     $('admin-rows').innerHTML=
       row('Усього водіїв',st.users||0)+
-      row('Нових за добу',st.new_1d||0)+
-      row('Нових за тиждень',st.new_7d||0)+
       row('Заходили за добу',st.active_1d||0)+
       row('Заходили за тиждень',st.active_7d||0)+
-      row('Ведуть зміни щодня',st.regular||0)+
+      row('Нових за добу · тиждень',(st.new_1d||0)+' · '+(st.new_7d||0))+
+      row('Прижилися',(st.regular||0)+' з '+(st.users||0))+
+      row('Змін заведено всього',st.shifts||0)+
       row('Звернень у підтримку',st.tickets||0);
+
+    /* два тижні: скільки заходило й скільки прийшло вперше */
+    const d=st.days||[];
+    const top=Math.max(1,...d.map(x=>Math.max(+x.a||0,+x.n||0)));
+    $('admin-days').innerHTML=d.length
+      ? '<div class="adm-days">'+d.map(x=>{
+          const a=Math.round((+x.a||0)/top*100),n=Math.round((+x.n||0)/top*100);
+          return '<div class="b" title="'+x.d+'">'+
+            (n>0?'<div class="f n" style="height:'+n+'%"></div>':'')+
+            '<div class="f" style="height:'+Math.max(0,a-n)+'%"></div></div>';
+        }).join('')+'</div>'+
+        '<div class="adm-dl"><span>'+(d[0]&&d[0].d||'')+'</span><span>'+(d[d.length-1]&&d[d.length-1].d||'')+'</span></div>'+
+        '<div class="adm-leg"><span><i style="background:var(--yellow)"></i>заходили</span>'+
+        '<span><i style="background:var(--amber)"></i>прийшли вперше</span></div>'
+      : '';
+
+    /* хто заходив останнім */
+    const seenAgo=v=>{
+      const t=new Date(String(v||'').replace(' ','T')+':00').getTime();
+      if(!t)return '';
+      const m=Math.floor((Date.now()-t)/60000);
+      if(m<60)return m+' хв тому';
+      if(m<1440)return Math.floor(m/60)+' год тому';
+      return Math.floor(m/1440)+' дн. тому';
+    };
+    const u=st.recent||[];
+    $('admin-list').innerHTML=u.length
+      ? '<div class="card-title" style="margin:6px 0 2px">Останні водії</div>'+
+        u.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x.name||'')+
+          (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
+          '<span>з '+esc(x.joined||'')+' · '+seenAgo(x.seen)+'</span></div>'+
+          '<div class="s">'+(+x.shifts||0)+' змін</div></div>').join('')
+      : '';
     card.style.display='';
   }catch(e){card.style.display='none';}
 }
