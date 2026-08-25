@@ -660,6 +660,18 @@ html.map-full .tabbar{display:none}
   </section>
 
   <section class="screen" id="screen-settings">
+    <div class="card adm" id="admin-card" style="display:none">
+      <div class="adm-head">
+        <span class="logo">ProTaxi</span>
+        <span class="adm-word">Admin</span>
+      </div>
+      <div class="checker adm-checker"></div>
+      <div id="admin-rows"></div>
+      <div id="admin-days"></div>
+      <div id="admin-list"></div>
+      <button class="btn btn-ghost btn-sm" id="admin-refresh">Оновити</button>
+    </div>
+
     <div class="sect">Мої налаштування</div>
 
     <div class="card">
@@ -738,17 +750,6 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="support-note"></p>
     </div>
 
-    <div class="card adm" id="admin-card" style="display:none">
-      <div class="adm-head">
-        <span class="logo">ProTaxi</span>
-        <span class="adm-word">Admin</span>
-      </div>
-      <div class="checker adm-checker"></div>
-      <div id="admin-rows"></div>
-      <div id="admin-days"></div>
-      <div id="admin-list"></div>
-      <button class="btn btn-ghost btn-sm" id="admin-refresh">Оновити</button>
-    </div>
 
     <div class="card">
       <div class="card-title">Про застосунок</div>
@@ -998,7 +999,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='4.9';
+const APP_VER='5.0';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3760,6 +3761,23 @@ async function uploadShot(blob){
   if(u.charAt(0)!=='/')u='/'+u;
   return SB_URL+'/storage/v1'+u;
 }
+/* База може бути старішою за сторінку: сторінка оновлюється миттєво, а SQL —
+   лише коли власник його виконає. Тому пробуємо по черзі всі три підписи. */
+async function sendSupport(text,urls){
+  const body={p_init_data:TG.initData,p_text:text};
+  const missing=e=>/\b404\b|PGRST202|Could not find/i.test(String(e&&e.message||e));
+  try{
+    return await sbRpc('support',{...body,p_photos:urls.length?urls:null});
+  }catch(e){
+    if(!missing(e))throw e;
+  }
+  try{
+    return await sbRpc('support',{...body,p_photo:urls[0]||null});
+  }catch(e){
+    if(!missing(e))throw e;
+  }
+  return await sbRpc('support',body);
+}
 function openSupport(){
   if(!TG||!TG.initData){
     if(SUPPORT_BOT)window.open('https://t.me/'+SUPPORT_BOT,'_blank','noopener');
@@ -3786,7 +3804,7 @@ $('sup-send').addEventListener('click',async function(){
       urls.push(await uploadShot(supShots[i].blob));
     }
     this.textContent='Надсилаю…';
-    await sbRpc('support',{p_init_data:TG.initData,p_text:t.slice(0,2000),p_photos:urls.length?urls:null});
+    await sendSupport(t.slice(0,2000),urls);
     closeM('modal-support');
     supClearShots();
     toast('Надіслано. Відповідь прийде в цей же бот');
