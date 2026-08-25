@@ -14,6 +14,16 @@
 <link rel="icon" href="icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>ProTaxi · Фінанси водія</title>
+<meta name="description" content="ProTaxi рахує, скільки з кожної зміни справді залишається водієві: мінус комісія, еквайринг, пальне по чеках, оренда й запас на ремонт.">
+<!-- Як посилання виглядає, коли його кидають у чат. Адреси мусять бути повними —
+     Telegram відносних не читає. Зміниться нікнейм чи назва репозиторію — правити тут. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ProTaxi">
+<meta property="og:title" content="ProTaxi · скільки з виручки справді ваше">
+<meta property="og:description" content="Застосунок для водія таксі: чисте за зміну, пальне по чеках, знижки на АЗС і скільки лишилось до цілі дня. Зараз відкрите тестування — безкоштовно.">
+<meta property="og:image" content="https://fullname17.github.io/Ye-taksyst-/cover.png">
+<meta property="og:url" content="https://fullname17.github.io/Ye-taksyst-/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&display=swap" rel="stylesheet">
 <style>
@@ -320,7 +330,7 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 
 .fund-balance{font-variant-numeric:tabular-nums;font-size:30px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
 
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:1000}
 .modal-bg.open{display:flex}
 /* Вікна вводу стоять угорі й нікуди не рухаються: клавіатура просто з'їдає низ.
    Центрування виглядало так, ніби екран підстрибує на кожне відкриття клавіатури. */
@@ -335,7 +345,7 @@ html.in-tg .modal-bg.mid .modal{max-height:none}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:14px}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:60;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* Поки відкрита клавіатура, нижня панель їде вниз — інакше вона накриває поле вводу */
@@ -479,7 +489,9 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .boost .b-ic svg{width:17px;height:17px;display:block}
 .boost .b-line b{color:var(--yellow)}
 /* Мапа */
-#map{width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#E8E6E1}
+/* Leaflet розкладає свої шари з z-index 400+. Без власного контексту
+   накладання вони рахуються нарівні з вікнами й вилазять поверх них. */
+#map{width:100%;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#E8E6E1;position:relative;z-index:0;isolation:isolate}
 #map.punchy .leaflet-tile-pane{filter:saturate(1.35) contrast(1.08) brightness(1.02)}
 /* Нічні тайли самі по собі пласкі — піднімаємо дорогам яскравість і додаємо синього */
 #map.dark{background:#1E252F}
@@ -1145,7 +1157,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.5';
+const APP_VER='1.6';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3742,10 +3754,10 @@ function renderDiag(){
     top.className='diag bad';
     top.innerHTML='<b>Дані тут не зберігаються</b>Це середовище стирає записи після закриття. Веди зміни там, де перевірка показує «працює», або одразу після зміни тисни «Скопіювати дані в буфер» у розділі «Ще».'+
       (isFileProtocol()?'<div class="mini">Файл відкрито напряму з «Файлів» — iOS дає йому тимчасове сховище. Потрібна вебадреса.</div>':'');
-  }else if(persistOK===true){
-    top.className='diag good';
-    top.innerHTML='<b>Сховище працює</b>Записи переживають закриття застосунку. Можна спокійно вести зміни.';
-    setTimeout(()=>{top.className='diag';},6000);
+  }else{
+    /* Коли все гаразд — мовчимо. Плашка «сховище працює» ні про що не
+       попереджає, а місце на головному екрані займає щоразу. */
+    top.innerHTML='';
   }
 }
 

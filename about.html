@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#22252B">
+<title>ProTaxi · застосунок для водія таксі</title>
+<meta name="description" content="ProTaxi рахує, скільки з кожної зміни справді залишається водієві: мінус комісія, еквайринг, пальне по чеках, оренда й запас на ремонт.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ProTaxi">
+<meta property="og:title" content="ProTaxi · скільки з виручки справді ваше">
+<meta property="og:description" content="Застосунок для водія таксі: чисте за зміну, пальне по чеках, знижки на АЗС і скільки лишилось до цілі дня. Зараз відкрите тестування — безкоштовно.">
+<meta property="og:image" content="https://fullname17.github.io/Ye-taksyst-/cover.png">
+<meta property="og:url" content="https://fullname17.github.io/Ye-taksyst-/about.html">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#22252B; --surface:#31353E; --surface2:#3B404A; --border:#464C58;
+  --text:#F5F6F8; --muted:#9DA3AE; --mint:#3BE0A6; --red:#FF5F57;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;padding:0 0 60px}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+a{color:inherit}
+.logo{display:inline-flex;align-items:center;gap:10px;margin:34px 0 0}
+.logo .mark{font-family:'Unbounded',-apple-system,sans-serif;font-weight:800;font-size:19px;
+  background:var(--mint);color:#101010;padding:7px 13px;border-radius:12px;letter-spacing:-.02em}
+.logo .sub{color:var(--muted);font-weight:500;font-size:15px}
+
+h1{font-size:clamp(28px,6vw,46px);line-height:1.12;letter-spacing:-.025em;font-weight:800;margin:26px 0 0;max-width:16ch}
+h1 em{font-style:normal;color:var(--mint)}
+.lead{margin-top:16px;font-size:clamp(16px,2.4vw,19px);color:var(--muted);max-width:56ch;font-weight:400}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:26px}
+.btn{display:inline-block;background:var(--mint);color:#101010;font-weight:700;font-size:16px;
+  padding:15px 26px;border-radius:14px;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border);font-weight:600}
+.badge{display:inline-block;border:1px solid var(--mint);color:var(--mint);border-radius:999px;
+  padding:6px 13px;font-size:13px;font-weight:600;margin-top:22px}
+
+.sect{margin-top:64px}
+.sect h2{font-size:clamp(21px,3.6vw,28px);letter-spacing:-.02em;font-weight:800;margin-bottom:8px}
+.sect .say{color:var(--muted);max-width:60ch;margin-bottom:24px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:22px}
+.card h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.card p{color:var(--muted);font-size:14.5px}
+.card .num{font-variant-numeric:tabular-nums;color:var(--mint);font-weight:800;font-size:15px;
+  display:block;margin-bottom:10px;letter-spacing:.04em;text-transform:uppercase}
+
+.money{display:grid;grid-template-columns:1fr auto;gap:10px 18px;background:var(--surface);
+  border:1px solid rgba(255,255,255,.05);border-radius:18px;padding:22px;max-width:520px;
+  font-variant-numeric:tabular-nums}
+.money div{padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.money div:nth-last-child(-n+2){border-bottom:0;font-weight:800;font-size:19px}
+.money .v{text-align:right;font-weight:600}
+.money .minus{color:var(--red)}
+.money .fin{color:var(--mint)}
+
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;margin-top:8px}
+.shot img{width:100%;border-radius:20px;border:1px solid var(--border);display:block}
+.shot p{color:var(--muted);font-size:13.5px;margin-top:10px}
+
+ol.steps{list-style:none;counter-reset:s;display:grid;gap:12px;max-width:640px}
+ol.steps li{counter-increment:s;background:var(--surface);border-radius:16px;padding:18px 20px 18px 58px;position:relative}
+ol.steps li::before{content:counter(s);position:absolute;left:18px;top:18px;width:26px;height:26px;
+  border-radius:9px;background:var(--mint);color:#101010;font-weight:800;font-size:14px;
+  display:flex;align-items:center;justify-content:center}
+ol.steps b{display:block;margin-bottom:2px}
+ol.steps span{color:var(--muted);font-size:14.5px}
+
+footer{margin-top:64px;color:var(--muted);font-size:14px;border-top:1px solid rgba(255,255,255,.07);padding-top:22px}
+footer a{color:var(--mint);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="logo"><span class="mark">ProTaxi</span><span class="sub">фінанси водія</span></div>
+
+  <h1>Таксі показує виручку. <em>ProTaxi показує, скільки з неї ваше.</em></h1>
+  <p class="lead">Застосунок рахує кожну зміну до кінця: мінус комісія платформи, мінус еквайринг,
+  мінус пальне по чеках, мінус оренда авто, мінус те, що варто відкласти на ремонт.
+  Лишається одна чесна цифра — на руки.</p>
+  <div class="cta">
+    <a class="btn" href="https://t.me/ProTaxiApp_Bot/app">Відкрити в Telegram</a>
+    <a class="btn ghost" href="./">Подивитись у браузері</a>
+  </div>
+  <div class="badge">Зараз відкрите тестування — безкоштовно</div>
+
+  <div class="sect">
+    <h2>Різниця, яку видно одразу</h2>
+    <p class="say">Типова зміна на 2 850 ₴ виручки. Ось що з неї залишається насправді.</p>
+    <div class="money">
+      <div>Виручка за зміну</div><div class="v">2 850 ₴</div>
+      <div>Комісія платформи, 20%</div><div class="v minus">−570 ₴</div>
+      <div>Еквайринг з карткових</div><div class="v minus">−28 ₴</div>
+      <div>Пальне, 42 л по чеку</div><div class="v minus">−694 ₴</div>
+      <div>Запас на ремонт і ТО</div><div class="v minus">−233 ₴</div>
+      <div class="fin">На руки</div><div class="v fin">1 325 ₴</div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <h2>Що вміє</h2>
+    <div class="grid">
+      <div class="card"><span class="num">Гроші</span>
+        <h3>Чисте за зміну, а не виручка</h3>
+        <p>Комісія, еквайринг з карткових оплат, чайові, податки для ФОП, оренда авто.
+        Скільки завгодно сесій за день — обід не ламає статистику.</p></div>
+      <div class="card"><span class="num">Замовлення</span>
+        <h3>Світлофор кожного замовлення</h3>
+        <p>Кожне замовлення підсвічується проти вашого середнього темпу: зелене — вигідніше,
+        червоне — на ньому ви втрачаєте. Одразу видно, наскільки.</p></div>
+      <div class="card"><span class="num">Пальне</span>
+        <h3>Витрата від бака до бака</h3>
+        <p>Не «за паспортом», а по чеках. Скільки лишилось у баку, на скільки вистачить,
+        скільки треба відкласти на наступну заправку.</p></div>
+      <div class="card"><span class="num">АЗС</span>
+        <h3>Де сьогодні дешевше</h3>
+        <p>Ваші знижки Uklon чи Bolt підставляються одним дотиком. Застосунок рахує чисту
+        ціну літра по кожній мережі — вигідна не та, де більша знижка.</p></div>
+      <div class="card"><span class="num">Ціль</span>
+        <h3>Скільки лишилось до цілі дня</h3>
+        <p>Не просто відсоток, а скільки ще замовлень і скільки часу — за вашою ж
+        статистикою саме в цей день тижня.</p></div>
+      <div class="card"><span class="num">Запас</span>
+        <h3>Гроші на ремонт лежать окремо</h3>
+        <p>З кожної зміни відкладається частка на ТО, гуму й ремонт — або на оренду наперед,
+        якщо авто не ваше. Щоб поломка не була катастрофою.</p></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <h2>Як це виглядає</h2>
+    <div class="shots">
+      <div class="shot"><img src="shot-shift.png" alt="Екран зміни" loading="lazy">
+        <p>Зміна: скільки на руки просто зараз і скільки лишилось до цілі дня.</p></div>
+      <div class="shot"><img src="shot-stats.png" alt="Статистика" loading="lazy">
+        <p>Тиждень: виручка окремо, на руки окремо. Середній чек, ціна за кілометр, темп.</p></div>
+      <div class="shot"><img src="shot-tank.png" alt="Бак і пальне" loading="lazy">
+        <p>Бак: реальна витрата по чеках і порівняння цін на АЗС із вашими знижками.</p></div>
+    </div>
+  </div>
+
+  <div class="sect">
+    <h2>Як почати</h2>
+    <ol class="steps">
+      <li><b>Відкрийте бота в Telegram</b><span>Застосунок відкривається просто в месенджері — нічого встановлювати не треба.</span></li>
+      <li><b>Пройдіть коротке налаштування</b><span>Своє авто чи орендоване, витрата й ціна пального, комісія платформи, ціль на день. Хвилина.</span></li>
+      <li><b>Ведіть зміну як зазвичай</b><span>Прийняли замовлення — сума й одометр. Завершили — здача. Решту застосунок порахує сам.</span></li>
+    </ol>
+  </div>
+
+  <div class="sect">
+    <h2>Ваші гроші — ваша справа</h2>
+    <p class="say">Записи зберігаються на вашому телефоні й у вашому Telegram-акаунті.
+    Автор застосунку не бачить ні ваших сум, ні маршрутів — лише знеособлену статистику
+    на кшталт «скільки водіїв відкрили застосунок сьогодні». Копію всіх даних можна
+    будь-коли забрати у файл.</p>
+    <div class="cta">
+      <a class="btn" href="https://t.me/ProTaxiApp_Bot/app">Спробувати безкоштовно</a>
+    </div>
+  </div>
+
+  <footer>
+    ProTaxi · застосунок для водіїв таксі.
+    Питання й пропозиції — у підтримку просто із застосунку або в бот
+    <a href="https://t.me/ProTaxiApp_Bot">@ProTaxiApp_Bot</a>.
+  </footer>
+
+</div>
+</body>
+</html>
