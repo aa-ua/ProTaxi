@@ -130,6 +130,23 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r{border-left-color:var(--red);background:linear-gradient(90deg,rgba(255,95,87,.10),transparent 62%)}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
+/* Підписка */
+.sub-card{text-align:center}
+.sub-pill{display:inline-block;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:999px;
+  background:var(--surface2);color:var(--muted);margin-bottom:12px}
+.sub-pill.on{background:rgba(59,224,166,.14);color:var(--yellow)}
+.sub-pill.off{background:rgba(255,107,107,.14);color:var(--red)}
+.sub-big{font-family:'Unbounded',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.sub-note{font-size:13.5px;color:var(--muted);font-weight:700;margin-top:8px;line-height:1.5}
+.sub-l{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);text-align:left}
+.sub-l:last-child{border-bottom:none}
+.sub-l>span{font-size:19px;line-height:1.25;flex-shrink:0}
+.sub-l b{display:block;font-size:14px;font-weight:800;margin-bottom:2px}
+.sub-l div{font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.45}
+.sub-warn{margin-bottom:12px;padding:12px 14px;border-radius:14px;background:rgba(255,176,32,.12);
+  color:var(--amber);font-size:13.5px;font-weight:700;line-height:1.45;cursor:pointer}
+.sub-warn.hot{background:rgba(255,107,107,.13);color:var(--red)}
+.sub-warn b{font-weight:800}
 /* Адмінка: та сама шапка, ті самі плитки, що й у застосунку */
 .adm-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 html.in-admin .topbar,html.in-admin .app>.checker{display:none}
@@ -165,6 +182,9 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .adm-t .h{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;margin-bottom:5px}
 .adm-t .h span{color:var(--muted);font-weight:700;white-space:nowrap}
 .adm-t .b{font-size:13.5px;font-weight:600;line-height:1.45;color:var(--text)}
+.adm-give{flex-shrink:0;padding:8px 12px;border-radius:11px;border:none;background:var(--surface2);
+  color:var(--yellow);font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer}
+.adm-give:disabled{opacity:.5}
 .adm-u .s i{font-style:normal;font-size:10.5px;color:var(--muted);font-weight:700}
 .adm-word{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;letter-spacing:-.02em}
 .adm-checker{margin:0 0 14px}
@@ -696,6 +716,25 @@ html.map-full .tabbar{display:none}
     </div>
   </section>
 
+  <section class="screen" id="screen-sub">
+    <div class="card sub-card">
+      <div class="sub-pill" id="sub-pill">—</div>
+      <div class="sub-big" id="sub-big">—</div>
+      <div class="sub-note" id="sub-note"></div>
+      <button class="btn btn-primary" id="sub-go" style="margin-top:16px">Продовжити</button>
+      <p class="hint" id="sub-hint" style="text-align:center"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">Що входить</div>
+      <div class="sub-l"><span>🚕</span><div><b>Зміни й замовлення без обмежень</b>Скільки завгодно сесій за день, кожне замовлення з часом і одометром</div></div>
+      <div class="sub-l"><span>⛽</span><div><b>Пальне по чеках</b>Витрата від бака до бака, рівень у баку, накопичення на заправку</div></div>
+      <div class="sub-l"><span>🗺️</span><div><b>Мапа заробітку</b>Вулиці за твоїм ₴/год, найкращі години й дні тижня</div></div>
+      <div class="sub-l"><span>☁️</span><div><b>Хмара</b>Записи привʼязані до Telegram — телефон загубився, дані на місці</div></div>
+      <div class="sub-l"><span>💬</span><div><b>Підтримка</b>Пишеш прямо із застосунку, відповідає жива людина</div></div>
+    </div>
+    <p class="hint" style="text-align:center">Твої записи нікуди не зникнуть навіть після закінчення підписки — і копію у файл можна забрати будь-коли.</p>
+  </section>
+
   <section class="screen adm" id="screen-admin">
     <div class="adm-head">
       <span class="logo">ProTaxi</span>
@@ -710,6 +749,7 @@ html.map-full .tabbar{display:none}
       <button class="chip active" data-at="dash">Дашборд</button>
       <button class="chip" data-at="ana">Аналітика</button>
       <button class="chip" data-at="people">Люди</button>
+      <button class="chip" data-at="pay">Підписки</button>
       <button class="chip" data-at="talk">Відгуки</button>
     </div>
     <div id="admin-body"></div>
@@ -802,7 +842,8 @@ html.map-full .tabbar{display:none}
       <div class="card-title">Про застосунок</div>
       <div class="ins"><span class="k">Версія</span><span class="v" id="about-ver">—</span></div>
       <div class="ins"><span class="k">Оновлено</span><span class="v" id="about-date">—</span></div>
-      <button class="btn btn-ghost" id="btn-intro" style="margin-top:12px">Як користуватись</button>
+      <button class="btn btn-ghost" id="btn-sub" data-screen="sub" style="margin-top:12px">Підписка</button>
+      <button class="btn btn-ghost" id="btn-intro" style="margin-top:10px">Як користуватись</button>
       <button class="btn btn-ghost" id="btn-changelog" style="margin-top:10px">Що нового</button>
     </div>
 
@@ -1046,7 +1087,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='5.4';
+const APP_VER='5.5';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1599,16 +1640,24 @@ async function persist(){
 let toastT;
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
-document.querySelectorAll('[data-screen]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('[data-screen]').forEach(x=>x.classList.remove('active'));
+function goScreen(name,btn){
+  const target=$('screen-'+name);
+  if(!target)return;
+  document.querySelectorAll('.tab[data-screen],.avatar[data-screen]').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  $('screen-'+b.dataset.screen).classList.add('active');
+  if(btn&&(btn.classList.contains('tab')||btn.classList.contains('avatar')))btn.classList.add('active');
+  target.classList.add('active');
   /* у панелі своя шапка з логотипом — застосункова там зайва */
-  document.documentElement.classList.toggle('in-admin',b.dataset.screen==='admin');
+  document.documentElement.classList.toggle('in-admin',name==='admin');
   window.scrollTo(0,0);
-  if(b.dataset.screen==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();setTimeout(buildStreetMap,400);}
-}));
+  if(name==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();setTimeout(buildStreetMap,400);}
+}
+/* через делегування, бо частина кнопок зʼявляється вже після завантаження */
+document.addEventListener('click',function(e){
+  const b=e.target.closest('[data-screen]');
+  if(!b)return;
+  goScreen(b.dataset.screen,b);
+});
 
 function openM(id){$(id).classList.add('open');}
 function closeM(id){$(id).classList.remove('open');}
@@ -1836,6 +1885,7 @@ function renderShift(){
   const s=data.settings;
   if(!data.active){
     root.innerHTML=
+      subWarnHTML()+
       goalCardHTML()+
       '<div class="card"><div class="card-title">Нова сесія</div>'+
       '<div class="grid2">'+
@@ -1850,6 +1900,7 @@ function renderShift(){
           : 'Впиши показник добового одометра — далі всі кілометри рахуватимуться по факту, а не по картах.'))+'</p></div>'+
       boostCardHTML();
     $('btn-open').addEventListener('click',async()=>{
+      if(!subActive()){goScreen('sub');toast('Продовж підписку — і працюємо далі');return;}
       const t=$('open-time').value||nowHM();
       data.active={id:Date.now(),startT:toMs(todayStr(),t),odoStart:num($('open-odo').value),orders:[],path:[]};
       await persist();renderShift();startTrack();toast('Сесію розпочато о '+t);
@@ -3872,6 +3923,64 @@ $('sup-send').addEventListener('click',async function(){
 $('btn-help').addEventListener('click',openSupport);
 $('admin-refresh').addEventListener('click',renderAdmin);
 
+/* ══ ПІДПИСКА ══
+   Перший місяць безкоштовно, далі продовження. Якщо сервер мовчить або
+   про підписку ще не знає — вважаємо, що доступ є: краще пустити зайвого,
+   ніж замкнути людину з її ж записами. */
+let bill=null;
+async function loadBilling(){
+  if(!TG||!TG.initData){bill=null;renderSub();return;}
+  try{bill=await sbRpc('billing',{p_init_data:TG.initData});}
+  catch(e){bill=null;}
+  renderSub();renderShift();
+}
+const subActive=()=>!bill||bill.active!==false;
+function renderSub(){
+  if(!$('sub-pill'))return;
+  const b=bill;
+  if(!b){
+    $('sub-pill').className='sub-pill';$('sub-pill').textContent='поза Telegram';
+    $('sub-big').textContent='Підписка не потрібна';
+    $('sub-note').textContent='Тут застосунок працює без обмежень, але й хмари немає. Відкрий через бота, щоб записи зберігались.';
+    $('sub-go').style.display='none';$('sub-hint').textContent='';
+    return;
+  }
+  const left=+b.left||0,act=b.active!==false;
+  $('sub-pill').className='sub-pill '+(act?'on':'off');
+  $('sub-pill').textContent=b.paid?'підписка активна':(act?'пробний період':'доступ закінчився');
+  $('sub-big').textContent=act
+    ? (left+' '+plDay(left)+' попереду')
+    : 'Час продовжити';
+  $('sub-note').innerHTML=act
+    ? (b.paid?'Оплачено до <b>'+fmtDate(b.until)+'</b>.':'Безкоштовний місяць діє до <b>'+fmtDate(b.until)+'</b>. Далі — '+b.price+' ₴ на місяць.')
+    : 'Записи на місці, їх видно й можна забрати копією. Щоб відкривати нові зміни — продовж підписку за <b>'+b.price+' ₴ на місяць</b>.';
+  $('sub-go').style.display='';
+  $('sub-go').textContent=act&&b.paid?'Продовжити ще на місяць':'Продовжити за '+b.price+' ₴';
+  $('sub-hint').textContent=b.link
+    ? 'Оплата відкриється в новому вікні. Після оплати доступ вмикається протягом кількох хвилин.'
+    : 'Натисни — і автор увімкне тобі доступ. Він отримає повідомлення одразу.';
+}
+const plDay=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'днів':(b===1?'день':((b>=2&&b<=4)?'дні':'днів'));};
+$('sub-go').addEventListener('click',async function(){
+  if(!TG||!TG.initData)return;
+  this.disabled=true;this.textContent='Надсилаю…';
+  try{
+    await sbRpc('billing_ask',{p_init_data:TG.initData});
+    if(bill&&bill.link)window.open(bill.link,'_blank','noopener');
+    toast('Заявку надіслано. Доступ увімкнуть найближчим часом');
+  }catch(e){toast('Не вийшло. Спробуй ще раз');}
+  this.disabled=false;renderSub();
+});
+function subWarnHTML(){
+  if(!bill)return '';
+  const left=+bill.left||0;
+  if(bill.active===false)
+    return '<div class="sub-warn hot" data-screen="sub">🔒 <b>Доступ закінчився.</b> Записи на місці, нову зміну відкрити не вийде. Тапни, щоб продовжити.</div>';
+  if(!bill.paid&&left<=7)
+    return '<div class="sub-warn" data-screen="sub">⏳ Безкоштовний місяць закінчується: лишилось <b>'+left+' '+plDay(left)+'</b>. Тапни, щоб подивитись умови.</div>';
+  return '';
+}
+
 /* ══ АДМІНКА ══
    Картка зі статистикою зʼявляється тільки тому, чий Telegram ID записаний
    у базі як адміністратор. Усім іншим сервер просто відмовляє. */
@@ -4007,12 +4116,56 @@ function admTalk(d){
     '<p class="hint">Повний текст із фото приходить тобі в бот. Тут — щоб не губилось.</p></div>';
 }
 
+let admBill=null;
+function admPay(){
+  const b=admBill;
+  if(!b)return '<div class="card"><div class="empty">Підписки ще не увімкнені в базі</div>'+
+    '<p class="hint">Виконай крок 7 у Supabase — і тут зʼявляться цифри.</p></div>';
+  const l=b.list||[],r=b.requests_list||[];
+  let h='<div class="metrics two">'+
+    admTile('key',b.paying||0,'платять','по '+(b.price||0)+' ₴ на місяць',true)+
+    admTile('users',b.trial||0,'на пробному','закінчується у '+(b.soon||0))+
+    '</div><div class="metrics two">'+
+    admTile('mail',b.over||0,'доступ закінчився','')+
+    admTile('live',fmt(b.mrr||0),'на місяць','заявок за 30 днів: '+(b.requests||0))+
+    '</div>';
+
+  if(r.length)h+='<div class="card"><div class="card-title">Просять продовжити</div>'+
+    r.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x.name||'')+
+      (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
+      '<button class="adm-give" data-give="'+x.id+'" data-days="30">+30 днів</button></div>').join('')+'</div>';
+
+  h+='<div class="card"><div class="card-title">Хто коли закінчується</div>'+
+    (l.length?l.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x.name||'')+
+      (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
+      '<span>'+(x.kind==='paid'?'платить':x.kind==='trial'?'пробний':'закінчився')+
+      ' · '+(x.days>=0?'до '+esc(x.until)+', '+x.days+' '+plDay(x.days):'минуло '+Math.abs(x.days)+' '+plDay(Math.abs(x.days)))+'</span></div>'+
+      '<button class="adm-give" data-give="'+x.id+'" data-days="30">+30</button></div>').join('')
+      :'<div class="empty">Ще нікого</div>')+
+    '<p class="hint">Тап «+30» вмикає водієві місяць і надсилає йому повідомлення в бот.</p></div>';
+  return h;
+}
+document.addEventListener('click',async function(e){
+  const b=e.target.closest('.adm-give');
+  if(!b||!TG||!TG.initData)return;
+  b.disabled=true;const was=b.textContent;b.textContent='…';
+  try{
+    await sbRpc('admin_grant',{p_init_data:TG.initData,p_tg_id:+b.dataset.give,p_days:+b.dataset.days});
+    toast('Увімкнено на '+b.dataset.days+' днів');
+    await loadAdminBilling();admPaint();
+  }catch(err){toast('Не вийшло');b.disabled=false;b.textContent=was;}
+});
+async function loadAdminBilling(){
+  try{admBill=await sbRpc('admin_billing',{p_init_data:TG.initData});}catch(e){admBill=null;}
+}
+
 function admPaint(){
   if(!admData)return;
   const box=$('admin-body');
   box.innerHTML=admTab==='dash'?admDash(admData)
     :admTab==='ana'?admAna(admData)
     :admTab==='people'?admPeople(admData)
+    :admTab==='pay'?admPay()
     :admTalk(admData);
   document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.classList.toggle('active',c.dataset.at===admTab));
 }
@@ -4025,6 +4178,7 @@ async function renderAdmin(){
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
     if(!st){btn.style.display='none';return;}
     admData=st;
+    await loadAdminBilling();
     btn.style.display='';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
     admPaint();
@@ -4807,6 +4961,7 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
   else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
   if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
   cloudPull();
+  setTimeout(loadBilling,1200);
 })();
 
 /* ══ TELEGRAM MINI APP ══
