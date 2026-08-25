@@ -414,6 +414,12 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .save-block .progress .fill.done{background:linear-gradient(90deg,var(--green),#9CF2C4)}
 .odo-note{font-size:11.5px;color:var(--muted);font-weight:700;text-align:center;margin-top:8px}
 .approx{color:var(--muted);font-size:11px;font-weight:700}
+.st-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;background:var(--surface2);border:1px solid transparent;margin-bottom:8px;cursor:pointer}
+.st-row.on{border-color:var(--yellow)}
+.st-row .d{font-weight:700;font-size:14px}
+.st-row .s{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
+.st-row .edit{background:none;border:0;color:var(--muted);font-family:inherit;font-size:12px;font-weight:600;padding:6px 2px;cursor:pointer;flex-shrink:0}
+.wchip .w2{display:block;font-size:10px;font-weight:700;opacity:.7;margin-top:2px;font-variant-numeric:tabular-nums}
 .modal .row-btn{display:flex;gap:10px}
 .modal .row-btn .btn{margin-top:0}
 .btn-warn{background:var(--amber);color:#101010}
@@ -688,13 +694,19 @@ html.map-full .tabbar{display:none}
       <div id="purse-box"></div>
     </div>
 
+    <div class="card" id="cheap-card" style="display:none">
+      <div class="card-title">Де дешевше</div>
+      <div id="cheap-list"></div>
+      <p class="hint" id="cheap-note"></p>
+    </div>
+
     <div class="card">
       <div class="card-title">Показники</div>
       <div id="tank-stats"></div>
     </div>
 
     <div class="card">
-      <div class="card-title">Ціна літра · динаміка</div>
+      <div class="card-title" id="t-price-dyn">Ціна літра · динаміка</div>
       <div class="trend" id="tank-trend" style="margin-bottom:10px"></div>
       <div class="chart" id="price-chart"></div>
       <div class="hint" id="price-note" style="margin-top:10px"></div>
@@ -774,18 +786,23 @@ html.map-full .tabbar{display:none}
 
     <div class="card">
       <div class="card-title">Пальне</div>
+      <div class="modes" id="fuel-kind">
+        <button class="mode" data-fk="petrol">Бензин<span class="sub">або дизель</span></button>
+        <button class="mode" data-fk="gas">Газ<span class="sub">пропан-бутан</span></button>
+        <button class="mode" data-fk="ev">Електро<span class="sub">кВт·год</span></button>
+      </div>
       <div class="grid2">
-        <div class="field"><label>Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
-        <div class="field"><label>Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
-        <div class="field"><label>Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
+        <div class="field"><label id="lab-cons">Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
+        <div class="field"><label id="lab-price">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
+        <div class="field"><label id="lab-tankl">Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
-      <p class="hint">Для газу став свою реальну витрату — вона зазвичай на 15–20% вища за бензинову.</p>
-      <div class="modes" id="disc-mode">
-        <button class="mode" data-dm="uah">Знижка ₴<span class="sub">з літра</span></button>
-        <button class="mode" data-dm="pct">Знижка %<span class="sub">від ціни</span></button>
-      </div>
-      <div class="field"><label id="lab-disc">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="set-disc" step="0.01" placeholder="0"></div>
-      <p class="hint" id="disc-note"></p>
+      <p class="hint" id="fuel-note"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title row">Знижки на АЗС<button class="mini-add" id="btn-station" aria-label="Додати знижку">+</button></div>
+      <div id="st-list"></div>
+      <p class="hint" id="st-note"></p>
     </div>
 
     <div class="card">
@@ -1009,11 +1026,12 @@ html.map-full .tabbar{display:none}
   <div class="modal">
     <h3 id="rf-title">Заправка</h3>
     <div class="grid2">
-      <div class="field"><label>Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label>Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label id="lab-rf-liters">Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label id="lab-rf-price">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
       <div class="field"><label>Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
     </div>
+    <div class="wchips" id="rf-st" style="display:none"></div>
     <div class="wchips" id="rf-full">
       <button class="wchip on" data-full="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5M5.5 9.5h7.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/></svg></span>До повного</button>
       <button class="wchip" data-full="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.6h8.2l1.4 5.2-5.5 11.6H8.4L3.9 8.8z"/><path d="M4.6 11.4h11"/></svg></span>Частково</button>
@@ -1027,6 +1045,28 @@ html.map-full .tabbar{display:none}
     <button class="btn btn-primary" id="rf-save">Зберегти заправку</button>
     <button class="btn btn-ghost" id="rf-cancel">Скасувати</button>
     <button class="btn btn-danger" id="rf-del" style="display:none">Видалити заправку</button>
+  </div>
+</div>
+
+<!-- Модалка: знижка на АЗС -->
+<div class="modal-bg" id="modal-station">
+  <div class="modal">
+    <h3 id="st-title">Знижка на АЗС</h3>
+    <div class="wchips" id="st-presets"></div>
+    <p class="hint" id="st-preset-note" style="margin:-6px 0 12px">Мережу можна взяти зі списку. Знижки підставлені з програми Uklon DriverUP — виправте на свою, якщо у вас інша.</p>
+    <div class="field"><label>Мережа</label><input type="text" id="st-name" maxlength="24" placeholder="ОККО" autocomplete="off"></div>
+    <div class="modes" id="st-mode">
+      <button class="mode" data-sm="uah">Знижка ₴<span class="sub" id="st-sub-uah">з літра</span></button>
+      <button class="mode" data-sm="pct">Знижка %<span class="sub">від ціни</span></button>
+    </div>
+    <div class="grid2">
+      <div class="field"><label id="lab-st-val">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
+      <div class="field"><label id="lab-st-price">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="як у налаштуваннях"></div>
+    </div>
+    <div class="hint" id="st-calc" style="margin:0 0 12px;text-align:center"></div>
+    <button class="btn btn-primary" id="st-save">Зберегти</button>
+    <button class="btn btn-ghost" id="st-cancel">Скасувати</button>
+    <button class="btn btn-danger" id="st-del" style="display:none">Видалити знижку</button>
   </div>
 </div>
 
@@ -1098,7 +1138,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.3';
+const APP_VER='1.4';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1142,7 +1182,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -1462,9 +1502,52 @@ function rateFor(e){
   }
   return{cons:+s.consumption||0,price:netPrice(s),exact:false};
 }
-/* Ціна літра з таксистською знижкою — саме за нею рахуємо, поки немає чеків */
+/* Вид пального міняє тільки одиниці й підписи: математика та сама —
+   витрата на 100 км, помножена на ціну одиниці. Для електро це кВт·год. */
+const FUEL_KINDS={
+  petrol:{u:'л',p100:'л/100',per:'л/100 км',price:'₴/л',
+    cons:'Витрата, л/100 км',priceLab:'Ціна, ₴/л',tank:'Обʼєм бака, л',
+    tankShort:'Обʼєм бака',tankNom:'бак',tankGen:'бака',fullAcc:'повний бак',
+    unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
+    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, ₴',go:'на заправку',
+    note:'Якщо їздите на газу — оберіть «Газ»: витрата на ньому зазвичай на 15–20% вища за бензинову.'},
+  gas:{u:'л',p100:'л/100',per:'л/100 км',price:'₴/л',
+    cons:'Витрата, л/100 км',priceLab:'Ціна, ₴/л',tank:'Обʼєм балона, л',
+    tankShort:'Обʼєм балона',tankNom:'балон',tankGen:'балона',fullAcc:'повний балон',
+    unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
+    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, ₴',go:'на заправку',
+    note:'Ставте свою реальну витрату на газу — вона зазвичай на 15–20% вища за бензинову.'},
+  ev:{u:'кВт·год',p100:'кВт·год/100',per:'кВт·год/100 км',price:'₴/кВт·год',
+    cons:'Витрата, кВт·год/100 км',priceLab:'Ціна, ₴/кВт·год',tank:'Ємність батареї, кВт·год',
+    tankShort:'Ємність батареї',tankNom:'заряд',tankGen:'батареї',fullAcc:'повний заряд',
+    unitGen:'кіловат-години',many:'кіловат-години',cut:'з кВт·год',dyn:'Ціна кВт·год · динаміка',
+    rf:'кВт·год (з чека)',rfPrice:'Ціна за кВт·год, ₴',go:'на зарядку',
+    note:'Рахунок іде в кіловат-годинах: витрата на 100 км, ціна за кВт·год і ємність батареї.'}
+};
+function FK(s){s=s||(typeof data!=='undefined'&&data.settings)||{};return FUEL_KINDS[s.fuelKind]||FUEL_KINDS.petrol;}
+const UU=()=>FK().u, U100=()=>FK().p100, UPR=()=>FK().price;
+
+/* Знижки на АЗС. Ціна «на табло» в кожної мережі своя, тому вигідна не та,
+   де більша знижка, а та, де менша решта — саме її ми й показуємо. */
+function stationsOf(s){s=s||data.settings;return Array.isArray(s.stations)?s.stations:[];}
+function stationBase(st,s){s=s||data.settings;return +st.price>0?+st.price:Math.max(0,+s.fuelPrice||0);}
+function stationNet(st,s){
+  const base=stationBase(st,s);
+  const cut=st.mode==='pct' ? base*Math.max(0,+st.val||0)/100 : Math.max(0,+st.val||0);
+  return Math.max(0,base-cut);
+}
+function stationCut(st,s){return stationBase(st,s)-stationNet(st,s);}
+function mainStation(s){
+  s=s||data.settings;
+  const l=stationsOf(s);if(!l.length)return null;
+  return l.find(x=>x.id===s.stationId)||l[0];
+}
+/* Ціна одиниці, за якою рахуємо, поки немає чеків заправок:
+   основна мережа водія, а якщо мереж ще немає — стара одна знижка. */
 function netPrice(s){
   s=s||data.settings;
+  const st=mainStation(s);
+  if(st)return stationNet(st,s);
   const p=Math.max(0,+s.fuelPrice||0);
   const cut=s.discMode==='pct' ? p*(Math.max(0,+s.discPct||0))/100 : Math.max(0,+s.discUah||0);
   return Math.max(0,p-cut);
@@ -1607,6 +1690,17 @@ async function load(){
     if(+s.serviceTarget===8000)s.serviceTarget=20000;
     s.mine=true;
   }
+  /* 1.4: замість однієї знижки — список мереж. Стару переносимо, щоб
+     розрахунок не змінився в того, хто вже її вписав. */
+  if(!s.fuelKind)s.fuelKind='petrol';
+  if(!Array.isArray(s.stations)){
+    s.stations=[];
+    const v=s.discMode==='pct'?(+s.discPct||0):(+s.discUah||0);
+    if(v>0){
+      s.stations.push({id:Date.now(),name:'Моя АЗС',price:0,mode:s.discMode||'uah',val:v});
+      s.stationId=s.stations[0].id;
+    }
+  }
   data.entries.forEach(e=>{
     if(!Array.isArray(e.orders))e.orders=[];
     e.oc=e.orders.length;
@@ -1676,7 +1770,7 @@ document.addEventListener('click',function(e){
 
 function openM(id){$(id).classList.add('open');}
 function closeM(id){$(id).classList.remove('open');}
-['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-account','modal-changelog'].forEach(id=>{
+['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-station','modal-account','modal-changelog'].forEach(id=>{
   $(id).addEventListener('click',e=>{if(e.target.id===id)closeM(id);});
 });
 
@@ -3159,7 +3253,7 @@ function renderOrdersAnalysis(){
   if(cur.perKm>0)h+=r('Ціна за кілометр',fmt1(cur.perKm)+' ₴',chg(cur.perKm,prev&&prev.perKm,false));
   h+=r('Темп',fmt(cur.rate)+'/год',chg(cur.rate,prev&&prev.rate,false));
   h+=r('Середня поїздка',Math.round(cur.avgMin)+' хв'+(cur.avgKm>0?' · '+fmt1(cur.avgKm)+' км':''),'');
-  if(cur.cons>0)h+=r('Витрата пального',fmt1(cur.cons)+' л/100',chg(cur.cons,prev&&prev.cons,true));
+  if(cur.cons>0)h+=r('Витрата пального',fmt1(cur.cons)+' '+U100(),chg(cur.cons,prev&&prev.cons,true));
   if(prev&&prev.n)h+='<p class="hint" style="margin:8px 0 0">Відсотки — порівняно '+b.label+' ('+prev.n+' замовл.).</p>';
   else h+='<p class="hint" style="margin:8px 0 0">Попереднього періоду для порівняння ще немає.</p>';
   h+='</div>';
@@ -3447,7 +3541,7 @@ function renderQuality(es){
   add('Вигідно від','≈ '+fmt1(be)+' ₴/км');
   if(!ords.length){
     const n=document.createElement('div');n.className='hint';n.style.marginTop='8px';
-    n.textContent='Поріг рахую з витрати '+fmt1(s.consumption)+' л/100 км і холостого ходу. Завершуй заказ з одометром — і додам розбивку по дистанціях.';
+    n.textContent='Поріг рахую з витрати '+fmt1(s.consumption)+' '+FK(s).per+' і холостого ходу. Завершуй заказ з одометром — і додам розбивку по дистанціях.';
     box.appendChild(n);return;
   }
   const pk=o=>o.amount/oKm(o);
@@ -3730,13 +3824,20 @@ function introSetupHTML(kind){
       '<button class="mode" data-rp="week">За тиждень</button>'+
       '<button class="mode" data-rp="month">За місяць</button>'+
       '</div></div>';
-  if(kind==='fuel')
-    return '<div class="grid2">'+
-      '<div class="field"><label>Витрата, л/100 км</label><input type="number" inputmode="decimal" id="in-cons" step="0.1" value="'+(s.consumption||'')+'"></div>'+
-      '<div class="field"><label>Ціна, ₴/л</label><input type="number" inputmode="decimal" id="in-price" step="0.01" value="'+(s.fuelPrice||'')+'"></div>'+
+  if(kind==='fuel'){
+    const k=FK(s);
+    return '<div class="modes" id="in-fk">'+
+      '<button class="mode" data-fk="petrol">Бензин<span class="sub">або дизель</span></button>'+
+      '<button class="mode" data-fk="gas">Газ<span class="sub">пропан-бутан</span></button>'+
+      '<button class="mode" data-fk="ev">Електро<span class="sub">кВт·год</span></button>'+
       '</div>'+
-      '<div class="field" style="margin-top:12px"><label>Обʼєм бака, л</label><input type="number" inputmode="decimal" id="in-tank" step="1" value="'+(s.tankLiters||'')+'"></div>'+
-      '<p class="hint">На газу постав свою реальну витрату — вона зазвичай на 15–20% вища за бензинову.</p>';
+      '<div class="grid2">'+
+      '<div class="field"><label id="in-lab-cons">'+k.cons+'</label><input type="number" inputmode="decimal" id="in-cons" step="0.1" value="'+(s.consumption||'')+'"></div>'+
+      '<div class="field"><label id="in-lab-price">'+k.priceLab+'</label><input type="number" inputmode="decimal" id="in-price" step="0.01" value="'+(s.fuelPrice||'')+'"></div>'+
+      '</div>'+
+      '<div class="field" style="margin-top:12px"><label id="in-lab-tank">'+k.tank+'</label><input type="number" inputmode="decimal" id="in-tank" step="1" value="'+(s.tankLiters||'')+'"></div>'+
+      '<p class="hint" id="in-fuel-note">'+k.note+'</p>';
+  }
   return '<div class="grid2">'+
     '<div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
     '<div class="field"><label>Ціль на день, ₴ на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
@@ -3756,6 +3857,18 @@ function renderIntro(){
   $('intro-back').disabled=introIx===0;
   $('intro-skip').style.display=last?'none':'';
   if(sl.setup==='car')bindIntroCar();
+  if(sl.setup==='fuel')bindIntroFuel();
+}
+function bindIntroFuel(){
+  const s=data.settings;
+  const paint=()=>{
+    const k=FK(s);
+    document.querySelectorAll('#in-fk .mode').forEach(b=>b.classList.toggle('on',b.dataset.fk===(s.fuelKind||'petrol')));
+    const set=(id,t)=>{const e=$(id);if(e)e.textContent=t;};
+    set('in-lab-cons',k.cons);set('in-lab-price',k.priceLab);set('in-lab-tank',k.tank);set('in-fuel-note',k.note);
+  };
+  document.querySelectorAll('#in-fk .mode').forEach(b=>b.addEventListener('click',()=>{s.fuelKind=b.dataset.fk;paint();}));
+  paint();
 }
 function bindIntroCar(){
   const s=data.settings;
@@ -4511,8 +4624,8 @@ function renderGauge(){
   const s=data.settings;
 
   const rows=
-    '<div class="gauge-row"><span>Обʼєм бака</span>'+
-      '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> л</span></div>'+
+    '<div class="gauge-row"><span>'+FK(s).tankShort+'</span>'+
+      '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> '+FK(s).u+'</span></div>'+
     '<div class="gauge-row"><span>Витрата</span><span class="v">'+consLine()+'</span></div>'+
     '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
       (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
@@ -4521,7 +4634,7 @@ function renderGauge(){
   if(!t){
     box.innerHTML='<div class="gauge">'+canisterSVG(0,false)+
       '<div class="gauge-side"><div class="gauge-val">—</div>'+
-      '<div class="gauge-note">Запиши заправку «до повного» — і я почну рахувати, скільки лишилось</div></div></div>'+
+      '<div class="gauge-note">Запишіть заправку «до повного» — і почнеться підрахунок, скільки лишилось</div></div></div>'+
       '<div class="gauge-rows">'+rows+'</div>';
     bindGauge();return;
   }
@@ -4529,10 +4642,10 @@ function renderGauge(){
   box.innerHTML=
     '<div class="gauge">'+canisterSVG(t.pct,low)+
       '<div class="gauge-side">'+
-        '<div class="gauge-val'+(low?' low':'')+'">≈ '+fmt1(t.left)+' л</div>'+
-        '<div class="gauge-pct'+(low?' low':'')+'">'+pc+'% бака</div>'+
+        '<div class="gauge-val'+(low?' low':'')+'">≈ '+fmt1(t.left)+' '+FK(s).u+'</div>'+
+        '<div class="gauge-pct'+(low?' low':'')+'">'+pc+'% '+FK(s).tankGen+'</div>'+
         '<div class="gauge-note">'+(low
-          ? 'Пора на заправку — лишилось приблизно '+Math.round(t.range)+' км ходу'
+          ? 'Пора '+FK(s).go+' — лишилось приблизно '+Math.round(t.range)+' км ходу'
           : 'Вистачить приблизно на '+Math.round(t.range)+' км')+'</div>'+
       '</div>'+
     '</div>'+
@@ -4544,7 +4657,7 @@ function consLine(){
   const s=data.settings,avg=avgConsumption(),lp=lastPrice()||netPrice(s);
   const v=avg||+s.consumption||0;
   if(v<=0)return '—';
-  return fmt1(v)+' л/100'+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
+  return fmt1(v)+' '+U100()+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
 }
 function savingHTML(){
   const g=tankSaving();
@@ -4552,24 +4665,24 @@ function savingHTML(){
   const pc=Math.min(100,Math.round(g.pct*100));
   const done=g.saved>=g.target;
   return '<div class="save-block">'+
-    '<div class="gauge-row"><span>'+(done?'Накопичено на повний бак':'Копиш на наступний бак')+'</span>'+
+    '<div class="gauge-row"><span>'+(done?'Накопичено на '+FK().fullAcc:'Відкладаєте на наступний '+FK().tankNom)+'</span>'+
       '<b class="'+(done?'ok':'')+'">'+fmt(g.saved)+'</b></div>'+
     '<div class="progress"><div class="fill'+(done?' done':'')+'" style="width:'+Math.max(2,pc)+'%"></div></div>'+
-    '<div class="progress-text"><span>'+(done?'вистачає на повний бак':'з '+fmt(g.target)+' за бак')+'</span><span>'+pc+'%</span></div>'+
+    '<div class="progress-text"><span>'+(done?'вистачає на '+FK().fullAcc:'з '+fmt(g.target)+' за '+FK().tankNom)+'</span><span>'+pc+'%</span></div>'+
     (done
-      ? '<p class="hint" style="margin-top:8px"><b>Накопичено на повний бак.</b> Поки їдеш на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — твої, можеш забирати.</p>'
+      ? '<p class="hint" style="margin-top:8px"><b>Накопичено на '+FK().fullAcc+'.</b> Поки їдете на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — ваші, можна забирати.</p>'
       : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Рахунок пішов від останньої заправки й обнулиться на наступній.</p>');
 }
 function bindGauge(){
   const i=$('g-tankl');if(!i)return;
   i.addEventListener('change',async()=>{
     data.settings.tankLiters=num(i.value)||50;
-    await persist();renderTank();toast('Обʼєм бака · '+fmt1(data.settings.tankLiters)+' л');
+    await persist();renderTank();toast(FK().tankShort+' · '+fmt1(data.settings.tankLiters)+' '+FK().u);
   });
 }
 
 function renderTank(){
-  renderPurse();renderGauge();
+  renderPurse();renderGauge();renderCheaper();
   const s=data.settings;
   $('mode-std').classList.toggle('on',s.calcMode!=='exact');
   $('mode-exact').classList.toggle('on',s.calcMode==='exact');
@@ -4578,7 +4691,7 @@ function renderTank(){
   $('mode-note').textContent=s.calcMode==='exact'
     ? (ps.length?'Витрата береться з реальних чеків: '+ps.length+' завершених баків. Простій на світлофорах уже врахований.'
                :'Додайте ще одну заправку до повного бака — після цього почнеться точний облік. Поки розрахунок за налаштуваннями.')
-    : 'Рахую за витратою '+fmt1(s.consumption)+' л/100 км з налаштувань. Для точності перейди на облік по баках.';
+    : 'Рахую за витратою '+fmt1(s.consumption)+' '+FK(s).per+' з налаштувань. Для точності перейдіть на облік по баках.';
 
   /* динаміка ціни */
   const rs=[...data.refuels].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
@@ -4587,29 +4700,29 @@ function renderTank(){
     const a=+rs[rs.length-2].price,b=+rs[rs.length-1].price;
     const d=b-a, pct=a>0?d/a*100:0;
     tr.className='trend '+(d>0.005?'up':d<-0.005?'down':'flat');
-    tr.textContent=d>0.005?'Ціна зросла на '+fmt1(d).replace(',','.')+' ₴/л (+'+Math.abs(pct).toFixed(1)+'%)'
-      :d<-0.005?'Ціна впала на '+Math.abs(d).toFixed(2)+' ₴/л (−'+Math.abs(pct).toFixed(1)+'%)'
-      :'Ціна тримається на '+(+b).toFixed(2)+' ₴/л';
+    tr.textContent=d>0.005?'Ціна зросла на '+fmt1(d).replace(',','.')+' '+UPR()+' (+'+Math.abs(pct).toFixed(1)+'%)'
+      :d<-0.005?'Ціна впала на '+Math.abs(d).toFixed(2)+' '+UPR()+' (−'+Math.abs(pct).toFixed(1)+'%)'
+      :'Ціна тримається на '+(+b).toFixed(2)+' '+UPR();
   }else tr.textContent='';
 
   /* показники */
   const box=$('tank-stats');box.innerHTML='';
   const add=(k,v)=>{const r=document.createElement('div');r.className='ins';r.innerHTML='<span class="k">'+k+'</span><span class="v">'+v+'</span>';box.appendChild(r);};
   if(!data.refuels.length){
-    box.innerHTML='<div class="empty">Записуй кожну заправку з чека — літри з копійками, ціну й одометр</div>';
+    box.innerHTML='<div class="empty">Записуйте кожну заправку з чека — '+FK().many+' з копійками, ціну й одометр</div>';
   }else{
     const totL=data.refuels.reduce((a,r)=>a+(+r.liters||0),0);
     const totM=data.refuels.reduce((a,r)=>a+(+r.liters||0)*(+r.price||0),0);
     add('Заправок',data.refuels.length+' · '+fmt1(totL)+' л');
     add('Витрачено на пальне',fmt(totM));
-    add('Середня ціна літра',totL>0?(totM/totL).toFixed(2)+' ₴':'—');
+    add('Середня ціна '+FK().unitGen,totL>0?(totM/totL).toFixed(2)+' ₴':'—');
     if(ps.length){
       const km=ps.reduce((a,p)=>a+p.km,0);
       add('Пройдено по баках',fmt1(km)+' км');
       const best=[...ps].sort((a,b)=>a.cons-b.cons)[0];
       const worst=[...ps].sort((a,b)=>b.cons-a.cons)[0];
-      add('Найощадніший бак',fmt1(best.cons)+' л/100');
-      if(ps.length>1)add('Найпрожерливіший',fmt1(worst.cons)+' л/100');
+      add('Найощадніший '+FK().tankNom,fmt1(best.cons)+' '+U100());
+      if(ps.length>1)add('Найпрожерливіший',fmt1(worst.cons)+' '+U100());
     }
     const set=+s.consumption||0;
     if(avg&&set>0){
@@ -4636,12 +4749,12 @@ function renderTank(){
       b.className='bar'+(+r.price>=mx?' hot':'');
       const rel=mx>mn?(( +r.price-mn)/(mx-mn))*70+30:60;
       b.style.height=Math.round(rel)+'px';
-      b.title=(+r.price).toFixed(2)+' ₴/л · '+fmtDate(r.date);
+      b.title=(+r.price).toFixed(2)+' '+UPR()+' · '+fmtDate(r.date);
       const l=document.createElement('div');l.className='bar-lbl';
       l.textContent=new Date(r.date+'T00:00:00').getDate();
       w.appendChild(b);w.appendChild(l);pc.appendChild(w);
     });
-    $('price-note').textContent='Від '+mn.toFixed(2)+' до '+mx.toFixed(2)+' ₴/л за останні '+last.length+' заправок.';
+    $('price-note').textContent='Від '+mn.toFixed(2)+' до '+mx.toFixed(2)+' '+UPR()+' за останні '+last.length+' заправок.';
   }
 
   /* історія */
@@ -4650,21 +4763,41 @@ function renderTank(){
   [...data.refuels].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(r=>{
     const row=document.createElement('div');row.className='hist-item tap';
     const per=ps.find(x=>x.toOdo===+r.odo);
-    row.innerHTML='<div class="hist-main" style="flex:1"><div class="d">'+fmt1(r.liters)+' л · '+(+r.price).toFixed(2)+' ₴/л'+(r.full?'':' <span class="approx">частково</span>')+'</div>'+
-      '<div class="s">'+fmtDate(r.date)+' · одометр '+fmt1(r.odo)+(per?' · '+fmt1(per.cons)+' л/100':'')+'</div></div>'+
+    row.innerHTML='<div class="hist-main" style="flex:1"><div class="d">'+fmt1(r.liters)+' '+UU()+' · '+(+r.price).toFixed(2)+' '+UPR()+(r.full?'':' <span class="approx">частково</span>')+'</div>'+
+      '<div class="s">'+fmtDate(r.date)+(r.st?' · '+esc(r.st):'')+' · одометр '+fmt1(r.odo)+(per?' · '+fmt1(per.cons)+' '+U100():'')+'</div></div>'+
       '<div class="hist-net">'+fmt((+r.liters)*(+r.price))+'</div>';
     row.addEventListener('click',()=>openRefuel(r.id));
     list.appendChild(row);
   });
 }
 
-let rfId=null;
+let rfId=null,rfStId=0;
+/* Мережі просто чипами: тап підставляє ціну зі знижкою, щоб не набирати
+   її руками. Ціну з чека все одно можна виправити — вона старша. */
+function renderRfStations(){
+  const box=$('rf-st');if(!box)return;
+  const l=stationsOf();
+  if(!l.length){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='';
+  box.innerHTML=l.map(st=>'<button class="wchip'+(st.id===rfStId?' on':'')+'" data-sid="'+st.id+'">'+
+    esc(st.name)+'<span class="w2">'+(stationNet(st)>0?fmt1(stationNet(st)):'—')+'</span></button>').join('');
+}
+$('rf-st').addEventListener('click',e=>{
+  const b=e.target.closest('.wchip');if(!b)return;
+  rfStId=+b.dataset.sid;
+  const st=stationsOf().find(x=>x.id===rfStId);
+  if(st&&stationNet(st)>0)$('rf-price').value=stationNet(st).toFixed(2);
+  renderRfStations();disarm($('rf-save'));rfCalc();
+});
 function openRefuel(id){
   rfId=id||null;
   const r=id?data.refuels.find(x=>x.id===id):null;
+  const mn=mainStation();
+  rfStId=r?(+r.stId||0):(mn?mn.id:0);
+  const guess=rfStId?stationNet(stationsOf().find(x=>x.id===rfStId)||{}):0;
   $('rf-title').textContent=r?'Редагувати заправку':'Заправка';
   $('rf-liters').value=r?r.liters:'';
-  $('rf-price').value=r?(+r.price).toFixed(2):(lastPrice()?lastPrice().toFixed(2):(netPrice()>0?netPrice().toFixed(2):''));
+  $('rf-price').value=r?(+r.price).toFixed(2):(guess>0?guess.toFixed(2):(lastPrice()?lastPrice().toFixed(2):(netPrice()>0?netPrice().toFixed(2):'')));
   $('rf-odo').value=r?r.odo:(lastOdometer()>0?fmt1(lastOdometer()).replace(',','.'):'');
   $('rf-date').value=r?r.date:todayStr();
   const full=r?!!r.full:true;
@@ -4672,6 +4805,7 @@ function openRefuel(id){
   const wasReset=r?!!r.reset:false;
   document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.reset==='1')===wasReset));
   $('rf-del').style.display=r?'block':'none';
+  renderRfStations();
   disarm($('rf-save'));disarm($('rf-del'));
   rfCalc();openM('modal-refuel');
   if(!r)setTimeout(()=>$('rf-liters').focus(),120);
@@ -4687,9 +4821,9 @@ function rfCalc(){
   const prev=rsAll.length?rsAll[rsAll.length-1]:null;
   if(prev&&l>0&&rfFull()){
     const km=prev.reset?odo:(odo-prev.odo);
-    if(km>0)p.push('за '+fmt1(km)+' км → '+fmt1(l/km*100)+' л/100');
+    if(km>0)p.push('за '+fmt1(km)+' км → '+fmt1(l/km*100)+' '+U100());
   }
-  $('rf-calc').textContent=p.join(' · ')||'Вкажіть літри з копійками та показник одометра';
+  $('rf-calc').textContent=p.join(' · ')||'Вкажіть '+FK().many+' з копійками та показник одометра';
   const db=$('rf-days');
   if(db){
     const d=daysSinceRefuel();
@@ -4716,13 +4850,15 @@ $('btn-refuel').addEventListener('click',()=>openRefuel(null));
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
 $('rf-save').addEventListener('click',function(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
-  if(l<=0){toast('Вкажіть літри з чека');return;}
-  if(pr<=0){toast('Вкажіть ціну за літр');return;}
+  if(l<=0){toast('Вкажіть '+FK().many+' з чека');return;}
+  if(pr<=0){toast('Вкажіть ціну — '+FK().price);return;}
   const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
   if(dup){toast('Заправка з таким одометром уже є');return;}
   arm(this,rfId?'Точно зберегти?':'Точно записати?',async()=>{
     const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
+    const stPick=stationsOf().find(x=>x.id===rfStId);
     const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
+      stId:rfStId||0,st:(stPick&&stPick.name)||'',
       reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now(),
       /* час потрібен, щоб відрізнити зміну до заправки від зміни після неї.
          Заправку заднім числом вважаємо вечірньою. */
@@ -4798,7 +4934,7 @@ function renderSettings(){
   renderCarMode();
   renderRentMode();
   renderFundMode();
-  renderDiscMode();
+  renderFuelKind();renderStations();
   renderSupport();renderCloud();renderAdmin();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
@@ -4835,27 +4971,172 @@ document.querySelectorAll('#car-mode .mode').forEach(b=>b.addEventListener('clic
   renderCarMode();recalcAll();await persist();renderAll();
 }));
 
-/* Знижка на пальне: у гривнях з літра або відсотком. Обидва значення тримаємо
-   окремо, щоб перемикання туди-сюди не стирало набране. */
-function renderDiscMode(){
-  const s=data.settings,pct=s.discMode==='pct';
-  $('lab-disc').textContent=pct?'Знижка, % від ціни':'Знижка з літра, ₴';
-  $('set-disc').value=pct?(+s.discPct||''):(+s.discUah||'');
-  document.querySelectorAll('#disc-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.dm==='pct')===pct));
-  const np=netPrice(s),full=+s.fuelPrice||0;
-  $('disc-note').textContent=(np<full&&full>0)
-    ? 'Платиш по факту '+fmt1(np)+' ₴/л замість '+fmt1(full)+'. Саме за цією ціною рахується пальне, поки немає чеків заправок.'
-    : 'Таксистська знижка на АЗС. Немає — лиши нуль. Коли запишеш заправку, рахунок піде за ціною з чека.';
+/* ══ ВИД ПАЛЬНОГО ══ */
+function renderFuelKind(){
+  const s=data.settings,k=FK(s);
+  document.querySelectorAll('#fuel-kind .mode').forEach(b=>b.classList.toggle('on',b.dataset.fk===(s.fuelKind||'petrol')));
+  const set=(id,t)=>{const e=$(id);if(e)e.textContent=t;};
+  set('lab-cons',k.cons);set('lab-price',k.priceLab);set('lab-tankl',k.tank);
+  set('fuel-note',k.note);set('t-price-dyn',k.dyn);
+  set('lab-rf-liters',k.rf);set('lab-rf-price',k.rfPrice);
+  set('st-sub-uah',k.cut);
 }
-function grabDiscField(){
-  const s=data.settings;
-  if(s.discMode==='pct')s.discPct=num($('set-disc').value); else s.discUah=num($('set-disc').value);
-}
-document.querySelectorAll('#disc-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
-  grabDiscField();
-  data.settings.discMode=b.dataset.dm;
-  renderDiscMode();recalcAll();await persist();renderAll();
+document.querySelectorAll('#fuel-kind .mode').forEach(b=>b.addEventListener('click',async()=>{
+  data.settings.fuelKind=b.dataset.fk;
+  renderFuelKind();renderStations();recalcAll();await persist();renderAll();
 }));
+
+/* ══ ЗНИЖКИ НА АЗС ══
+   Готові мережі — щоб не набирати руками. Цифри взяті з програми Uklon
+   DriverUP і є лише підказкою: у кожного водія своя картка, тому значення
+   редагується, а внизу вікна одразу видно ціну, яка вийде. */
+const ST_PRESETS={
+  petrol:[{n:'ОККО',v:5},{n:'WOG',v:3.5},{n:'УКРНАФТА',v:3},{n:'SOCAR',v:2.5},
+          {n:'AMIC'},{n:'БРСМ'},{n:'Авіас'},{n:'KLO'},{n:'Shell'},{n:'UPG'}],
+  gas:[{n:'ОККО',v:1.5},{n:'WOG',v:1.5},{n:'УКРНАФТА',v:1.5},{n:'SOCAR',v:1.5},{n:'AMIC'},{n:'БРСМ'}],
+  ev:[{n:'FLASH · швидкі (DC)',v:2},{n:'FLASH · повільні (AC)',v:1},{n:'GO TO-U',v:8,m:'pct'},
+      {n:'YASNO E-mobility'},{n:'Іон'},{n:'TOKA'}]
+};
+function stPresets(){return ST_PRESETS[data.settings.fuelKind]||ST_PRESETS.petrol;}
+
+function renderStations(){
+  const box=$('st-list');if(!box)return;
+  const s=data.settings,l=stationsOf(s),main=mainStation(s);
+  if(!l.length){
+    box.innerHTML='<div class="empty">Знижок ще немає. Додайте свої картки — і пальне рахуватиметься за реальною ціною, а не за цінником на табло</div>';
+  }else{
+    box.innerHTML=l.map(st=>{
+      const on=!!main&&st.id===main.id,cut=stationCut(st,s),net=stationNet(st,s);
+      return '<div class="st-row'+(on?' on':'')+'" data-st="'+st.id+'">'+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="d">'+esc(st.name)+(on?' <span class="approx">основна</span>':'')+'</div>'+
+          '<div class="s">'+(cut>0.005?'−'+fmt1(cut)+(st.mode==='pct'?' ('+fmt1(+st.val||0)+'%)':'')+' · ':'')+
+            (net>0?'по факту '+fmt1(net)+' '+UPR():'ціну не вказано')+'</div>'+
+        '</div>'+
+        '<button class="edit" data-edit="'+st.id+'">Змінити</button></div>';
+    }).join('');
+  }
+  const k=FK(s);
+  $('st-note').textContent=l.length
+    ? 'Пальне рахується за ціною основної мережі, поки немає чеків заправок. Дотик до рядка робить мережу основною. Записана заправка завжди старша за цю оцінку.'
+    : 'Знижка водія таксі на АЗС ('+k.cut+' або відсотком). Мережі, у яких заправляєтесь, зручно порівнювати на екрані «Бак» → «Де дешевше».';
+}
+$('st-list').addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-edit]');
+  if(ed){openStation(+ed.dataset.edit);return;}
+  const row=e.target.closest('[data-st]');
+  if(!row)return;
+  data.settings.stationId=+row.dataset.st;
+  recalcAll();await persist();renderStations();renderAll();
+});
+$('btn-station').addEventListener('click',()=>openStation(null));
+
+let stId=null,stMode='uah';
+function renderStMode(){
+  const k=FK();
+  document.querySelectorAll('#st-mode .mode').forEach(b=>b.classList.toggle('on',b.dataset.sm===stMode));
+  $('lab-st-val').textContent=stMode==='pct'?'Знижка, % від ціни':'Знижка '+k.cut+', ₴';
+  $('lab-st-price').textContent='Ціна на табло, '+k.price;
+}
+function stCalc(){
+  const st={mode:stMode,val:num($('st-val').value),price:num($('st-price').value)};
+  const base=stationBase(st),net=stationNet(st);
+  $('st-calc').textContent=base>0
+    ? 'Платите '+fmt1(net)+' '+UPR()+(net<base?' замість '+fmt1(base):'')
+    : 'Вкажіть ціну на табло або базову ціну в налаштуваннях';
+}
+function openStation(id){
+  stId=id||null;
+  const st=id?stationsOf().find(x=>x.id===id):null;
+  $('st-title').textContent=st?'Знижка · '+st.name:'Нова знижка';
+  $('st-name').value=st?st.name:'';
+  $('st-val').value=st?(+st.val||''):'';
+  $('st-price').value=st&&+st.price>0?(+st.price).toFixed(2):'';
+  stMode=st?(st.mode||'uah'):'uah';
+  $('st-del').style.display=st?'block':'none';
+  const pr=$('st-presets');
+  pr.style.display=st?'none':'';
+  $('st-preset-note').style.display=st?'none':'';
+  pr.innerHTML=st?'':stPresets().map(p=>'<button class="wchip" data-p="'+esc(p.n)+'" data-v="'+(p.v==null?'':p.v)+'" data-m="'+(p.m||'uah')+'">'+esc(p.n)+'</button>').join('');
+  disarm($('st-del'));
+  renderStMode();stCalc();openM('modal-station');
+  if(!st)setTimeout(()=>$('st-name').focus(),120);
+}
+$('st-presets').addEventListener('click',e=>{
+  const b=e.target.closest('.wchip');if(!b)return;
+  $('st-name').value=b.dataset.p;
+  if(b.dataset.v!=='')$('st-val').value=b.dataset.v;
+  stMode=b.dataset.m||'uah';
+  renderStMode();stCalc();
+});
+document.querySelectorAll('#st-mode .mode').forEach(b=>b.addEventListener('click',()=>{
+  stMode=b.dataset.sm;renderStMode();stCalc();
+}));
+['st-val','st-price'].forEach(id=>$(id).addEventListener('input',stCalc));
+$('st-cancel').addEventListener('click',()=>closeM('modal-station'));
+$('st-save').addEventListener('click',async()=>{
+  const name=($('st-name').value||'').trim().slice(0,24);
+  if(!name){toast('Впишіть назву мережі');return;}
+  const val=num($('st-val').value),price=num($('st-price').value),s=data.settings;
+  if(!Array.isArray(s.stations))s.stations=[];
+  if(stId){
+    const st=s.stations.find(x=>x.id===stId);
+    if(st){st.name=name;st.val=val;st.price=price;st.mode=stMode;}
+  }else{
+    const st={id:Date.now(),name:name,val:val,price:price,mode:stMode};
+    s.stations.push(st);
+    if(!mainStation(s)||s.stations.length===1)s.stationId=st.id;
+  }
+  recalcAll();await persist();closeM('modal-station');
+  renderStations();renderAll();toast('Знижку збережено');
+});
+$('st-del').addEventListener('click',function(){
+  arm(this,'Точно видалити?',async()=>{
+    const s=data.settings;
+    s.stations=stationsOf(s).filter(x=>x.id!==stId);
+    if(s.stationId===stId)s.stationId=s.stations.length?s.stations[0].id:0;
+    recalcAll();await persist();closeM('modal-station');
+    renderStations();renderAll();toast('Знижку видалено');
+  });
+});
+
+/* Порівняння мереж на екрані бака: де сьогодні дешевше й скільки це коштує */
+function unitsLast(days){
+  const from=new Date(Date.now()-days*864e5).toISOString().slice(0,10);
+  return (data.refuels||[]).filter(r=>String(r.date||'')>=from).reduce((a,r)=>a+(+r.liters||0),0);
+}
+function renderCheaper(){
+  const card=$('cheap-card');if(!card)return;
+  const s=data.settings,l=stationsOf(s);
+  if(!l.length){card.style.display='none';return;}
+  card.style.display='';
+  const main=mainStation(s),k=FK(s);
+  const rows=l.map(st=>({st:st,net:stationNet(st,s)})).sort((a,b)=>a.net-b.net);
+  const best=rows[0],worst=rows[rows.length-1];
+  $('cheap-list').innerHTML=rows.map((x,i)=>{
+    const on=!!main&&x.st.id===main.id;
+    return '<div class="st-row'+(on?' on':'')+'" data-pick="'+x.st.id+'">'+
+      '<div style="flex:1;min-width:0"><div class="d">'+esc(x.st.name)+
+        (i===0&&rows.length>1?' <span class="approx">найдешевша</span>':'')+'</div>'+
+      '<div class="s">'+(x.net>0?fmt1(x.net)+' '+UPR():'ціну не вказано')+
+        (i>0&&x.net-best.net>0.005?' · дорожче на '+fmt1(x.net-best.net):'')+'</div></div>'+
+      (on?'<span class="approx">основна</span>':'')+'</div>';
+  }).join('');
+  const diff=worst.net-best.net,tk=Math.max(0,+s.tankLiters||0),u30=unitsLast(30);
+  let t='Дотик до рядка робить мережу основною — саме за її ціною рахується пальне, поки немає чеків.';
+  if(diff>0.005&&rows.length>1){
+    t='Різниця між «'+worst.st.name+'» і «'+best.st.name+'» — '+fmt1(diff)+' '+k.price+'.';
+    if(tk>0)t+=' На '+k.fullAcc+' це '+fmt(diff*tk)+'.';
+    if(u30>0)t+=' За 30 днів ви взяли '+fmt1(u30)+' '+k.u+' — різниця вийшла б '+fmt(diff*u30)+'.';
+    t+=' Дотик до рядка робить мережу основною.';
+  }
+  $('cheap-note').textContent=t;
+}
+$('cheap-list').addEventListener('click',async e=>{
+  const row=e.target.closest('[data-pick]');if(!row)return;
+  data.settings.stationId=+row.dataset.pick;
+  recalcAll();await persist();renderStations();renderAll();
+});
 
 function renderFundMode(){
   const s=data.settings,km=s.fundMode==='km';
@@ -4906,7 +5187,7 @@ document.querySelectorAll('#rent-period .mode').forEach(b=>b.addEventListener('c
 }));
 
 $('btn-set-save').addEventListener('click',async()=>{
-  grabFundField();grabRentField();grabDiscField();
+  grabFundField();grabRentField();
   data.settings={...data.settings,
     commissionPct:num($('set-comm').value),
     tankLiters:num($('set-tankl').value)||50,
@@ -4919,7 +5200,7 @@ $('btn-set-save').addEventListener('click',async()=>{
   };
   fitFundTarget();
   $('set-starget').value=data.settings.serviceTarget;
-  renderDiscMode();
+  renderFuelKind();renderStations();
   recalcAll(); /* нові відсотки й витрата застосовуються до всіх минулих змін */
   await persist();renderAll();toast('Налаштування збережено й застосовано до всієї історії');
 });
