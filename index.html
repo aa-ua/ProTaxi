@@ -130,6 +130,9 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .orow.tone-r{border-left-color:var(--red);background:linear-gradient(90deg,rgba(255,95,87,.10),transparent 62%)}
 .orow.tone-g .a{color:var(--green)}
 .orow.tone-r .a{color:var(--red)}
+/* Знімок екрана у зверненні */
+#sup-shot{margin-top:10px;text-align:center}
+#sup-prev{max-width:100%;max-height:190px;border-radius:12px;display:block;margin:0 auto 4px}
 /* Знайомство: спершу кілька екранів «навіщо це», далі три кроки налаштування */
 .modal.intro{padding:16px 18px 18px}
 .modal.intro #intro-next{margin-top:16px}
@@ -761,6 +764,12 @@ html.map-full .tabbar{display:none}
     <h3>Написати в підтримку</h3>
     <p class="hint" style="margin:0 0 12px">Що не так або чого бракує? Пиши як є — це читає жива людина, автор застосунку.</p>
     <div class="field"><textarea id="sup-text" rows="5" placeholder="Опиши, що сталося…"></textarea></div>
+    <input type="file" id="sup-file" accept="image/*" hidden>
+    <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">📷 Додати знімок екрана</button>
+    <div id="sup-shot" style="display:none">
+      <img id="sup-prev" alt="">
+      <button class="lnk" id="sup-drop" type="button">Прибрати знімок</button>
+    </div>
     <div class="hint" id="sup-state" style="margin:0 0 4px"></div>
     <button class="btn btn-primary" id="sup-send">Надіслати</button>
     <button class="btn btn-ghost" id="sup-cancel">Назад</button>
@@ -957,7 +966,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='4.6';
+const APP_VER='4.7';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3632,6 +3641,72 @@ async function sbRpc(fn,body){
   if(!r.ok)throw new Error(fn+' '+r.status+' '+(await r.text()).slice(0,140));
   return await r.json();
 }
+/* Знімок стискаємо просто на телефоні: у бот має летіти картинка, а не 8 мегабайт */
+let supBlob=null;
+function shrinkImage(file,maxSide,quality){
+  return new Promise(function(res,rej){
+    const fr=new FileReader();
+    fr.onerror=()=>rej(new Error('read'));
+    fr.onload=function(){
+      const img=new Image();
+      img.onerror=()=>rej(new Error('decode'));
+      img.onload=function(){
+        const k=Math.min(1,maxSide/Math.max(img.width,img.height));
+        const c=document.createElement('canvas');
+        c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+        c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+        c.toBlob(b=>b?res(b):rej(new Error('encode')),'image/jpeg',quality);
+      };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function supClearShot(){
+  supBlob=null;
+  $('sup-file').value='';
+  $('sup-shot').style.display='none';
+  $('sup-prev').removeAttribute('src');
+  $('sup-pick').textContent='📷 Додати знімок екрана';
+}
+$('sup-pick').addEventListener('click',()=>$('sup-file').click());
+$('sup-drop').addEventListener('click',supClearShot);
+$('sup-file').addEventListener('change',async function(){
+  const f=this.files&&this.files[0];
+  if(!f)return;
+  try{
+    supBlob=await shrinkImage(f,1600,0.75);
+    $('sup-prev').src=URL.createObjectURL(supBlob);
+    $('sup-shot').style.display='';
+    $('sup-pick').textContent='📷 Інший знімок';
+    $('sup-state').textContent='';
+  }catch(e){
+    supClearShot();
+    $('sup-state').textContent='Не вдалося прочитати картинку. Спробуй інший знімок.';
+  }
+});
+/* Кладемо знімок у сховище й повертаємо адресу, дійсну кілька хвилин */
+async function uploadShot(){
+  const slot=await sbRpc('support_slot',{p_init_data:TG.initData});
+  const path=slot&&slot.path;
+  if(!path)throw new Error('slot');
+  const up=await fetch(SB_URL+'/storage/v1/object/support/'+path,{
+    method:'POST',
+    headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},
+    body:supBlob
+  });
+  if(!up.ok)throw new Error('upload '+up.status);
+  const sg=await fetch(SB_URL+'/storage/v1/object/sign/support/'+path,{
+    method:'POST',
+    headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},
+    body:JSON.stringify({expiresIn:600})
+  });
+  if(!sg.ok)throw new Error('sign '+sg.status);
+  const j=await sg.json();
+  let u=j.signedURL||j.signedUrl||'';
+  if(u.charAt(0)!=='/')u='/'+u;
+  return SB_URL+'/storage/v1'+u;
+}
 function openSupport(){
   if(!TG||!TG.initData){
     if(SUPPORT_BOT)window.open('https://t.me/'+SUPPORT_BOT,'_blank','noopener');
@@ -3640,6 +3715,7 @@ function openSupport(){
   }
   $('sup-text').value='';
   $('sup-state').textContent='';
+  supClearShot();
   const b=$('sup-send');b.disabled=false;b.textContent='Надіслати';
   openM('modal-support');
   setTimeout(()=>$('sup-text').focus(),150);
@@ -3647,12 +3723,16 @@ function openSupport(){
 $('sup-cancel').addEventListener('click',()=>closeM('modal-support'));
 $('sup-send').addEventListener('click',async function(){
   const t=$('sup-text').value.trim();
-  if(t.length<3){toast('Напиши хоч кілька слів');return;}
+  if(t.length<3&&!supBlob){toast('Напиши хоч кілька слів');return;}
   this.disabled=true;this.textContent='Надсилаю…';
   $('sup-state').textContent='';
   try{
-    await sbRpc('support',{p_init_data:TG.initData,p_text:t.slice(0,2000)});
+    let url=null;
+    if(supBlob){this.textContent='Надсилаю знімок…';url=await uploadShot();}
+    this.textContent='Надсилаю…';
+    await sbRpc('support',{p_init_data:TG.initData,p_text:t.slice(0,2000),p_photo:url});
     closeM('modal-support');
+    supClearShot();
     toast('Надіслано. Відповідь прийде в цей же бот');
   }catch(e){
     $('sup-state').textContent='Не вийшло надіслати. Перевір інтернет і спробуй ще раз.';
