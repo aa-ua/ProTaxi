@@ -161,6 +161,10 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .sub-row .t span{display:block;font-size:12.5px;color:var(--muted);font-weight:400;line-height:1.45;margin-top:3px}
 .sub-row .ok{flex-shrink:0;width:19px;height:19px;color:var(--yellow);margin-top:2px}
 .sub-cta{border-radius:999px;height:56px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+/* Оплати ще немає: кнопка на місці, але вимкнена — видно, що буде далі,
+   і ніхто не надсилає заявок, які нема кому приймати. */
+.btn:disabled,.btn.off{background:var(--surface2);color:var(--muted);cursor:default;box-shadow:none}
+.btn:disabled:active,.btn.off:active{transform:none}
 .sub-fine{font-size:12.5px;color:var(--muted);font-weight:400;text-align:center;line-height:1.5;margin-top:12px}
 .sub-warn{margin-bottom:12px;padding:13px 15px;border-radius:14px;background:rgba(255,176,32,.11);
   color:var(--amber);font-size:13.5px;font-weight:500;line-height:1.5;cursor:pointer}
@@ -1157,7 +1161,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.8';
+const APP_VER='1.9';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4163,6 +4167,9 @@ async function loadBilling(){
   catch(e){bill=null;}
   renderSub();renderShift();
 }
+/* Оплата ще не відкрита. Поставиш true — кнопка знову почне працювати,
+   більше нічого міняти не треба. */
+const PAY_OPEN=false;
 /* ціна показується у валюті, яку власник задав у базі */
 const subPrice=b=>{
   const v=+((b&&b.price)||0),c=(b&&b.cur)||'UAH';
@@ -4216,15 +4223,23 @@ function renderSub(){
         ? 'Підписка діє до <b>'+fmtFull(b.until)+'</b>. Продовження — '+subPrice(b)+' на місяць.'
         : 'Ознайомчий період діє до <b>'+fmtFull(b.until)+'</b>. Далі — '+subPrice(b)+' на місяць.')
     : 'Історія змін, статистика й резервна копія лишаються доступними. Для відкриття нових змін потрібна активна підписка.';
-  $('sub-go').style.display='';
-  $('sub-go').textContent=b.paid?'Продовжити на місяць':'Оформити за '+subPrice(b);
+  const go=$('sub-go');
+  go.style.display='';
+  if(!PAY_OPEN){
+    go.disabled=true;go.classList.add('off');
+    go.textContent='Оформлення скоро';
+    $('sub-hint').textContent='Оплата ще не відкрита. Поки триває тестування, застосунок працює без обмежень.';
+    return;
+  }
+  go.disabled=false;go.classList.remove('off');
+  go.textContent=b.paid?'Продовжити на місяць':'Оформити за '+subPrice(b);
   $('sub-hint').textContent=b.link
     ? 'Оплата відкриється в окремому вікні. Доступ активується протягом кількох хвилин після зарахування.'
     : 'Запит надійде автору застосунку. Доступ активують вручну, зазвичай того ж дня.';
 }
 const plDay=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'днів':(b===1?'день':((b>=2&&b<=4)?'дні':'днів'));};
 $('sub-go').addEventListener('click',async function(){
-  if(!TG||!TG.initData)return;
+  if(!PAY_OPEN||!TG||!TG.initData)return;
   this.disabled=true;this.textContent='Надсилаю…';
   try{
     await sbRpc('billing_ask',{p_init_data:TG.initData});
