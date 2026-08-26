@@ -1269,7 +1269,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.25';
+const APP_VER='1.26';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4488,7 +4488,25 @@ function roundRect(c,x,y,w,h,r){
   c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);
   c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();
 }
-const SHARE_FONT='-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif';
+/* Шрифт беремо просто з тіла сторінки — тоді картинка й застосунок
+   написані однаково на будь-якому телефоні. Логотип, як і всюди, Unbounded. */
+const SHARE_FONT=(function(){
+  try{const f=getComputedStyle(document.body).fontFamily;if(f)return f;}catch(e){}
+  return '-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,sans-serif';
+})();
+const SHARE_LOGO_FONT="'Unbounded',"+SHARE_FONT;
+/* canvas малює тільки вже завантаженими шрифтами — дочекаємось їх */
+async function shareFontsReady(){
+  try{
+    if(!document.fonts||!document.fonts.load)return;
+    await Promise.all([
+      document.fonts.load("800 40px "+SHARE_LOGO_FONT),
+      document.fonts.load("800 150px "+SHARE_FONT),
+      document.fonts.load("500 30px "+SHARE_FONT)
+    ]);
+    await document.fonts.ready;
+  }catch(e){}
+}
 function drawShare(){
   const cv=document.createElement('canvas');
   cv.width=SHARE_W;cv.height=SHARE_H;
@@ -4506,7 +4524,7 @@ function drawShare(){
 
   const P=84;
   /* марка */
-  c.font='800 40px '+SHARE_FONT;
+  c.font='800 40px '+SHARE_LOGO_FONT;
   const mw=c.measureText('ProTaxi').width+56;
   c.fillStyle='#3BE0A6';roundRect(c,P,P,mw,74,22);c.fill();
   c.fillStyle='#101010';c.textBaseline='middle';c.textAlign='left';
@@ -4558,6 +4576,7 @@ let shareBlob=null,shareUrl='';
 async function openShare(){
   const st=shareStats();
   if(!st.shifts){toast('За цей період ще немає змін');return;}
+  await shareFontsReady();
   const cv=drawShare();
   shareUrl=cv.toDataURL('image/jpeg',0.92);
   $('share-img').src=shareUrl;
