@@ -558,7 +558,9 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 #map.punchy .leaflet-tile-pane{filter:saturate(1.35) contrast(1.08) brightness(1.02)}
 /* Нічні тайли самі по собі пласкі — піднімаємо дорогам яскравість і додаємо синього */
 #map.dark{background:#1E252F}
-#map.dark .leaflet-tile-pane{filter:brightness(1.9) contrast(.92) saturate(1.4) hue-rotate(-6deg)}
+/* класичний рецепт нічної мапи зі світлих тайлів: інверсія плюс поворот
+   відтінку повертає зелень зеленою, а воду — синьою */
+#map.dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.86) contrast(1.12) saturate(.78)}
 .map-card{position:relative;padding:8px}
 .map-fs{position:absolute;top:16px;right:16px;z-index:5;width:38px;height:38px;border-radius:11px;
   background:rgba(34,37,43,.86);border:none;color:#fff;display:flex;align-items:center;justify-content:center;
@@ -1298,7 +1300,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.29';
+const APP_VER='1.30';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2740,13 +2742,14 @@ function loadLeaflet(cb){
   s.onerror=()=>{leafletState='failed';const q=leafletCbs;leafletCbs=[];q.forEach(f=>f(false));};
   document.head.appendChild(s);
 }
-const CARTO=n=>'https://{s}.basemaps.cartocdn.com/rastertiles/'+n+'/{z}/{x}/{y}{r}.png';
-const CARTO_OPT={maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap © CARTO'};
-/* Темну не робимо фільтром зі світлої: у світлій і дороги, і фон майже білі,
-   інверсія зливає їх у чорне. Тому беремо окремі нічні тайли й піднімаємо контраст. */
+/* CARTO почала вимагати ключ і малює поверх карти «API KEY REQUIRED».
+   Тому беремо тайли самої OpenStreetMap: вони безкоштовні й без ключа.
+   Нічний вигляд робимо фільтром — окремих темних тайлів без ключа немає. */
+const OSM_URL='https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const OSM_OPT={maxZoom:19,attribution:'© OpenStreetMap'};
 const MAP_STYLES={
-  light:{url:CARTO('voyager'),opt:CARTO_OPT},
-  dark :{url:CARTO('dark_all'),opt:CARTO_OPT,dark:true}
+  light:{url:OSM_URL,opt:OSM_OPT},
+  dark :{url:OSM_URL,opt:OSM_OPT,dark:true}
 };
 let tileLayerRef=null;
 function applyMapStyle(){
