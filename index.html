@@ -214,6 +214,12 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .adm-t .h{display:flex;justify-content:space-between;gap:10px;font-size:13px;font-weight:800;margin-bottom:5px}
 .adm-t .h span{color:var(--muted);font-weight:700;white-space:nowrap}
 .adm-t .b{font-size:13.5px;font-weight:600;line-height:1.45;color:var(--text)}
+.adm-t .f{display:flex;align-items:flex-start;gap:10px;margin-top:9px}
+.adm-t .ans{flex:1;min-width:0;font-size:12.5px;font-weight:600;line-height:1.45;color:var(--muted);
+  border-left:2px solid var(--yellow);padding-left:9px}
+.adm-t .ans b{display:block;font-size:11px;color:var(--yellow);font-weight:800;margin-bottom:2px}
+.adm-q{font-size:13px;font-weight:600;line-height:1.45;color:var(--muted);
+  border-left:2px solid var(--line);padding-left:10px;margin:0 0 12px;max-height:150px;overflow-y:auto}
 .adm-give{flex-shrink:0;padding:8px 12px;border-radius:11px;border:none;background:var(--surface2);
   color:var(--yellow);font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer}
 .adm-give:disabled{opacity:.5}
@@ -1059,6 +1065,18 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: відповідь на звернення (адмінка) -->
+<div class="modal-bg mid" id="modal-areply">
+  <div class="modal">
+    <h3>Відповісти водієві</h3>
+    <p class="hint" style="margin:0 0 10px">Відповідь надійде йому в бот — від імені ProTaxi, не з вашого акаунта.</p>
+    <div class="adm-q" id="ar-quote"></div>
+    <div class="field"><textarea id="ar-text" rows="5" placeholder="Ваша відповідь…"></textarea></div>
+    <button class="btn btn-primary" id="ar-send">Надіслати</button>
+    <button class="btn btn-ghost" id="ar-cancel">Назад</button>
+  </div>
+</div>
+
 <!-- Модалка: знайомство і перше налаштування -->
 <div class="modal-bg mid" id="modal-intro">
   <div class="modal intro">
@@ -1302,7 +1320,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.33';
+const APP_VER='1.34';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4806,19 +4824,67 @@ function admPeople(d){
       :'<div class="empty">Ще нікого</div>')+'</div>';
 }
 
+/* Звернення для адмінки беремо окремою функцією: у ній є номер звернення,
+   без якого нема на що відповідати. Немає її в базі — лишається старий
+   список із admin_stats, тільки без кнопки. */
+let admTicks=null;
+async function loadAdminTicks(){
+  try{const r=await sbRpc('admin_tickets',{p_init_data:TG.initData,p_limit:40});
+    admTicks=(r&&r.list)||[];}
+  catch(e){admTicks=null;}
+}
 function admTalk(d){
-  const t=d.tick||[];
+  const own=Array.isArray(admTicks),t=own?admTicks:(d.tick||[]);
+  const card=x=>{
+    const head='<div class="h"><b>'+esc(x.name||'')+
+      (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
+      '<div class="b">'+esc(x.body||'')+
+      (x.shot?' <i style="font-style:normal;color:var(--muted)">· зі знімком</i>':'')+'</div>';
+    if(!own)return '<div class="adm-t">'+head+'</div>';
+    const foot=x.ans
+      ? '<div class="f"><div class="ans"><b>Ви відповіли · '+esc(x.ans_at||'')+'</b>'+esc(x.ans)+'</div></div>'
+      : '<div class="f"><button class="adm-give" type="button" data-reply="'+x.id+'">Відповісти</button></div>';
+    return '<div class="adm-t">'+head+foot+'</div>';
+  };
   return '<div class="metrics two">'+
     admTile('mail',d.tickets||0,'звернень усього','за добу '+(d.tickets_1d||0),true)+
     admTile('key',(d.started||0),'дійшли до замовлення','з '+(d.users||0)+' водіїв')+
     '</div>'+
     '<div class="card"><div class="card-title">Останні звернення</div>'+
-    (t.length?t.map(x=>'<div class="adm-t"><div class="h"><b>'+esc(x.name||'')+
-      (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
-      '<div class="b">'+esc(x.body||'')+(x.shot?' <i style="font-style:normal;color:var(--muted)">· зі знімком</i>':'')+'</div></div>').join('')
-      :'<div class="empty">Звернень ще не було</div>')+
-    '<p class="hint">Повний текст зі знімками надходить у бот. Тут — щоб звернення не губились.</p></div>';
+    (t.length?t.map(card).join(''):'<div class="empty">Звернень ще не було</div>')+
+    '<p class="hint">'+(own
+      ? 'Відповідь іде водієві в бот від імені ProTaxi. Знімки екрана лишаються в боті.'
+      : 'Повний текст зі знімками надходить у бот. Щоб відповідати звідси, виконайте крок 13 у Supabase.')+
+    '</p></div>';
 }
+
+/* ── відповідь на звернення ── */
+let arId=0;
+$('admin-body').addEventListener('click',e=>{
+  const b=e.target.closest('[data-reply]');if(!b)return;
+  const t=(admTicks||[]).find(x=>String(x.id)===b.dataset.reply);if(!t)return;
+  arId=+t.id;
+  $('ar-quote').textContent=(t.name||'')+(t.user?' @'+t.user:'')+': '+(t.body||'');
+  $('ar-text').value='';
+  openM('modal-areply');
+  setTimeout(()=>$('ar-text').focus(),120);
+});
+$('ar-cancel').addEventListener('click',()=>closeM('modal-areply'));
+$('ar-send').addEventListener('click',async function(){
+  const txt=$('ar-text').value.trim();
+  if(txt.length<2){toast('Напишіть відповідь');return;}
+  this.disabled=true;const was=this.textContent;this.textContent='Надсилаю…';
+  try{
+    await sbRpc('admin_reply',{p_init_data:TG.initData,p_ticket:arId,p_text:txt});
+    closeM('modal-areply');
+    toast('Відповідь надіслано');
+    await loadAdminTicks();admPaint();
+  }catch(err){
+    const m=String((err&&err.message)||err);
+    toast(/404|PGRST202|Could not find/i.test(m)?'Спершу виконайте крок 13 у Supabase':'Не вийшло надіслати');
+  }
+  this.disabled=false;this.textContent=was;
+});
 
 let admBill=null;
 function admPay(){
@@ -4887,7 +4953,7 @@ async function renderAdmin(){
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
     if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
-    await loadAdminBilling();
+    await Promise.all([loadAdminBilling(),loadAdminTicks()]);
     btn.style.display='';
     admWhy='доступ є';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
