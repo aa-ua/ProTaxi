@@ -446,6 +446,8 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
   font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:color .18s;white-space:nowrap}
 .seg-b.on{color:#101010}
 .seg-note{font-size:12.5px;font-weight:600;color:var(--muted)}
+/* Список служб: чипи по вмісту, у кілька рядків */
+.wchip.sm{flex:0 0 auto;min-width:0;padding:9px 14px;font-size:12.5px;font-weight:700}
 .modal .row-btn{display:flex;gap:10px}
 .modal .row-btn .btn{margin-top:0}
 .btn-warn{background:var(--amber);color:#101010}
@@ -840,8 +842,10 @@ html.map-full .tabbar{display:none}
 
     <div class="card">
       <div class="card-title">Розрахунок</div>
+      <div class="wchips" id="plat-list"></div>
+      <p class="hint" style="margin:-4px 0 12px">Відсоток різний у різних містах і навіть у різних водіїв — впишіть свій.</p>
       <div class="grid2">
-        <div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="set-comm"></div>
+        <div class="field"><label id="lab-comm">Комісія платформи, %</label><input type="number" inputmode="decimal" id="set-comm"></div>
         <div class="field"><label id="lab-fund">Запас, % від чистого</label><input type="number" inputmode="decimal" id="set-fund"></div>
       </div>
       <div class="modes" id="fund-mode" style="margin-top:12px">
@@ -1189,7 +1193,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.13';
+const APP_VER='1.14';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1233,7 +1237,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={commissionPct:20,platform:'',acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -3445,7 +3449,7 @@ function renderDayDetail(){
     let h='<div class="card-title">'+(e.weather?WEMO[e.weather]+' ':'')+(list.length>1?'Сесія '+(ix+1)+' · ':fmtDate(e.date)+' · ')+(e.startT?hm(e.startT)+'–'+hm(e.endT):'')+' · '+fmtHours(e.hours)+'</div>';
     h+='<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(+e.gross||0)+'</span></div>';
     if(+e.tips>0)h+='<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(+e.tips)+'</span></div>';
-    h+='<div class="ins"><span class="k">Платформі</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
+    h+='<div class="ins"><span class="k">Платформі'+(platName()?' · '+esc(platName()):'')+'</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
     if(+e.calc.acquiring>0)h+='<div class="ins"><span class="k">Еквайринг '+(+data.settings.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0)+'</span><span class="v neg">−'+fmt(e.calc.acquiring)+'</span></div>';
     h+='<div class="ins"><span class="k">Пальне · '+fmt1(e.liters)+' л</span><span class="v neg">−'+fmt(e.calc.fuel)+'</span></div>';
     if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
@@ -3983,7 +3987,8 @@ function introSetupHTML(kind){
       '<p class="hint" id="in-fuel-note">'+k.note+'</p>';
   }
   return '<div class="grid2">'+
-    '<div class="field"><label>Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
+    '<div class="wchips" id="in-plat" style="margin-bottom:12px"></div>'+
+    '<div class="field"><label id="in-lab-comm">Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
     '<div class="field"><label>Ціль на день, ₴ на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
     '</div>'+
     '<p class="hint">Ціль рахується від суми на руки — після пального, комісії та запасу.</p>';
@@ -4002,6 +4007,22 @@ function renderIntro(){
   $('intro-skip').style.display=last?'none':'';
   if(sl.setup==='car')bindIntroCar();
   if(sl.setup==='fuel')bindIntroFuel();
+  if(sl.setup==='money')bindIntroMoney();
+}
+function bindIntroMoney(){
+  const box=$('in-plat');if(!box)return;
+  const paint=()=>{
+    const cur=platName();
+    box.innerHTML=PLATFORMS.map(p=>'<button class="wchip sm'+(p===cur?' on':'')+'" data-plat="'+esc(p)+'">'+esc(p)+'</button>').join('');
+    const lab=$('in-lab-comm');
+    if(lab)lab.textContent='Комісія'+(cur?' '+cur:' платформи')+', %';
+  };
+  box.addEventListener('click',e=>{
+    const b=e.target.closest('.wchip');if(!b)return;
+    data.settings.platform=(platName()===b.dataset.plat)?'':b.dataset.plat;
+    paint();
+  });
+  paint();
 }
 function bindIntroFuel(){
   const s=data.settings;
@@ -5137,7 +5158,7 @@ function renderSettings(){
   renderCarMode();
   renderRentMode();
   renderFundMode();
-  renderFuelKind();renderStations();
+  renderFuelKind();renderStations();renderPlatform();
   renderSupport();renderCloud();renderAdmin();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
@@ -5404,14 +5425,31 @@ $('cheap-list').addEventListener('click',async e=>{
   recalcAll();await persist();renderStations();renderAll();
 });
 
+/* Служби, з якими працюють в Україні. Список — щоб не набирати руками;
+   відсоток водій вписує сам: він різний у різних містах і за рівнем водія. */
+const PLATFORMS=['Uklon','Bolt','Uber','OnTaxi','Opti','Taxi 838','Shark Taxi','Своя служба'];
+const platName=()=>String((data.settings&&data.settings.platform)||'').trim();
+function renderPlatform(){
+  const box=$('plat-list');if(!box)return;
+  const cur=platName();
+  box.innerHTML=PLATFORMS.map(p=>'<button class="wchip sm'+(p===cur?' on':'')+'" data-plat="'+esc(p)+'">'+esc(p)+'</button>').join('');
+  const lab=$('lab-comm');
+  if(lab)lab.textContent='Комісія'+(cur?' '+cur:' платформи')+', %';
+}
+$('plat-list').addEventListener('click',async e=>{
+  const b=e.target.closest('.wchip');if(!b)return;
+  /* повторний дотик знімає вибір — раптом водій пішов зі служби */
+  data.settings.platform=(platName()===b.dataset.plat)?'':b.dataset.plat;
+  renderPlatform();await persist();renderAll();
+});
 function renderFundMode(){
   const s=data.settings,km=s.fundMode==='km';
   $('lab-fund').textContent=km?'Запас, ₴ за кілометр':'Запас, % від чистого';
   $('set-fund').value=km?s.fundPerKm:s.fundPct;
   document.querySelectorAll('#fund-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.fm==='km')===km));
   $('fund-note').textContent=km
-    ? 'Відкладаєш однаково з кожного кілометра — зручно, якщо думаєш про знос авто. Більше за чисте за зміну не відкладеться.'
-    : 'Відкладаєш частку від чистого — у слабкий день відкладеш менше, у сильний більше.';
+    ? 'Відкладаєте однаково з кожного кілометра — зручно, якщо думаєте про знос авто. Більше за чисте за зміну не відкладеться.'
+    : 'Відкладаєте частку від чистого — у слабкий день менше, у сильний більше.';
 }
 function grabFundField(){
   const s=data.settings;
