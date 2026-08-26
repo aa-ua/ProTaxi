@@ -1377,7 +1377,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.47';
+const APP_VER='1.48';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5521,21 +5521,34 @@ function renderTank(){
   });
 }
 
-let rfId=null,rfStId=0,rfGrade='a95';
+let rfId=null,rfStId=0,rfStName='',rfGrade='a95';
 /* Мережа й марка чипами: заправка памʼятає, де і чим заправлялись.
    Ціну водій вписує з чека сам — вона фактична й завжди старша за будь-яку
    обчислену, тому підставляти нічого не треба. */
 function rfStation(){return stationsOf().find(x=>x.id===rfStId)||null;}
+/* Заправитись можна де завгодно, не тільки там, де є знижка. Тому в списку
+   спершу свої мережі, а далі решта відомих — щоб чек із випадкової заправки
+   було куди записати. У чужої мережі знижки немає, і це чесно: нічого не
+   вигадуємо. */
+function rfStList(){
+  const own=stationsOf().map(st=>({id:st.id,name:st.name,own:true}));
+  const have=new Set(own.map(x=>x.name.toLowerCase()));
+  const rest=stPresets().filter(p=>!have.has(String(p.n).toLowerCase()))
+    .map(p=>({id:0,name:p.n,own:false}));
+  /* остання кнопка — для заправки, якої в списку немає */
+  return own.concat(rest,[{id:0,name:'Інша',own:false}]);
+}
 function renderRfStations(){
   const box=$('rf-st'),fb=$('rf-fuel');if(!box)return;
-  const l=stationsOf();
+  const l=rfStList();
   if(!l.length){box.style.display='none';box.innerHTML='';}
   else{
     box.style.display='';
     box.innerHTML=l.map(st=>{
       /* Без ціни під назвою: довгі назви («УКРНАФТА») не вміщались у кнопку,
          а ціну водій усе одно вписує з чека — вгадана лише збивала б з пантелику. */
-      return '<button class="wchip'+(st.id===rfStId?' on':'')+'" data-sid="'+st.id+'">'+
+      const on=st.own?(st.id===rfStId):(!rfStId&&rfStName===st.name);
+      return '<button class="wchip'+(on?' on':'')+'" data-sid="'+st.id+'" data-sname="'+esc(st.name)+'">'+
         esc(st.name)+'</button>';
     }).join('');
   }
@@ -5550,7 +5563,8 @@ function renderRfStations(){
    мовчки зіпсувала б розрахунок, якби водій її не помітив. */
 $('rf-st').addEventListener('click',e=>{
   const b=e.target.closest('.wchip');if(!b)return;
-  rfStId=+b.dataset.sid;
+  rfStId=+b.dataset.sid||0;
+  rfStName=rfStId?'':(b.dataset.sname||'');
   renderRfStations();disarm($('rf-save'));rfCalc();
 });
 $('rf-fuel').addEventListener('click',e=>{
@@ -5563,6 +5577,7 @@ function openRefuel(id){
   const r=id?data.refuels.find(x=>x.id===id):null;
   const mn=mainStation();
   rfStId=r?(+r.stId||0):(mn?mn.id:0);
+  rfStName=rfStId?'':((r&&r.st)||'');
   rfGrade=(r&&r.fuel&&GRADES[r.fuel])?r.fuel:defGrade();
   $('rf-title').textContent=r?'Редагувати заправку':'Заправка';
   $('rf-liters').value=r?r.liters:'';
@@ -5627,7 +5642,7 @@ $('rf-save').addEventListener('click',function(){
     const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
     const stPick=rfStation();
     const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
-      stId:rfStId||0,st:(stPick&&stPick.name)||'',fuel:rfGrade,
+      stId:rfStId||0,st:(stPick&&stPick.name)||rfStName||'',fuel:rfGrade,
       reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now(),
       /* час потрібен, щоб відрізнити зміну до заправки від зміни після неї.
          Заправку заднім числом вважаємо вечірньою. */
