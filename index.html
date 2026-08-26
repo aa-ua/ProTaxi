@@ -1324,7 +1324,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.40';
+const APP_VER='1.41';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2406,14 +2406,21 @@ function lastOdoWasReset(){
 }
 function lastOdometer(){
   const a=data.active;if(!a)return 0;
-  /* беремо хронологічно останнє показання, а не найбільше — після обнулення воно менше */
-  let t=0,v=a.odoStart||0;
+  /* Одометр лише зростає, тому беремо НАЙБІЛЬШЕ показання, а не те, у якого
+     пізніший час. Час замовлення водій може виправити руками, і замовлення
+     можуть перекриватись — тоді «останнє за часом» вказує на давніший
+     кілометраж, і наступне замовлення починається з меншого числа.
+     Межа — останнє обнулення лічильника на заправці: до нього цифри більші,
+     і без цієї межі лічильник ніколи б не впав до нуля. */
+  const cut=(data.refuels||[]).reduce((m,rf)=>
+    (rf.reset&&(+rf.resetAt||0)>m)?(+rf.resetAt||0):m,0);
+  let v=0;
+  if(!cut||(+a.startT||0)>=cut)v=Math.max(v,+a.odoStart||0);
   (a.orders||[]).forEach(o=>{
-    const ot=o.endT||o.t||0;
-    if(ot>=t){t=ot;if(o.odoEnd>0)v=o.odoEnd;else if(o.odoStart>0)v=o.odoStart;}
+    const ot=+o.endT||+o.t||0;
+    if(cut&&ot<cut)return;
+    v=Math.max(v,+o.odoStart||0,+o.odoEnd||0);
   });
-  /* якщо після цього була заправка з обнуленням — лічильник пішов з нуля */
-  if((data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t))return 0;
   return v;
 }
 function openNewOrder(){
