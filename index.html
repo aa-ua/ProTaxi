@@ -923,9 +923,9 @@ html.map-full .tabbar{display:none}
     <div class="card">
       <div class="card-title">Пальне</div>
       <div class="modes" id="fuel-kind">
-        <button class="mode" data-fk="petrol">Бензин<span class="sub">або дизель</span></button>
         <button class="mode" data-fk="gas">Газ<span class="sub">пропан-бутан</span></button>
         <button class="mode" data-fk="ev">Електро<span class="sub">кВт·год</span></button>
+        <button class="mode" data-fk="petrol">Дизель<span class="sub">або бензин</span></button>
       </div>
       <div class="wchips" id="fuel-grade" style="margin-top:-2px"></div>
       <div class="grid2">
@@ -1290,9 +1290,9 @@ html.map-full .tabbar{display:none}
     <div class="grid2">
       <div class="field"><label id="lab-st-val">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
       <div class="field" id="st-gas-box"><label id="lab-st-gas">Знижка на газ, ₴</label><input type="number" inputmode="decimal" id="st-gas" step="0.01" placeholder="як на пальне"></div>
-      <div class="field"><label id="lab-st-price">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="як у налаштуваннях"></div>
+      <div class="field"><label id="lab-st-price">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="з налаштувань"></div>
     </div>
-    <div class="hint" id="st-calc" style="margin:0 0 12px;text-align:center"></div>
+    <div class="hint" id="st-calc" style="margin:0 0 12px;text-align:center;white-space:pre-line"></div>
     <button class="btn btn-primary" id="st-save">Зберегти</button>
     <button class="btn btn-ghost" id="st-cancel">Скасувати</button>
     <button class="btn btn-danger" id="st-del" style="display:none">Видалити знижку</button>
@@ -1377,7 +1377,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.46';
+const APP_VER='1.47';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1421,7 +1421,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'gas',fuelGrade:'gas',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 /* Статистика відкривається на сьогоднішньому дні: водій заходить подивитись,
    скільки він заробив зараз, а не підсумок тижня. */
@@ -1796,12 +1796,15 @@ const UU=()=>FK().u, U100=()=>FK().p100, UPR=()=>FK().price;
 /* Вид пального — це шкала (літри чи кіловат-години), марка — те, що реально
    ллється в бак. Знижка й ціна на табло різні саме за маркою, тому заправка
    памʼятає марку, а не тільки мережу. */
+/* Порядок тут — це і порядок кнопок, і те, що стане типовим у своєму виді
+   (`gradesFor(k)[0]`). Спершу газ, далі електро, далі дизель і аж потім
+   бензин: саме так їздять таксисти. */
 const GRADES={
-  a95 :{k:'petrol',n:'А95',   full:'Бензин А95'},
-  a95p:{k:'petrol',n:'А95+',  full:'Бензин А95+'},
-  dp  :{k:'petrol',n:'Дизель',full:'Дизельне пальне'},
   gas :{k:'gas',   n:'Газ',   full:'Автогаз'},
-  ev  :{k:'ev',    n:'Заряд', full:'Електрика'}
+  ev  :{k:'ev',    n:'Заряд', full:'Електрика'},
+  dp  :{k:'petrol',n:'Дизель',full:'Дизельне пальне'},
+  a95 :{k:'petrol',n:'А95',   full:'Бензин А95'},
+  a95p:{k:'petrol',n:'А95+',  full:'Бензин А95+'}
 };
 const gradesFor=k=>Object.keys(GRADES).filter(g=>GRADES[g].k===(k||'petrol'));
 function defGrade(s){
@@ -2016,7 +2019,7 @@ async function load(){
   }
   /* 1.4: замість однієї знижки — список мереж. Стару переносимо, щоб
      розрахунок не змінився в того, хто вже її вписав. */
-  if(!s.fuelKind)s.fuelKind='petrol';
+  if(!s.fuelKind)s.fuelKind='gas';
   if(!s.fuelGrade||!GRADES[s.fuelGrade])s.fuelGrade=gradesFor(s.fuelKind)[0];
   if(!Array.isArray(s.stations)){
     s.stations=[];
@@ -4250,9 +4253,9 @@ function introSetupHTML(kind){
   if(kind==='fuel'){
     const k=FK(s);
     return '<div class="modes" id="in-fk">'+
-      '<button class="mode" data-fk="petrol">Бензин<span class="sub">або дизель</span></button>'+
       '<button class="mode" data-fk="gas">Газ<span class="sub">пропан-бутан</span></button>'+
       '<button class="mode" data-fk="ev">Електро<span class="sub">кВт·год</span></button>'+
+      '<button class="mode" data-fk="petrol">Дизель<span class="sub">або бензин</span></button>'+
       '</div>'+
       '<div class="grid2">'+
       '<div class="field"><label id="in-lab-cons">'+k.cons+'</label><input type="number" inputmode="decimal" id="in-cons" step="0.1" value="'+(s.consumption||'')+'"></div>'+
@@ -5864,10 +5867,20 @@ function stCalc(){
   const g=defGrade();
   const st={mode:stMode,val:num($('st-val').value),valGas:$('st-gas').value,price:num($('st-price').value),
             name:($('st-name').value||'').trim()};
-  const base=stationBase(st,null,g),net=stationNet(st,null,g);
-  $('st-calc').textContent=base>0
-    ? 'За «'+gradeName(g)+'» платите '+fmt1(net)+' '+UPR()+(net<base?' замість '+fmt1(base):'')
-    : 'Вкажіть ціну на табло або базову ціну в налаштуваннях';
+  const line=gr=>{
+    const base=stationBase(st,null,gr),net=stationNet(st,null,gr);
+    if(!(base>0))return '';
+    return 'За «'+gradeName(gr)+'» платите '+fmt1(net)+' '+UPR()+(net<base?' замість '+fmt1(base):'');
+  };
+  /* Рахуємо тільки для тієї марки, якою водій їздить: базова ціна в
+     налаштуваннях одна, і показати «скільки вийде за газ» водієві на бензині
+     означало б узяти бензинову ціну за газову. Про окрему знижку на газ
+     кажемо словами, без вигаданої суми. */
+  const rows=[line(g)];
+  const gv=String($('st-gas').value||'').trim();
+  if(g!=='gas'&&gv!=='')rows.push('На газ знижка окрема — '+fmt1(num(gv))+(stMode==='pct'?' %':' '+UPR()));
+  const txt=rows.filter(Boolean).join('\n');
+  $('st-calc').textContent=txt||'Вкажіть ціну на табло або базову ціну в налаштуваннях';
 }
 function openStation(id){
   stId=id||null;
