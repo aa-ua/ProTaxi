@@ -1393,7 +1393,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.54';
+const APP_VER='1.55';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2400,6 +2400,14 @@ function renderShift(){
 
   const liters=litersFor(estKm,s);
   const c=calc({gross,tips:0,liters,km:estKm,ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
+
+  /* Кладемо підрахунок поруч із самою зміною: бот бере цифри звідси, а не
+     рахує їх окремо. Інакше два підрахунки з часом розійдуться, і водієві
+     прийде сума, якої він у застосунку не бачить. */
+  const goal=+s.dailyGoal||0;
+  a.live={gross:Math.round(gross),personal:Math.round(c.personal),
+          orders:a.orders.length,
+          goalPct:goal>0?Math.round(c.personal/goal*100):null};
 
   const stale=dateOf(a.startT)!==todayStr();
   let html=
@@ -3512,34 +3520,79 @@ $('cm-cancelshift').addEventListener('click',function(){
     data.active=null;stopTrack();await persist();closeM('modal-close');renderShift();toast('Сесію скасовано');
   });
 });
-$('cm-save').addEventListener('click',async()=>{
-  const a=data.active;if(!a)return;
-  const endT=toMs(dateOf(a.startT),$('cm-end').value||nowHM());
-  if(endT<=a.startT){toast('Час закриття раніше початку');return;}
-  const gross=a.orders.reduce((x,o)=>x+(+o.amount||0),0);
-  const odoKm=cmShiftKm();
-  const ordKm=a.orders.reduce((x,o)=>x+oKm(o),0);
+/* Один-єдиний шлях закриття зміни — і руками, і автоматично. Дві копії
+   цього підрахунку колись розійшлись би, і водій отримав би дві різні
+   суми за ту саму зміну. */
+function closeShiftWith(o){
+  const a=data.active;if(!a)return null;
+  const endT=o.endT;
+  if(endT<=a.startT)return null;
+  const gross=a.orders.reduce((x,y)=>x+(+y.amount||0),0);
+  const odoKm=(+o.odoEnd>0&&+a.odoStart>=0)?Math.max(0,+o.odoEnd-(+a.odoStart||0)):0;
+  const ordKm=a.orders.reduce((x,y)=>x+oKm(y),0);
   /* немає одометра в кінці — оцінюємо пробіг по заказах, щоб пальне не стало нулем */
   const km=odoKm>0?+odoKm.toFixed(1):+(ordKm*idleFactor()).toFixed(1);
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
-  const manual=num($('cm-liters').value);
+  const manual=+o.liters||0;
   const liters=manual>0?manual:km/100*r.cons;
-  const inp={gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),
+  const inp={gross,tips:+o.tips||0,liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),
     ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)};
   const c=calc(inp,data.settings);
   data.entries.push({
     id:a.id,date:dateOf(a.startT),startT:a.startT,endT,hours:(endT-a.startT)/3600000,
-    odoStart:a.odoStart||0,odoEnd:num($('cm-odo').value),
-    orders:a.orders,oc:a.orders.length,weather:cmWeather,path:thinPath(a.path),
-    manualLiters:manual>0,kmEst:odoKm<=0&&km>0,...inp,calc:c
+    odoStart:a.odoStart||0,odoEnd:+o.odoEnd||0,
+    orders:a.orders,oc:a.orders.length,weather:o.weather||'',path:thinPath(a.path),
+    manualLiters:manual>0,kmEst:odoKm<=0&&km>0,auto:!!o.auto,...inp,calc:c
   });
   data.active=null;
   stopTrack();
+  return c;
+}
+$('cm-save').addEventListener('click',async()=>{
+  const a=data.active;if(!a)return;
+  const endT=toMs(dateOf(a.startT),$('cm-end').value||nowHM());
+  if(endT<=a.startT){toast('Час закриття раніше початку');return;}
+  const c=closeShiftWith({endT,odoEnd:num($('cm-odo').value),tips:num($('cm-tips').value),
+                          liters:num($('cm-liters').value),weather:cmWeather});
+  if(!c)return;
   await persist();closeM('modal-close');renderAll();
   tap('shift.close');
   toast('Сесію завершено: '+fmt(c.personal)+' на руки');
   if(gToken&&Date.now()<gExp)driveUp(true); /* тиха копія у Drive */
 });
+
+/* ══ ЗАБУТА ЗМІНА ══
+   Якщо зміну не чіпали понад три години, застосунок закриває її сам —
+   при наступному відкритті. Робить це саме застосунок, а не сервер:
+   тут лежить єдиний підрахунок, і тут же видно, чи не встиг водій
+   змінити щось на телефоні.
+
+   Нічого не стирається. Зміна із замовленнями стає звичайним записом
+   у статистиці; порожню зміну, у якій водій не зробив жодного
+   замовлення, зберігати нема сенсу — там немає що зберігати. */
+const AUTO_CLOSE_H=3;
+function lastActiveT(a){
+  const t=(a.orders||[]).reduce((m,o)=>Math.max(m,+o.endT||+o.t||0),0);
+  return t||+a.startT||0;
+}
+async function autoCloseStale(){
+  const a=data.active;if(!a)return false;
+  if((a.orders||[]).some(isOpen))return false;   /* відкрите замовлення — не чіпаємо */
+  const last=lastActiveT(a);
+  if(!last||Date.now()-last<AUTO_CLOSE_H*3600000)return false;
+  const n=(a.orders||[]).length;
+  const when=fmtDate(dateOf(a.startT));
+  if(!n){
+    data.active=null;stopTrack();await persist();renderAll();
+    toast('Порожню зміну від '+when+' закрито — замовлень у ній не було');
+    return true;
+  }
+  const c=closeShiftWith({endT:last,odoEnd:lastOdometer(),tips:0,liters:0,weather:'',auto:true});
+  if(!c)return false;
+  await persist();renderAll();
+  toast('Зміну від '+when+' завершено автоматично · '+fmt(c.personal)+' на руки');
+  return true;
+}
 
 /* ══ СТАТИСТИКА ══ */
 const PERIOD_NAMES={today:'Сьогодні',yesterday:'Вчора',week:'Тиждень',month:'Місяць',
@@ -6409,7 +6462,9 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
     if(fresh)setTimeout(()=>renderChangelog(true),600);
     else if(data.settings.seenVer!==APP_VER){data.settings.seenVer=APP_VER;persist();}
   }else if(!data.settings.seenVer){data.settings.seenVer=APP_VER;persist();}
-  if(data.active){toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();}
+  if(data.active&&!(await autoCloseStale())){
+    toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();
+  }
   cloudPull();
   setTimeout(loadBilling,1200);
   setTimeout(loadPrices,1500);
