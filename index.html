@@ -123,11 +123,11 @@ input[type="time"],input[type="date"]{color-scheme:dark}
 .live-line{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);font-weight:700;margin-bottom:8px}
 .live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(53,208,124,.55)}70%{box-shadow:0 0 0 9px transparent}100%{box-shadow:0 0 0 0 transparent}}
-.hero-big{font-variant-numeric:tabular-nums;font-size:36px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;line-height:1.15}
+.hero-big{font-variant-numeric:tabular-nums;font-size:36px;font-weight:900;color:var(--yellow);letter-spacing:-.03em;line-height:1.15}
 .hero-sub{font-size:13px;color:var(--muted);font-weight:700;margin-top:6px}
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .metric{background:var(--surface2);border-radius:12px;padding:10px 6px;text-align:center}
-.metric .v{font-weight:800;font-size:14.5px;font-variant-numeric:tabular-nums}
+.metric .v{font-weight:900;font-size:14.5px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .metric .k{font-size:10.5px;color:var(--muted);font-weight:400;margin-top:3px}
 .warn{color:var(--amber);font-size:13px;font-weight:700;text-align:center;margin-top:10px}
 
@@ -331,11 +331,35 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:10px;margin-bottom:12px}
 .stat{background:var(--surface);border:1px solid transparent;border-radius:var(--radius);padding:14px;
   display:flex;flex-direction:column;justify-content:center}
-.stat .v{font-variant-numeric:tabular-nums;font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.02em;white-space:nowrap}
+.stat .v{font-variant-numeric:tabular-nums;font-size:18px;line-height:1.25;font-weight:900;letter-spacing:-.03em;white-space:nowrap}
 .stat .k{font-size:12.5px;color:var(--muted);font-weight:400;margin-top:4px}
-.stat.stat-main{background:rgba(59,224,166,.10)}
-.stat.stat-main .v{color:#3BE0A6}
+
+/* ── Скляні плитки ──
+   Не заливка, а шар: світлий кант угорі, куди «падає світло», ледь помітний
+   градієнт і мʼяка тінь під карткою. Робиться самими лише background-image
+   і box-shadow — жодних меж і відступів, тому нічого нікуди не зсувається. */
+.card,.stat,.metric{
+  background-image:linear-gradient(158deg,rgba(255,255,255,.075),rgba(255,255,255,.022) 46%,rgba(255,255,255,.012));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),
+             inset 0 1px 0 rgba(255,255,255,.10),
+             0 8px 22px rgba(0,0,0,.20)}
+/* Головна плитка — те саме скло, але зеленого відтінку, і по ньому раз на
+   кілька секунд проходить відблиск. Решта плиток лишаються сірими. */
+.stat.stat-main{position:relative;overflow:hidden;
+  background-image:linear-gradient(158deg,rgba(59,224,166,.30),rgba(59,224,166,.13) 52%,rgba(59,224,166,.07));
+  box-shadow:inset 0 0 0 1px rgba(59,224,166,.24),
+             inset 0 1px 0 rgba(255,255,255,.14),
+             0 10px 26px rgba(31,169,122,.18)}
+/* на зеленому склі чистий брендовий зелений тьмяніє — беремо його ж,
+   але висвітлений до майже білого, як на картці підсумку */
+.stat.stat-main .v{color:#EAFFF6;text-shadow:0 1px 12px rgba(31,169,122,.45)}
 .stat.stat-main .k{color:#8FE7C8}
+.stat .v,.stat .k{position:relative;z-index:1}
+.stat.stat-main::after{content:'';position:absolute;top:-60%;bottom:-60%;left:-45%;width:36%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);
+  transform:skewX(-14deg);animation:sheen 7s ease-in-out infinite;pointer-events:none;z-index:0}
+@keyframes sheen{0%{left:-45%}58%{left:125%}100%{left:125%}}
+@media (prefers-reduced-motion:reduce){.stat.stat-main::after{display:none}}
 
 .chart{display:flex;align-items:flex-end;gap:4px;height:128px;padding-top:6px}
 .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
@@ -368,7 +392,7 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .daynav input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--text);font-size:15px;font-weight:800;font-family:inherit}
 .navbtn{width:48px;height:48px;flex-shrink:0;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:18px;font-weight:800;font-family:inherit;cursor:pointer}
 
-.fund-balance{font-variant-numeric:tabular-nums;font-size:30px;font-weight:800;color:var(--yellow);letter-spacing:-.02em;text-shadow:0 0 30px rgba(59,224,166,.22)}
+.fund-balance{font-variant-numeric:tabular-nums;font-size:30px;font-weight:900;color:var(--yellow);letter-spacing:-.03em;text-shadow:0 0 30px rgba(59,224,166,.22)}
 
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:1000}
 .modal-bg.open{display:flex}
@@ -637,9 +661,9 @@ html.map-full .tabbar{display:none}
 
   <section class="screen" id="screen-stats">
     <div class="chips chips-period">
-      <button class="chip" data-period="today">Сьогодні</button>
+      <button class="chip active" data-period="today">Сьогодні</button>
       <button class="chip" data-period="yesterday">Вчора</button>
-      <button class="chip active" data-period="week">Тиждень</button>
+      <button class="chip" data-period="week">Тиждень</button>
       <div class="pwrap">
         <button class="chip" id="chip-more" type="button" aria-label="Інший період"><span id="chip-more-lbl"></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.2" width="16.8" height="15.2" rx="3"/><path d="M3.6 10h16.8M8.4 3.4v3.4M15.6 3.4v3.4"/></svg></button>
@@ -1324,7 +1348,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.41';
+const APP_VER='1.42';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1370,7 +1394,9 @@ const store={
 const MAP_STYLES_KEYS=['light','dark'];
 const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
-let period='week';
+/* Статистика відкривається на сьогоднішньому дні: водій заходить подивитись,
+   скільки він заробив зараз, а не підсумок тижня. */
+let period='today';
 let dayCursor='';
 
 const WNAME={clear:'Ясно',cloud:'Хмарно',rain:'Дощ',snow:'Сніг'};
