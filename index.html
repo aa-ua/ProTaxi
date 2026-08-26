@@ -1252,7 +1252,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.15';
+const APP_VER='1.16';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1927,9 +1927,12 @@ async function persist(){
   if(!ok)toast('Не вдалося зберегти');
   cloudPush();
   const st=$('save-state');
-  if(st)st.textContent='Збережено о '+nowHM()+' · версія '+APP_VER;
+  if(st)st.textContent='Збережено сьогодні о '+hms(Date.now())+' · версія '+APP_VER;
 }
 
+/* Час із секундами — щоб було видно, що збереження щойно відбулось */
+const hms=t=>{const d=new Date(+t||Date.now()),p=n=>String(n).padStart(2,'0');
+  return p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());};
 let toastT;
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
@@ -3906,9 +3909,11 @@ function payloadJSON(){
   return JSON.stringify({app:'ye-taksyst',ver:APP_VER,schema:SCHEMA,exportedAt:Date.now(),
     settings:data.settings,entries:data.entries,fundOps:data.fundOps,refuels:data.refuels,active:data.active});
 }
-async function applyPayload(txt){
+/* quiet — коли записи приїхали самі з хмари. Плашка на кожному відкритті
+   застосунку тільки заважає: людина нічого не робила, повідомляти нема про що. */
+async function applyPayload(txt,quiet){
   const p=parseSave(txt);
-  if(!p){toast('Текст не підходить');return false;}
+  if(!p){if(!quiet)toast('Текст не підходить');return false;}
   data.settings={...DEFAULTS,...(p.settings||{})};
   data.entries=p.entries||[];data.fundOps=p.fundOps||[];
   data.refuels=p.refuels||[];data.active=p.active||null;
@@ -3918,7 +3923,7 @@ async function applyPayload(txt){
     if(!en.calc)en.calc=calc(en,data.settings);
   });
   recalcAll();await persist();renderSettings();renderAll();
-  toast('Відновлено: '+data.entries.length+' змін');
+  if(!quiet)toast('Відновлено: '+data.entries.length+' '+plShift(data.entries.length));
   return true;
 }
 $('btn-copy').addEventListener('click',async()=>{
@@ -4389,6 +4394,7 @@ function renderSub(){
     ? 'Оплата відкриється в окремому вікні. Доступ активується протягом кількох хвилин після зарахування.'
     : 'Запит надійде автору застосунку. Доступ активують вручну, зазвичай того ж дня.';
 }
+const plShift=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'змін':(b===1?'зміну':((b>=2&&b<=4)?'зміни':'змін'));};
 const plDay=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'днів':(b===1?'день':((b>=2&&b<=4)?'дні':'днів'));};
 $('sub-go').addEventListener('click',async function(){
   if(!PAY_OPEN||!TG||!TG.initData)return;
@@ -4692,7 +4698,7 @@ async function cloudPull(){
     const res=await cloudCall(data.entries.length||data.active?data:null);
     if(res&&res.source==='cloud'&&res.payload){
       const p=parseSave(JSON.stringify(res.payload));
-      if(p)await applyPayload(JSON.stringify(res.payload));   /* воно саме скаже, скільки змін */
+      if(p)await applyPayload(JSON.stringify(res.payload),true);   /* тихо: людина нічого не натискала */
     }
     cloudState='ok';
   }catch(e){cloudState='err';}
@@ -5665,7 +5671,7 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
     : 'Увага: тимчасове сховище. Зробіть копію у файл.';
   if(!real.length)toast('Тимчасовий режим: зроби копію у файл');
   $('save-state').textContent=data.savedAt
-    ? 'Останнє збереження: '+fmtDate(dateOf(data.savedAt))+' '+hm(data.savedAt)+' · версія '+APP_VER
+    ? 'Останнє збереження: '+fmtDate(dateOf(data.savedAt))+' о '+hms(data.savedAt)+' · версія '+APP_VER
     : 'Версія '+APP_VER;
   await checkPersistence();
   recalcAll();
