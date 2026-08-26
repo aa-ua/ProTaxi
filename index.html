@@ -310,8 +310,10 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 #chip-more #chip-more-lbl{display:none}
 #chip-more.active{gap:8px;padding:9px 14px}
 #chip-more.active #chip-more-lbl{display:inline}
-.chips-period{flex-wrap:nowrap;align-items:center}
-.chips-period .chip{flex:0 0 auto;white-space:nowrap}
+.chips.chips-period{flex-wrap:nowrap;align-items:center;gap:7px}
+.chips.chips-period .chip{flex:0 0 auto;white-space:nowrap;padding:9px 12px;font-size:12.5px}
+.chips.chips-period #chip-more.active{max-width:132px;overflow:hidden}
+.chips.chips-period #chip-more.active #chip-more-lbl{overflow:hidden;text-overflow:ellipsis}
 .pmenu{display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:60;
   flex-direction:column;gap:6px;padding:10px;border-radius:18px;background:var(--surface);
   border:1px solid var(--border);box-shadow:0 18px 40px rgba(0,0,0,.45);min-width:172px}
@@ -1300,7 +1302,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.31';
+const APP_VER='1.32';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3425,9 +3427,17 @@ document.addEventListener('click',e=>{
 document.querySelectorAll('.chip[data-period]').forEach(ch=>ch.addEventListener('click',()=>{
   period=ch.dataset.period;closePeriodMenu();setChips();renderStats();
 }));
+/* прозорий input поверх кнопки не завжди спрацьовує всередині випадаючого
+   списку — тому кличемо системний підбирач напряму, коли браузер це вміє */
+$('chip-day').addEventListener('click',e=>{
+  const inp=$('pick-day');if(!inp)return;
+  if(typeof inp.showPicker==='function'){
+    try{inp.showPicker();e.preventDefault();}catch(_){}
+  }
+});
 $('pick-day').addEventListener('change',()=>{
   const v=$('pick-day').value;if(!v)return;
-  dayCursor=v;period='day';setChips();renderStats();
+  dayCursor=v;period='day';closePeriodMenu();setChips();renderStats();
 });
 const ydayStr=()=>dateOf(Date.now()-86400000);
 /* Підсумки одного календарного дня — для порівняння з попереднім */
@@ -6010,7 +6020,14 @@ new MutationObserver(dressTime).observe(document.body,{childList:true,subtree:tr
    Плюс своя галочка «готово»: на цифровій клавіатурі iOS кнопки закриття немає взагалі. */
 (function(){
   var root=document.documentElement;
-  var isField=function(el){return !!el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT');};
+  /* у date і time свій системний підбирач, клавіатури немає — ховати
+     нижню панель через них не можна, інакше вона просто зʼїжджає */
+  var OWN_PICKER={date:1,time:1,'datetime-local':1,month:1,week:1};
+  var isField=function(el){
+    if(!el)return false;
+    if(el.tagName==='INPUT')return !OWN_PICKER[(el.type||'').toLowerCase()];
+    return el.tagName==='TEXTAREA'||el.tagName==='SELECT';
+  };
   /* час і дату iOS показує власним підбирачем — там своя кнопка «Готово» */
   var tShow=null,tHide=null;
 
