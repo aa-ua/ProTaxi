@@ -434,6 +434,18 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .st-row .s{font-size:12px;color:var(--muted);font-weight:500;margin-top:2px}
 .st-row .edit{background:none;border:0;color:var(--muted);font-family:inherit;font-size:12px;font-weight:600;padding:6px 2px;cursor:pointer;flex-shrink:0}
 .wchip .w2{display:block;font-size:10px;font-weight:700;opacity:.7;margin-top:2px;font-variant-numeric:tabular-nums}
+/* Свій клієнт чи через платформу — це не рівнозначний вибір, як готівка й
+   картка, а перемикач за замовчуванням. Тому тонкий повзунок, а не чипи. */
+.segrow{display:flex;align-items:center;gap:11px;margin:-2px 0 12px}
+.seg{position:relative;display:flex;flex:0 0 auto;width:170px;height:34px;border-radius:999px;
+  background:var(--surface2);padding:3px}
+.seg-thumb{position:absolute;top:3px;left:3px;width:calc(50% - 3px);height:calc(100% - 6px);
+  border-radius:999px;background:var(--yellow);transition:transform .22s cubic-bezier(.4,0,.2,1)}
+.seg[data-own="1"] .seg-thumb{transform:translateX(100%)}
+.seg-b{position:relative;z-index:1;flex:1;padding:0;border:0;background:none;font-family:inherit;
+  font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:color .18s;white-space:nowrap}
+.seg-b.on{color:#101010}
+.seg-note{font-size:12.5px;font-weight:600;color:var(--muted)}
 .modal .row-btn{display:flex;gap:10px}
 .modal .row-btn .btn{margin-top:0}
 .btn-warn{background:var(--amber);color:#101010}
@@ -973,9 +985,13 @@ html.map-full .tabbar{display:none}
       <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
       <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
     </div>
-<div class="wchips" id="om-src">
-      <button class="wchip on" data-own="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.4" y="2.6" width="15.2" height="18.8" rx="2.6"/><path d="M8.4 6.6h7.2M8.4 10.4h7.2M8.4 14.2h4"/></svg></span>Через застосунок<span class="w2">комісія </span></button>
-      <button class="wchip" data-own="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.6 20.2c.6-3.7 3.7-5.8 7.4-5.8s6.8 2.1 7.4 5.8"/></svg></span>Свій клієнт<span class="w2">без комісії</span></button>
+<div class="segrow">
+      <div class="seg" id="om-src" data-own="0">
+        <span class="seg-thumb"></span>
+        <button class="seg-b on" data-own="0" type="button">Платформа</button>
+        <button class="seg-b" data-own="1" type="button">Свій</button>
+      </div>
+      <span class="seg-note" id="om-src-note"></span>
     </div>
     <div class="hint" id="om-hint" style="margin:0 0 12px"></div>
     <button class="btn btn-primary" id="om-save">Прийняти</button>
@@ -1004,9 +1020,13 @@ html.map-full .tabbar{display:none}
       <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
       <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
     </div>
-<div class="wchips" id="fin-src">
-      <button class="wchip on" data-own="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.4" y="2.6" width="15.2" height="18.8" rx="2.6"/><path d="M8.4 6.6h7.2M8.4 10.4h7.2M8.4 14.2h4"/></svg></span>Через застосунок<span class="w2">комісія </span></button>
-      <button class="wchip" data-own="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.6 20.2c.6-3.7 3.7-5.8 7.4-5.8s6.8 2.1 7.4 5.8"/></svg></span>Свій клієнт<span class="w2">без комісії</span></button>
+<div class="segrow">
+      <div class="seg" id="fin-src" data-own="0">
+        <span class="seg-thumb"></span>
+        <button class="seg-b on" data-own="0" type="button">Платформа</button>
+        <button class="seg-b" data-own="1" type="button">Свій</button>
+      </div>
+      <span class="seg-note" id="fin-src-note"></span>
     </div>
     <div class="field" id="fin-cash-row"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
@@ -1169,7 +1189,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.12';
+const APP_VER='1.13';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1300,12 +1320,17 @@ const oMin=o=>o.endT&&o.endT>o.t?(o.endT-o.t)/60000:0;
 const oTime=o=>o.endT?hm(o.t)+'–'+hm(o.endT):hm(o.t);
 /* Спосіб оплати: готівка чи картка. З карткових знімається еквайринг. */
 function payOf(box){const b=document.querySelector('#'+box+' .wchip.on');return b?b.dataset.pay:'cash';}
-function ownOf(box){const b=document.querySelector('#'+box+' .wchip.on');return !!b&&b.dataset.own==='1';}
-function setOwn(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.own==='1')===!!v));}
-/* підпис із поточним відсотком комісії — щоб різниця була видна одразу */
+function ownOf(box){const el=$(box);return !!el&&el.dataset.own==='1';}
+function setOwn(box,v){
+  const el=$(box);if(!el)return;
+  el.dataset.own=v?'1':'0';
+  el.querySelectorAll('.seg-b').forEach(x=>x.classList.toggle('on',(x.dataset.own==='1')===!!v));
+  paintSrc(box);
+}
+/* підпис поруч: скільки коштує це замовлення платформі */
 function paintSrc(box){
-  const el=document.querySelector('#'+box+' .wchip[data-own="0"] .w2');
-  if(el)el.textContent='комісія '+(+data.settings.commissionPct||0)+'%';
+  const note=$(box+'-note');if(!note)return;
+  note.textContent=ownOf(box)?'без комісії':'комісія '+(+data.settings.commissionPct||0)+'%';
 }
 function setPay(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x.classList.toggle('on',x.dataset.pay===(v||'cash')));}
 ['om-pay','fin-pay'].forEach(id=>{
@@ -2161,7 +2186,7 @@ function renderShift(){
 
   html+=goalCardHTML()+boostCardHTML();
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
-  if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийми перше!</div>';
+  if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийміть перше</div>';
   html+='</div><p class="hint">Дотик до замовлення завершує або відкриває його для редагування</p></div>';
   root.innerHTML=html;
 
@@ -3366,7 +3391,7 @@ function renderOrdersAnalysis(){
   const ow=ownStatsIn();
   if(ow.n>0){
     h+=r('Свої клієнти',ow.n+' зам. · '+fmt(ow.sum),'');
-    if(ow.saved>0)h+=r('Не віддано комісії','<span style="color:var(--yellow)">'+fmt(ow.saved)+'</span>','');
+    if(ow.saved>0)h+=r('Зекономлено на комісії','<span style="color:var(--yellow)">'+fmt(ow.saved)+'</span>','');
   }
   if(cur.perKm>0)h+=r('Ціна за кілометр',fmt1(cur.perKm)+' ₴',chg(cur.perKm,prev&&prev.perKm,false));
   h+=r('Темп',fmt(cur.rate)+'/год',chg(cur.rate,prev&&prev.rate,false));
@@ -4522,8 +4547,10 @@ async function renderAdmin(){
 ['om-src','fin-src'].forEach(id=>{
   const box=$(id);if(!box)return;
   box.addEventListener('click',e=>{
-    const b=e.target.closest('.wchip');if(!b)return;
-    setOwn(id,b.dataset.own==='1');
+    const b=e.target.closest('.seg-b');
+    /* тап повз кнопку теж перемикає — по повзунку зручніше влучати */
+    const v=b?b.dataset.own==='1':!ownOf(id);
+    setOwn(id,v);
     if(id==='om-src')omHint(); else finCalc();
   });
 });
