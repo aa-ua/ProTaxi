@@ -264,8 +264,11 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
   color:var(--muted);font-size:13.5px;font-weight:700;text-align:center;cursor:pointer;display:block}
 .fin-time b{color:var(--text);font-weight:800;font-size:15px}
 .fin-time .ed{opacity:.7;font-weight:700}
-.btn.btn-sm{height:42px;font-size:13.5px;margin-top:10px}
-#fin-more{background:none;color:var(--muted);font-size:13px;height:36px;margin-top:8px}
+/* у кнопок із заданою висотою padding від .btn зсуває текст — центруємо flex'ом */
+.btn.btn-sm{height:42px;font-size:13.5px;margin-top:10px;
+  display:flex;align-items:center;justify-content:center;padding:0 14px}
+#fin-more{background:none;color:var(--muted);font-size:13px;height:36px;margin-top:8px;
+  display:flex;align-items:center;justify-content:center;padding:0 12px}
 /* Здача — найбільша цифра у вікні: її віддають клієнту за кермом */
 #fin-change{margin:2px 0 14px;padding:13px;border-radius:14px;text-align:center;
   background:rgba(59,224,166,.12);color:var(--yellow);font-weight:800;font-size:15px}
@@ -352,7 +355,9 @@ html.in-tg .modal-bg.mid .modal{max-height:none}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:14px}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;box-shadow:0 8px 30px rgba(0,0,0,.4);
+  /* довгі підписи не вміщались у ширину екрана — переносимо рядок */
+  max-width:calc(100% - 36px);white-space:normal;text-align:center;line-height:1.35}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 /* Поки відкрита клавіатура, нижня панель їде вниз — інакше вона накриває поле вводу */
@@ -1250,7 +1255,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.18';
+const APP_VER='1.20';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1614,18 +1619,30 @@ function avgConsumption(){
   return km>0?lt/km*100:null;
 }
 /* Яку витрату й ціну застосувати до конкретної зміни */
+/* Ціна пального станом на день зміни: беремо найближчий чек ДО неї, потім
+   найближчий після, і лише як останній варіант — сьогоднішню з налаштувань.
+   Інакше зміна дворічної давнини перераховувалась би за сьогоднішнім цінником. */
+function priceOn(date){
+  const rs=(data.refuels||[]).filter(r=>+r.price>0&&r.date)
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  if(!rs.length)return 0;
+  let before=0;
+  for(const r of rs){ if(String(r.date)<=String(date))before=+r.price; else break; }
+  return before||(+rs[0].price||0);
+}
 function rateFor(e){
   const s=data.settings;
+  const dayPrice=priceOn(e&&e.date)||netPrice(s);
   if(s.calcMode==='exact'){
     const ps=tankPeriods();
     let hit=null;
     if(+e.odoStart>0)hit=ps.find(p=>!p.viaReset&&e.odoStart>=p.fromOdo&&e.odoStart<=p.toOdo);
     if(!hit&&e.date)hit=ps.find(p=>p.fromDate<=e.date&&e.date<=p.toDate);
-    if(hit)return{cons:hit.cons,price:hit.price||netPrice(s),exact:true};
+    if(hit)return{cons:hit.cons,price:hit.price||dayPrice,exact:true};
     const avg=avgConsumption();
-    if(avg)return{cons:avg,price:lastPrice()||netPrice(s),exact:false};
+    if(avg)return{cons:avg,price:dayPrice,exact:false};
   }
-  return{cons:+s.consumption||0,price:netPrice(s),exact:false};
+  return{cons:+s.consumption||0,price:dayPrice,exact:false};
 }
 /* Вид пального міняє тільки одиниці й підписи: математика та сама —
    витрата на 100 км, помножена на ціну одиниці. Для електро це кВт·год. */
@@ -4002,7 +4019,8 @@ function renderChangelog(onlyNew){
    Спершу коротко пояснюємо, навіщо це все, а далі одразу питаємо те, без чого
    рахунок буде брехати: авто, пальне, комісія й ціль. */
 const SVI=(function(){
-  const d={money:'<path d="M12 3.4v17.2"/><path d="M16.4 7.1c-.6-1.3-2.2-2.1-4.4-2.1-2.6 0-4.4 1.2-4.4 3s1.6 2.6 4.4 3.1c2.8.5 4.6 1.3 4.6 3.2s-1.9 3.2-4.6 3.2c-2.4 0-4-.9-4.6-2.3"/>',car:'<path d="M4.5 15.5h15M6.5 15.5V12l1.8-4.2c.3-.7 1-1.2 1.8-1.2h3.8c.8 0 1.5.5 1.8 1.2L17.5 12v3.5"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="18" r="1.6"/>',fuel:'<path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5M5.5 9.5h7.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/>',map:'<path d="M9.2 4.2 3.6 6.6v13.2l5.6-2.4 5.6 2.4 5.6-2.4V4.2l-5.6 2.4z"/><path d="M9.2 4.2v13.2M14.8 6.6v13.2"/>',lock:'<rect x="4.6" y="10.4" width="14.8" height="10" rx="2.6"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/>'};
+  const d={money:'<path d="M12 3.4v17.2"/><path d="M16.4 7.1c-.6-1.3-2.2-2.1-4.4-2.1-2.6 0-4.4 1.2-4.4 3s1.6 2.6 4.4 3.1c2.8.5 4.6 1.3 4.6 3.2s-1.9 3.2-4.6 3.2c-2.4 0-4-.9-4.6-2.3"/>',car:'<path d="M4.5 15.5h15M6.5 15.5V12l1.8-4.2c.3-.7 1-1.2 1.8-1.2h3.8c.8 0 1.5.5 1.8 1.2L17.5 12v3.5"/><circle cx="8" cy="18" r="1.6"/><circle cx="16" cy="18" r="1.6"/>',fuel:'<path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5M5.5 9.5h7.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/>',map:'<path d="M9.2 4.2 3.6 6.6v13.2l5.6-2.4 5.6 2.4 5.6-2.4V4.2l-5.6 2.4z"/><path d="M9.2 4.2v13.2M14.8 6.6v13.2"/>',lock:'<rect x="4.6" y="10.4" width="14.8" height="10" rx="2.6"/><path d="M8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6"/>',
+    warn:'<path d="M12 3.6 2.6 20h18.8L12 3.6z"/><path d="M12 9.6v4.6"/><path d="M12 17.2h.01"/>'};
   const o={};
   Object.keys(d).forEach(k=>{o[k]='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+d[k]+'</svg>';});
   return o;
@@ -4018,6 +4036,8 @@ const INTRO=[
   p:'Вулиці на мапі забарвлені за вашим заробітком на годину: <b>зелена — прибуткова, червона — ні</b>.<br><br>Окремо — найкращі години та дні тижня за вашою власною статистикою.'},
  {ico:SVI.lock,t:'Ваші гроші — ваша справа',
   p:'Записи зберігаються на вашому телефоні. Копія в хмарі <b>привʼязана до вашого Telegram</b> — з чужого акаунта її не відкрити.<br><br>Дані не передаються нікому: ні службі таксі, ні податковій, ні рекламодавцям. Ми не питаємо ні прізвища, ні номера авто, ні платіжних даних.'},
+ {ico:SVI.warn,t:'Три хвилини, які все вирішують',
+  p:'Далі — три коротких кроки: авто, пальне, гроші.<br><br><b>Поки ці цифри не вказані, застосунок рахує навмання.</b> Він не знає ні вашої комісії, ні витрати, ні ціни пального — і всі підсумки будуть неправильні.<br><br>Заповніть зараз: це швидше, ніж потім розбиратись, звідки взялись дивні суми. Змінити їх можна будь-коли в розділі «Ще».'},
  {setup:'car',t:'Авто',p:'Від цього залежить, що застосунок віднімає й на що збирає запас.'},
  {setup:'fuel',t:'Пальне',p:'Без цих трьох цифр пальне рахуватиметься навмання.'},
  {setup:'money',t:'Гроші',p:'Останній крок — і можна працювати.'}
@@ -5565,7 +5585,7 @@ $('btn-set-save').addEventListener('click',async()=>{
   $('set-starget').value=data.settings.serviceTarget;
   renderFuelKind();renderStations();
   recalcAll(); /* нові відсотки й витрата застосовуються до всіх минулих змін */
-  await persist();renderAll();toast('Налаштування збережено й застосовано до всієї історії');
+  await persist();renderAll();toast('Збережено. Перерахували всю історію');
 });
 
 function downloadFile(name,content,type){
