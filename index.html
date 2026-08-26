@@ -1243,7 +1243,7 @@ html.map-full .tabbar{display:none}
     <div class="grid2">
       <div class="field"><label id="lab-rf-liters">Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
       <div class="field"><label id="lab-rf-price">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label>Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
+      <div class="field"><label id="lab-rf-odo">Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
     </div>
     <div class="wchips" id="rf-st" style="display:none"></div>
@@ -1253,8 +1253,8 @@ html.map-full .tabbar{display:none}
       <button class="wchip" data-full="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.6h8.2l1.4 5.2-5.5 11.6H8.4L3.9 8.8z"/><path d="M4.6 11.4h11"/></svg></span>Частково</button>
     </div>
     <div class="wchips" id="rf-reset">
-      <button class="wchip on" data-reset="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14"/><path d="M13.4 6.6 18.8 12l-5.4 5.4"/></svg></span>Лічильник далі</button>
       <button class="wchip" data-reset="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8a8 8 0 1 1-2.6-5.9"/><path d="M20.4 4.2v5h-5"/></svg></span>Лічильник обнулено</button>
+      <button class="wchip on" data-reset="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14"/><path d="M13.4 6.6 18.8 12l-5.4 5.4"/></svg></span>Лічильник далі</button>
     </div>
     <div class="hint" id="rf-calc" style="margin:0 0 6px;text-align:center"></div>
     <div class="hint" id="rf-days" style="display:none;margin:0 0 12px;text-align:center"></div>
@@ -1377,7 +1377,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.48';
+const APP_VER='1.49';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5591,11 +5591,19 @@ function openRefuel(id){
   $('rf-del').style.display=r?'block':'none';
   renderRfStations();
   disarm($('rf-save'));disarm($('rf-del'));
-  rfCalc();openM('modal-refuel');
+  rfOdoLabel();rfCalc();openM('modal-refuel');
   if(!r)setTimeout(()=>$('rf-liters').focus(),120);
 }
 function rfFull(){return document.querySelector('#rf-full .wchip.on').dataset.full==='1';}
 function rfReset(){const b=document.querySelector('#rf-reset .wchip.on');return !!b&&b.dataset.reset==='1';}
+/* Показник треба вписати в обох випадках: це кілометраж, накатаний на цьому
+   баку. Якщо лічильник обнуляють, число все одно потрібне — саме воно й
+   закриває попередній бак. Тому не вимикаємо поле, а прямо кажемо, що
+   вписати: показник ПЕРЕД обнуленням. */
+function rfOdoLabel(){
+  const l=$('lab-rf-odo');if(!l)return;
+  l.textContent=rfReset()?'Одометр перед обнуленням, км':'Одометр, км';
+}
 function rfCalc(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
   const p=[];
@@ -5628,7 +5636,7 @@ $('rf-full').addEventListener('click',e=>{
 $('rf-reset').addEventListener('click',e=>{
   const b=e.target.closest('.wchip');if(!b)return;
   document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',x===b));
-  disarm($('rf-save'));rfCalc();
+  rfOdoLabel();disarm($('rf-save'));rfCalc();
 });
 $('btn-refuel').addEventListener('click',()=>openRefuel(null));
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
