@@ -1165,7 +1165,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: закриття зміни -->
-<div class="modal-bg" id="modal-close">
+<div class="modal-bg mid" id="modal-close">
   <div class="modal">
     <h3>Завершити сесію</h3>
     <div class="grid2">
@@ -1190,7 +1190,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: заправка -->
-<div class="modal-bg" id="modal-refuel">
+<div class="modal-bg mid" id="modal-refuel">
   <div class="modal">
     <h3 id="rf-title">Заправка</h3>
     <div class="grid2">
@@ -1230,7 +1230,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: знижка на АЗС -->
-<div class="modal-bg" id="modal-station">
+<div class="modal-bg mid" id="modal-station">
   <div class="modal">
     <h3 id="st-title">Знижка на АЗС</h3>
     <div class="wchips" id="st-presets"></div>
@@ -1253,7 +1253,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: витрата з фонду -->
-<div class="modal-bg" id="modal-fund">
+<div class="modal-bg mid" id="modal-fund">
   <div class="modal">
     <h3>Витрата із запасу</h3>
     <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="fx-amount" placeholder="0"></div>
@@ -1265,7 +1265,7 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: акаунт -->
-<div class="modal-bg" id="modal-account">
+<div class="modal-bg mid" id="modal-account">
   <div class="modal">
     <h3>Акаунт Google</h3>
     <div id="g-off">
@@ -1320,7 +1320,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.36';
+const APP_VER='1.37';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
