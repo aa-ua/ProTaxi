@@ -1324,7 +1324,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.39';
+const APP_VER='1.40';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4103,10 +4103,17 @@ const CHANGELOG=[
 
 function renderChangelog(onlyNew){
   const seen=data.settings.seenVer||'';
-  const list=onlyNew?CHANGELOG.filter(r=>verNum(r.v)>verNum(seen)):CHANGELOG;
+  /* Саме́ вікно після оновлення показує рівно один запис — найсвіжіший.
+     Гортати всю історію на старті водієві нема чого: він відкрив застосунок
+     працювати. Уся історія лишається в «Ще» → «Що нового». */
+  const fresh=CHANGELOG.filter(r=>verNum(r.v)>verNum(seen));
+  const list=onlyNew?(fresh.length?[fresh[0]]:[CHANGELOG[0]]):CHANGELOG;
   const body=$('cl-body');body.innerHTML='';
-  $('cl-title').textContent=onlyNew?'Оновлено до '+APP_VER:'Що нового';
-  (list.length?list:CHANGELOG).forEach(r=>{
+  /* У заголовку номера немає навмисне: APP_VER бампається щовипуску, а записи
+     в CHANGELOG зʼявляються лише на справжні новинки, і числа розходяться —
+     «Оновлено до 1.39» над записом 1.2 виглядало б помилкою. */
+  $('cl-title').textContent=onlyNew?'У новій версії':'Що нового';
+  list.forEach(r=>{
     const d=document.createElement('div');d.className='rel';
     let html='<div class="rel-head"><span class="rel-v">'+r.v+'</span><span class="rel-d">'+r.d+'</span>'+
       (r.v===APP_VER?'<span class="rel-now">поточна</span>':'')+'</div><ul>';
