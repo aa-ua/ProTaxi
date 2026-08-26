@@ -1255,7 +1255,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.23';
+const APP_VER='1.24';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4962,6 +4962,9 @@ function consLine(){
   return fmt1(v)+' '+U100()+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
 }
 function savingHTML(){
+  /* Поки немає жодної заправки, «наступного бака» не існує: рахувати нема від
+     чого, а цифра, що взялась нізвідки, лякає більше за її відсутність. */
+  if(!(data.refuels||[]).length)return '';
   const g=tankSaving();
   if(g.target<=0)return '';
   const pc=Math.min(100,Math.round(g.pct*100));
