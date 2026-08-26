@@ -938,7 +938,7 @@ html.map-full .tabbar{display:none}
     <div class="sect">Застосунок</div>
 
     <div class="acc" data-acc="help">
-      <button class="acc-h" type="button"><span class="t">Підтримка й хмара<span class="s">звернення до автора, синхронізація</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <button class="acc-h" type="button"><span class="t">Підтримка й хмара<span class="s">звернення в підтримку, синхронізація</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
       <div class="acc-b">
     <div class="card">
       <div class="card-title">Підтримка</div>
@@ -1013,7 +1013,7 @@ html.map-full .tabbar{display:none}
 <div class="modal-bg mid" id="modal-support">
   <div class="modal">
     <h3>Написати в підтримку</h3>
-    <p class="hint" style="margin:0 0 12px">Опишіть проблему або пропозицію. Звернення читає автор застосунку, відповідь надійде в Telegram.</p>
+    <p class="hint" style="margin:0 0 12px">Опишіть проблему або пропозицію. Ми прочитаємо кожне звернення й відповімо в Telegram.</p>
     <div class="field"><textarea id="sup-text" rows="5" placeholder="Опиши, що сталося…"></textarea></div>
     <input type="file" id="sup-file" accept="image/*" multiple hidden>
     <button class="btn btn-ghost btn-sm" id="sup-pick" type="button">Додати знімок екрана</button>
@@ -1255,7 +1255,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.22';
+const APP_VER='1.23';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4403,7 +4403,7 @@ function renderSub(){
     $('sub-note').innerHTML='ProTaxi працює в режимі відкритого тестування: <b>оплата не потрібна</b>, усі можливості доступні без обмежень.'+
       '<br><br>Учасникам тестування після запуску нараховується <b>додатковий місяць</b> підписки.';
     $('sub-go').style.display='none';
-    $('sub-hint').textContent='Помітили помилку в розрахунку або незручність — напишіть у підтримку. Кожне звернення читає автор.';
+    $('sub-hint').textContent='Помітили помилку в розрахунку або незручність — напишіть у підтримку. Ми читаємо кожне звернення.';
     return;
   }
   const left=+b.left||0,act=b.active!==false;
@@ -4427,7 +4427,7 @@ function renderSub(){
   go.textContent=b.paid?'Продовжити на місяць':'Оформити за '+subPrice(b);
   $('sub-hint').textContent=b.link
     ? 'Оплата відкриється в окремому вікні. Доступ активується протягом кількох хвилин після зарахування.'
-    : 'Запит надійде автору застосунку. Доступ активують вручну, зазвичай того ж дня.';
+    : 'Запит надійде в підтримку. Доступ активуємо вручну, зазвичай того ж дня.';
 }
 const plDay=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'днів':(b===1?'день':((b>=2&&b<=4)?'дні':'днів'));};
 $('sub-go').addEventListener('click',async function(){
@@ -4766,7 +4766,7 @@ function renderSupport(){
     $('tg-name').textContent=[u.first_name,u.last_name].filter(Boolean).join(' ')||('@'+(u.username||u.id));
   }else who.style.display='none';
   $('support-note').textContent=TG
-    ? 'Звернення надійде автору застосунку в Telegram. Відповідь прийде в цей самий чат.'
+    ? 'Звернення надійде в підтримку. Відповідь прийде в цей самий чат.'
     : 'Звернення відкриється в Telegram. Повідомляйте про будь-яку помилку — це впливає на наступні оновлення.';
   $('btn-support').disabled=!TG&&!SUPPORT_BOT;
 }
