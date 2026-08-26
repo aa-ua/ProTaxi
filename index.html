@@ -973,6 +973,10 @@ html.map-full .tabbar{display:none}
       <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
       <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
     </div>
+<div class="wchips" id="om-src">
+      <button class="wchip on" data-own="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.4" y="2.6" width="15.2" height="18.8" rx="2.6"/><path d="M8.4 6.6h7.2M8.4 10.4h7.2M8.4 14.2h4"/></svg></span>Через застосунок<span class="w2">комісія </span></button>
+      <button class="wchip" data-own="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.6 20.2c.6-3.7 3.7-5.8 7.4-5.8s6.8 2.1 7.4 5.8"/></svg></span>Свій клієнт<span class="w2">без комісії</span></button>
+    </div>
     <div class="hint" id="om-hint" style="margin:0 0 12px"></div>
     <button class="btn btn-primary" id="om-save">Прийняти</button>
     <button class="btn btn-ghost" id="om-cancel">Скасувати</button>
@@ -999,6 +1003,10 @@ html.map-full .tabbar{display:none}
     <div class="wchips" id="fin-pay">
       <button class="wchip on" data-pay="cash"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="6.2" width="18.4" height="11.6" rx="2.4"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.6h.01M18 14.4h.01"/></svg></span>Готівка</button>
       <button class="wchip" data-pay="card"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="5.4" width="18.4" height="13.2" rx="2.6"/><path d="M2.8 9.8h18.4M6.4 14.6h3.4"/></svg></span>Картка</button>
+    </div>
+<div class="wchips" id="fin-src">
+      <button class="wchip on" data-own="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.4" y="2.6" width="15.2" height="18.8" rx="2.6"/><path d="M8.4 6.6h7.2M8.4 10.4h7.2M8.4 14.2h4"/></svg></span>Через застосунок<span class="w2">комісія </span></button>
+      <button class="wchip" data-own="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.4" r="3.6"/><path d="M4.6 20.2c.6-3.7 3.7-5.8 7.4-5.8s6.8 2.1 7.4 5.8"/></svg></span>Свій клієнт<span class="w2">без комісії</span></button>
     </div>
     <div class="field" id="fin-cash-row"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
@@ -1161,7 +1169,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.11';
+const APP_VER='1.12';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1292,6 +1300,13 @@ const oMin=o=>o.endT&&o.endT>o.t?(o.endT-o.t)/60000:0;
 const oTime=o=>o.endT?hm(o.t)+'–'+hm(o.endT):hm(o.t);
 /* Спосіб оплати: готівка чи картка. З карткових знімається еквайринг. */
 function payOf(box){const b=document.querySelector('#'+box+' .wchip.on');return b?b.dataset.pay:'cash';}
+function ownOf(box){const b=document.querySelector('#'+box+' .wchip.on');return !!b&&b.dataset.own==='1';}
+function setOwn(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.own==='1')===!!v));}
+/* підпис із поточним відсотком комісії — щоб різниця була видна одразу */
+function paintSrc(box){
+  const el=document.querySelector('#'+box+' .wchip[data-own="0"] .w2');
+  if(el)el.textContent='комісія '+(+data.settings.commissionPct||0)+'%';
+}
 function setPay(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x.classList.toggle('on',x.dataset.pay===(v||'cash')));}
 ['om-pay','fin-pay'].forEach(id=>{
   const el=document.getElementById(id);if(!el)return;
@@ -1342,6 +1357,7 @@ function oMeta(o,e){
     const f=+e.calc.fuel*(k/+e.km);
     if(f>0.5)p.push('пальне '+fmt(f));
   }
+  if(isOwn(o))p.push('свій · без комісії');
   if(o.pay==='card')p.push('картка');
   if(+o.tip>0)p.push('чай '+fmt(+o.tip));
   return p.join(' · ')||'—';
@@ -1638,6 +1654,7 @@ function recalcAll(){
     e.exact=r.exact;
     e.oc=(e.orders&&e.orders.length)?e.orders.length:(+e.oc||0);
     e.cardGross=cardGrossOf(e);
+    e.ownGross=ownGrossOf(e);
     e.rentShifts=shiftsOnDay(e.date,false);
     e.gross=(e.orders&&e.orders.length)?e.orders.reduce((a,o)=>a+(+o.amount||0),0):(+e.gross||0);
     e.calc=calc(e,data.settings);
@@ -1689,7 +1706,9 @@ function fundBoth(fund,km,net,s){
 
 function calc(inp,s){
   const gross=+inp.gross||0,tips=+inp.tips||0;
-  const commission=gross*s.commissionPct/100;
+  /* комісія береться лише з того, що пройшло через платформу */
+  const ownGross=Math.min(gross,Math.max(0,+inp.ownGross||0));
+  const commission=(gross-ownGross)*s.commissionPct/100;
   /* еквайринг береться лише з тих замовлень, що прийшли карткою — понад комісію */
   const acquiring=(+inp.cardGross||0)*(+s.acquiringPct||0)/100;
   const liters=+inp.liters||0;
@@ -1987,7 +2006,8 @@ function todayTotals(){
   if(data.active&&dateOf(data.active.startT)===t){
     const gross=data.active.orders.reduce((a,o)=>a+(+o.amount||0),0);
     const km=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
-    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings),rentShifts:shiftsOnDay(t,true)},data.settings);
+    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings),ownGross:ownGrossOf(data.active),
+      rentShifts:shiftsOnDay(t,true)},data.settings);
     add(c);
   }
   return{net,personal,costs,rent};
@@ -2106,7 +2126,7 @@ function renderShift(){
   const approx=factKm<=0;
 
   const liters=litersFor(estKm,s);
-  const c=calc({gross,tips:0,liters,km:estKm,rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
+  const c=calc({gross,tips:0,liters,km:estKm,ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
 
   const stale=dateOf(a.startT)!==todayStr();
   let html=
@@ -2117,7 +2137,7 @@ function renderShift(){
     '<div class="metrics">'+
     '<div class="metric"><div class="v">'+a.orders.length+'</div><div class="k">замовлень</div></div>'+
     '<div class="metric"><div class="v">'+(estKm>0?(approx?'≈':'')+fmt1(estKm):'—')+'</div><div class="k">км за зміну</div></div>'+
-    '<div class="metric"><div class="v">'+(busyMin>0?fmtHours(busyMin/60):'—')+'</div><div class="k">у заказах</div></div>'+
+    '<div class="metric"><div class="v">'+(busyMin>0?fmtHours(busyMin/60):'—')+'</div><div class="k">у замовленнях</div></div>'+
     '</div>'+
     '<div class="metrics'+(c.rent>0?' four':'')+'">'+
     '<div class="metric split"><div class="v neg">−'+fmt(c.commission)+'</div><div class="k">платформі</div></div>'+
@@ -2132,7 +2152,7 @@ function renderShift(){
     '</div>';
 
   if(live){
-    html+='<button class="btn btn-warn" id="btn-finish-live">Завершити заказ '+fmt(live.amount)+'</button>'+
+    html+='<button class="btn btn-warn" id="btn-finish-live">Завершити замовлення '+fmt(live.amount)+'</button>'+
           '<button class="btn btn-ghost" id="btn-order" style="margin-top:10px">+ Ще одне замовлення</button>';
   }else{
     html+='<button class="btn btn-primary" id="btn-order">+ Прийняти замовлення</button>';
@@ -2173,7 +2193,7 @@ function updateLive(){
     const live=a.orders.find(isOpen);
     if(live){
       const mins=Math.floor((Date.now()-live.t)/60000);
-      if(mins>=60){nudge.style.display='block';nudge.textContent='Заказ на '+fmt(live.amount)+' відкритий вже '+mins+' хв — не забудь завершити';}
+      if(mins>=60){nudge.style.display='block';nudge.textContent='Замовлення на '+fmt(live.amount)+' відкрите вже '+mins+' хв — не забудь завершити';}
       else nudge.style.display='none';
     }else{
       const last=a.orders.length?Math.max(...a.orders.map(o=>o.endT||o.t)):a.startT;
@@ -2224,6 +2244,7 @@ function openNewOrder(){
   /* після обнулення лічильник реально показує 0 — так і підставляємо */
   $('om-odo').value=lo>0?fmt1(lo).replace(',','.'):(odoWasReset()?'0':'');
   setPay('om-pay','cash');
+  setOwn('om-src',false);paintSrc('om-src');
   $('om-time-box').style.display='none';
   omTimeLine();
   omHint();
@@ -2263,9 +2284,9 @@ $('om-save').addEventListener('click',async()=>{
   if(amount<=0){toast('Вкажіть суму замовлення');return;}
   const odo=num($('om-odo').value);
   const t=toMs(dateOf(a.startT),$('om-time').value||nowHM());
-  const o={id:Date.now(),t,endT:0,amount,odoStart:odo,odoEnd:0,pay:payOf('om-pay'),tip:0};
+  const o={id:Date.now(),t,endT:0,amount,odoStart:odo,odoEnd:0,pay:payOf('om-pay'),own:ownOf('om-src'),tip:0};
   a.orders.push(o);
-  await persist();closeM('modal-order');renderShift();toast('Заказ прийнято · '+fmt(amount));
+  await persist();closeM('modal-order');renderShift();toast('Замовлення прийнято · '+fmt(amount));
   captureOrderMeta(o.id); /* погода і геоточка допишуться самі, без блокування */
 });
 
@@ -2317,6 +2338,7 @@ function openFinish(id){
   $('fin-tip').value=+o.tip>0?o.tip:'';
   $('fin-cash').value='';
   setPay('fin-pay',o.pay||'cash');
+  setOwn('fin-src',isOwn(o));paintSrc('fin-src');
   /* за кермом вікно має відкриватись у найкоротшому вигляді */
   $('fin-time-box').style.display='none';
   $('fin-extra').style.display='none';
@@ -2391,7 +2413,7 @@ $('fin-save').addEventListener('click',function(){
     const ds=f.entry?f.entry.date:dateOf(data.active.startT);
     o.amount=amount;
     o.odoStart=os;o.odoEnd=oe;
-    o.tip=num($('fin-tip').value);o.pay=payOf('fin-pay');
+    o.tip=num($('fin-tip').value);o.pay=payOf('fin-pay');o.own=ownOf('fin-src');
     o.t=toMs(ds,$('fin-start').value||hm(o.t));
     let endT=$('fin-end').value?toMs(ds,$('fin-end').value):o.t;
     if(endT<o.t)endT+=86400000;
@@ -2400,7 +2422,7 @@ $('fin-save').addEventListener('click',function(){
     if(f.entry)recalcEntry(f.entry);
     await persist();closeM('modal-finish');renderAll();
     if(open)captureFinishPoint(finId);
-    toast(open?'Заказ завершено':'Зміни збережено');
+    toast(open?'Замовлення завершено':'Зміни збережено');
   });
 });
 $('fin-del').addEventListener('click',function(){
@@ -2412,15 +2434,20 @@ $('fin-del').addEventListener('click',function(){
     }else{
       data.active.orders=data.active.orders.filter(x=>x.id!==finId);
     }
-    await persist();closeM('modal-finish');renderAll();toast('Заказ видалено');
+    await persist();closeM('modal-finish');renderAll();toast('Замовлення видалено');
   });
 });
 
 /* Перерахунок закритої зміни після редагування заказу */
-function cardGrossOf(e){return ((e&&e.orders)||[]).filter(o=>o.pay==='card').reduce((a,o)=>a+(+o.amount||0),0);}
+/* Свій клієнт: замовлення повз платформу. Комісії з нього немає, і еквайрингу
+   теж — картка йде водієві напряму, а не через застосунок таксі. */
+const isOwn=o=>!!(o&&o.own);
+function ownGrossOf(e){return ((e&&e.orders)||[]).filter(isOwn).reduce((a,o)=>a+(+o.amount||0),0);}
+function cardGrossOf(e){return ((e&&e.orders)||[]).filter(o=>o.pay==='card'&&!isOwn(o)).reduce((a,o)=>a+(+o.amount||0),0);}
 function recalcEntry(e){
   e.oc=(e.orders&&e.orders.length)?e.orders.length:(+e.oc||0);
   e.cardGross=cardGrossOf(e);
+  e.ownGross=ownGrossOf(e);
   e.gross=(e.orders||[]).reduce((a,o)=>a+(+o.amount||0),0);
   const r=rateFor(e);
   if(!e.manualLiters)e.liters=(+e.km||0)/100*r.cons;
@@ -3132,7 +3159,7 @@ function detectWeather(){
 function openCloseShift(){
   const a=data.active;if(!a)return;
   const live=a.orders.find(isOpen);
-  if(live){toast('Спершу заверши відкритий заказ');return;}
+  if(live){toast('Спершу завершіть відкрите замовлення');return;}
   $('cm-end').value=nowHM();
   const tipSum=((data.active&&data.active.orders)||[]).reduce((a,o)=>a+(+o.tip||0),0);
   $('cm-tips').value=tipSum>0?+tipSum.toFixed(2):'';
@@ -3161,7 +3188,8 @@ function cmPreview(){
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
   const manual=num($('cm-liters').value);
   const liters=manual>0?manual:km/100*r.cons;
-  const c=calc({gross,tips:num($('cm-tips').value),liters,km,fuelPrice:r.price,cardGross:cardGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},data.settings);
+  const c=calc({gross,tips:num($('cm-tips').value),liters,km,fuelPrice:r.price,cardGross:cardGrossOf(a),
+    ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},data.settings);
   const p=[];
   if(km>0)p.push((odoKm>0?'':'≈')+fmt1(km)+' км'+(ordKm>0&&odoKm>0?' · з пасажиром '+Math.round(ordKm/km*100)+'%':''));
   p.push('пальне '+fmt1(liters)+' л = '+fmt(c.fuel));
@@ -3192,7 +3220,8 @@ $('cm-save').addEventListener('click',async()=>{
   const r=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
   const manual=num($('cm-liters').value);
   const liters=manual>0?manual:km/100*r.cons;
-  const inp={gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)};
+  const inp={gross,tips:num($('cm-tips').value),liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),
+    ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)};
   const c=calc(inp,data.settings);
   data.entries.push({
     id:a.id,date:dateOf(a.startT),startT:a.startT,endT,hours:(endT-a.startT)/3600000,
@@ -3306,6 +3335,16 @@ function ordersStatsIn(from,to){
     avgSum:n>0?money/n:0, avgMin:n>0?min/n:0, avgKm:n>0?km/n:0,
     cons:shiftKm>0?liters/shiftKm*100:0};
 }
+/* Свої клієнти за період: скільки їх, на яку суму й скільки комісії
+   не пішло платформі. Саме остання цифра й цікава водієві. */
+function ownStatsIn(){
+  let n=0,sum=0;
+  data.entries.filter(e=>inPeriod(e.date)).forEach(e=>
+    (e.orders||[]).forEach(o=>{if(isOwn(o)){n++;sum+=+o.amount||0;}}));
+  if(data.active&&inPeriod(dateOf(data.active.startT)))
+    (data.active.orders||[]).forEach(o=>{if(isOwn(o)){n++;sum+=+o.amount||0;}});
+  return {n:n,sum:sum,saved:sum*(+data.settings.commissionPct||0)/100};
+}
 function renderOrdersAnalysis(){
   const box=$('orders-analysis'); if(!box)return;
   box.innerHTML='';
@@ -3324,6 +3363,11 @@ function renderOrdersAnalysis(){
   const r=(name,val,extra)=>'<div class="ins"><span class="k">'+name+'</span><span class="v">'+val+(extra||'')+'</span></div>';
   let h='<div class="card"><div class="card-title">Розбір замовлень · '+cur.n+' шт.</div>';
   h+=r('Середній чек',fmt(cur.avgSum),chg(cur.avgSum,prev&&prev.avgSum,false));
+  const ow=ownStatsIn();
+  if(ow.n>0){
+    h+=r('Свої клієнти',ow.n+' зам. · '+fmt(ow.sum),'');
+    if(ow.saved>0)h+=r('Не віддано комісії','<span style="color:var(--yellow)">'+fmt(ow.saved)+'</span>','');
+  }
   if(cur.perKm>0)h+=r('Ціна за кілометр',fmt1(cur.perKm)+' ₴',chg(cur.perKm,prev&&prev.perKm,false));
   h+=r('Темп',fmt(cur.rate)+'/год',chg(cur.rate,prev&&prev.rate,false));
   h+=r('Середня поїздка',Math.round(cur.avgMin)+' хв'+(cur.avgKm>0?' · '+fmt1(cur.avgKm)+' км':''),'');
@@ -4475,6 +4519,14 @@ async function renderAdmin(){
   done();
 }
 
+['om-src','fin-src'].forEach(id=>{
+  const box=$(id);if(!box)return;
+  box.addEventListener('click',e=>{
+    const b=e.target.closest('.wchip');if(!b)return;
+    setOwn(id,b.dataset.own==='1');
+    if(id==='om-src')omHint(); else finCalc();
+  });
+});
 $('btn-changelog').addEventListener('click',()=>renderChangelog(false));
 $('cl-close').addEventListener('click',async()=>{
   closeM('modal-changelog');
