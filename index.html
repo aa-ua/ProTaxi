@@ -1393,7 +1393,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.55';
+const APP_VER='1.56';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2406,7 +2406,8 @@ function renderShift(){
      прийде сума, якої він у застосунку не бачить. */
   const goal=+s.dailyGoal||0;
   a.live={gross:Math.round(gross),personal:Math.round(c.personal),
-          orders:a.orders.length,
+          orders:a.orders.length,goal:goal>0?goal:null,
+          left:goal>0?Math.max(0,Math.round(goal-c.personal)):null,
           goalPct:goal>0?Math.round(c.personal/goal*100):null};
 
   const stale=dateOf(a.startT)!==todayStr();
