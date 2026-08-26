@@ -1377,7 +1377,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.50';
+const APP_VER='1.51';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1441,6 +1441,8 @@ const verNum=v=>{const p=String(v||'0').split('.');return (+p[0]||0)*1000+(+p[1]
 /* Мінус ставимо перед гривнею, а не між нею й числом: «−₴80», а не «₴-80».
    З орендою від'ємний день — звичайна річ, тож це видно часто. */
 const fmt=n=>{const v=Math.round(n||0);return (v<0?'−₴':'₴')+Math.abs(v).toLocaleString('uk-UA');};
+/* просто число з розрядами, без гривні — для лічильників в адмінці */
+const fmtN=n=>Math.round(+n||0).toLocaleString('uk-UA');
 const fmt1=n=>(Math.round((n||0)*10)/10).toLocaleString('uk-UA');
 const pad=n=>String(n).padStart(2,'0');
 const todayStr=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
@@ -4833,15 +4835,63 @@ const admPct=(a,b)=>b>0?Math.round(a/b*100):0;
 const admBar=(pct,tone)=>'<div class="adm-track"><div class="adm-fill'+(tone?' '+tone:'')+'" style="width:'+Math.max(1,pct)+'%"></div></div>';
 const admRow=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>';
 
+/* ══ ЖИВА СТАТИСТИКА ══
+   Чотири головні цифри тими самими скляними плитками, що й у водія, далі
+   перемикач періодів і те, що люди робили за цей період. Дані бере окрема
+   RPC public.admin_pulse — вона одна вміє рахувати по днях. Немає її
+   в базі — панель показує старий вигляд, без плиток. */
+let admPeriod='today',admPulse=null,admPulseErr='';
+const ADM_PERIODS=[['today','Сьогодні'],['yesterday','Вчора'],['week','Тиждень'],
+                   ['month','Місяць'],['year','Рік'],['all','Весь час']];
+async function loadAdminPulse(){
+  try{admPulse=await sbRpc('admin_pulse',{p_init_data:TG.initData,p_period:admPeriod});admPulseErr='';}
+  catch(e){admPulse=null;admPulseErr=String((e&&e.message)||e);}
+}
+function admPace(p){
+  const t=+p.new_today||0,y=+p.new_yest||0,d=t-y;
+  if(!t&&!y)return {v:'0',sub:'учора теж нікого'};
+  const sub=d>0?('+'+d+' до вчора'):d<0?(d+' до вчора'):'як учора';
+  return {v:String(t),sub:sub};
+}
+function admHero(p){
+  const pace=admPace(p);
+  return '<div class="stat-grid">'+
+    '<div class="stat stat-main"><div class="v">'+(p.online||0)+'</div><div class="k">Зараз на зміні</div></div>'+
+    '<div class="stat"><div class="v">'+(p.users||0)+'</div><div class="k">Водіїв усього</div></div>'+
+    '<div class="stat"><div class="v">'+fmtN(p.orders_all||0)+'</div><div class="k">Замовлень за весь час</div></div>'+
+    '<div class="stat"><div class="v">'+pace.v+'</div><div class="k">Нових сьогодні · '+pace.sub+'</div></div>'+
+    '</div>';
+}
+function admPerChips(){
+  return '<div class="chips" id="adm-per">'+ADM_PERIODS.map(x=>
+    '<button class="chip'+(x[0]===admPeriod?' active':'')+'" data-ap="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>';
+}
+function admPulseBody(){
+  const p=admPulse;
+  if(!p)return '<div class="card"><div class="empty">Живої статистики ще немає</div>'+
+    '<p class="hint">Виконайте крок 15 у Supabase — і тут зʼявляться цифри за періодами.'+
+    (admPulseErr?'<br><br>Сервер відповів: '+esc(admPulseErr.slice(0,120)):'')+'</p></div>';
+  const w=p.who||[],v=p.vol||{};
+  const top=Math.max(1,...w.map(x=>+x.v||0));
+  return admHero(p)+admPerChips()+
+    '<div class="card"><div class="card-title">Що робили водії</div>'+
+    w.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(x.k)+'</span><b>'+(+x.v||0)+'</b></div>'+
+      admBar(Math.round((+x.v||0)/top*100))+'</div>').join('')+
+    '<p class="hint">Порядок — за значимістю. Перший рядок ширший за інші, бо саме він задає масштаб.</p></div>'+
+    '<div class="card"><div class="card-title">Обсяги за період</div>'+
+    '<div class="metrics"><div class="metric"><div class="v">'+fmtN(v.shifts||0)+'</div><div class="k">змін</div></div>'+
+    '<div class="metric"><div class="v">'+fmtN(v.orders||0)+'</div><div class="k">замовлень</div></div>'+
+    '<div class="metric"><div class="v">'+fmtN(v.refuels||0)+'</div><div class="k">заправок</div></div></div>'+
+    '<div class="metrics"><div class="metric"><div class="v">'+fmtN(v.km||0)+'</div><div class="k">км</div></div>'+
+    '<div class="metric"><div class="v">'+fmtN(v.hours||0)+'</div><div class="k">год на лінії</div></div>'+
+    '<div class="metric"><div class="v">'+fmtN(v.liters||0)+'</div><div class="k">літрів</div></div></div>'+
+    admRow('Середнє на руки за зміну',fmt(v.avg_shift||0))+
+    admRow('Середній чек',fmt(v.avg_check||0))+
+    '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>';
+}
 function admDash(d){
   const f=d.funnel||[],all=(f[0]&&f[0].n)||0;
-  let h='<div class="metrics two">'+
-    admTile('users',d.users||0,'водіїв усього',(d.new_7d||0)+' за тиждень · '+(d.idle||0)+' ще не почали',true)+
-    admTile('live',d.active_7d||0,'заходили за тиждень','сьогодні '+(d.active_1d||0))+
-    '</div><div class="metrics two">'+
-    admTile('shift',d.shifts||0,'змін заведено','у середньому '+(d.users?Math.round((d.shifts||0)/d.users*10)/10:0)+' на водія')+
-    admTile('ord',d.orders||0,'замовлень записано',((d.setup&&d.setup.online)||0)+' зараз на лінії')+
-    '</div>';
+  let h=admPulseBody();
 
   h+='<div class="card"><div class="card-title">Воронка</div>';
   f.forEach(function(st,i){
@@ -5041,6 +5091,14 @@ function admPaint(){
   document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.classList.toggle('active',c.dataset.at===admTab));
 }
 document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.addEventListener('click',()=>{admTab=c.dataset.at;admPaint();window.scrollTo(0,0);}));
+/* період у дашборді: список малюється щоразу заново, тому слухаємо контейнер */
+$('admin-body').addEventListener('click',async e=>{
+  const b=e.target.closest('#adm-per .chip');if(!b)return;
+  if(b.dataset.ap===admPeriod)return;
+  admPeriod=b.dataset.ap;
+  document.querySelectorAll('#adm-per .chip').forEach(x=>x.classList.toggle('active',x===b));
+  await loadAdminPulse();admPaint();
+});
 
 /* Чому немає щита в шапці — питання, на яке інакше не відповісти:
    кнопка ховається на будь-яку відмову сервера. Причину кладемо в
@@ -5054,7 +5112,7 @@ async function renderAdmin(){
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
     if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
-    await Promise.all([loadAdminBilling(),loadAdminTicks()]);
+    await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse()]);
     btn.style.display='';
     admWhy='доступ є';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
