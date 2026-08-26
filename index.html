@@ -580,6 +580,8 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .gl:last-child{border-bottom:none}
 .gl b{display:block;font-size:15px;font-weight:800;margin-bottom:3px}
 .gl span{display:block;font-size:13.5px;line-height:1.45;color:var(--muted);font-weight:400}
+.pv-p{font-size:13.5px;line-height:1.5;color:var(--muted);font-weight:400;padding:7px 0 7px 14px;position:relative}
+.pv-p:before{content:'';position:absolute;left:2px;top:15px;width:4px;height:4px;border-radius:50%;background:var(--yellow);opacity:.7}
 .rel{padding:14px 0;border-bottom:1px solid var(--border)}
 .rel:last-child{border-bottom:none}
 .rel-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
@@ -1051,6 +1053,7 @@ html.map-full .tabbar{display:none}
       <button class="btn btn-ghost" id="btn-intro" style="margin-top:10px">Як користуватись</button>
       <button class="btn btn-ghost" id="btn-changelog" style="margin-top:10px">Що нового</button>
       <button class="btn btn-ghost" id="btn-gloss" style="margin-top:10px">Словник понять</button>
+      <button class="btn btn-ghost" id="btn-privacy" style="margin-top:10px">Політика приватності</button>
     </div>
 
     <div class="card">
@@ -1341,6 +1344,16 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: політика приватності -->
+<div class="modal-bg" id="modal-privacy">
+  <div class="modal">
+    <h3>Політика приватності</h3>
+    <p class="hint" id="pv-date" style="margin:0 0 12px"></p>
+    <div class="modal-scroll" id="pv-body"></div>
+    <button class="btn btn-primary" id="pv-close" style="margin-top:14px">Зрозуміло</button>
+  </div>
+</div>
+
 <!-- Модалка: словник понять -->
 <div class="modal-bg" id="modal-gloss">
   <div class="modal">
@@ -1377,7 +1390,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.51';
+const APP_VER='1.52';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1422,7 +1435,22 @@ const store={
 
 const MAP_STYLES_KEYS=['light','dark'];
 const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'gas',fuelGrade:'gas',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
-let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
+let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{},taps:{}};
+
+/* ══ ЛІЧИЛЬНИК ФУНКЦІЙ ══
+   Скільки разів водій скористався кожною можливістю. Потрібно, щоб бачити,
+   що справді працює, а що ніхто не відкриває. Це лічильники натискань —
+   ні сум, ні маршрутів, ні тексту; вони їдуть у хмару разом зі звичайним
+   збереженням, окремих запитів не роблять. Зберігаємо із затримкою: тиснути
+   можна часто, а писати на диск на кожен дотик ні до чого. */
+let tapT=null;
+function tap(k){
+  if(!k)return;
+  if(!data.taps||typeof data.taps!=='object')data.taps={};
+  data.taps[k]=(+data.taps[k]||0)+1;
+  clearTimeout(tapT);
+  tapT=setTimeout(()=>{persist();},6000);
+}
 /* Статистика відкривається на сьогоднішньому дні: водій заходить подивитись,
    скільки він заробив зараз, а не підсумок тижня. */
 let period='today';
@@ -2092,6 +2120,7 @@ function goScreen(name,btn){
   /* у панелі своя шапка з логотипом — застосункова там зайва */
   document.documentElement.classList.toggle('in-admin',name==='admin');
   window.scrollTo(0,0);
+  tap('screen:'+name);
   if(name==='map'){setTimeout(ensureMap,60);renderRouteAnalytics();setTimeout(buildStreetMap,400);}
 }
 /* через делегування, бо частина кнопок зʼявляється вже після завантаження */
@@ -2534,6 +2563,7 @@ $('om-save').addEventListener('click',async()=>{
   const t=toMs(dateOf(a.startT),$('om-time').value||nowHM());
   const o={id:Date.now(),t,endT:0,amount,odoStart:odo,odoEnd:0,pay:payOf('om-pay'),own:ownOf('om-src'),tip:0};
   a.orders.push(o);
+  tap('order.new');
   await persist();closeM('modal-order');renderShift();toast('Замовлення прийнято · '+fmt(amount));
   captureOrderMeta(o.id); /* погода і геоточка допишуться самі, без блокування */
 });
@@ -2865,6 +2895,7 @@ document.querySelectorAll('[data-ms]').forEach(ch=>ch.addEventListener('click',a
 const mapFsBtn=$('map-fs');
 if(mapFsBtn)mapFsBtn.addEventListener('click',()=>{
   const on=document.documentElement.classList.toggle('map-full');
+  if(on)tap('map.full');
   mapFsBtn.setAttribute('aria-label',on?'Згорнути мапу':'На весь екран');
   if(map)setTimeout(()=>map.invalidateSize(),120);
 });
@@ -3490,6 +3521,7 @@ $('cm-save').addEventListener('click',async()=>{
   data.active=null;
   stopTrack();
   await persist();closeM('modal-close');renderAll();
+  tap('shift.close');
   toast('Сесію завершено: '+fmt(c.personal)+' на руки');
   if(gToken&&Date.now()<gExp)driveUp(true); /* тиха копія у Drive */
 });
@@ -4114,6 +4146,7 @@ async function applyPayload(txt,quiet){
   return true;
 }
 $('btn-copy').addEventListener('click',async()=>{
+  tap('backup.copy');
   const txt=payloadJSON();
   try{
     await navigator.clipboard.writeText(txt);
@@ -4363,7 +4396,7 @@ $('intro-next').addEventListener('click',async()=>{
 });
 $('intro-back').addEventListener('click',()=>{if(introIx>0){grabIntro();introIx--;renderIntro();}});
 $('intro-skip').addEventListener('click',async()=>{await finishIntro();toast('Налаштування — у «Ще»');});
-$('btn-intro').addEventListener('click',openIntro);
+$('btn-intro').addEventListener('click',()=>{tap('intro');openIntro();});
 
 /* ══ ПІДТРИМКА ══
    Повідомлення йде тим самим шляхом, що й синхронізація: підпис Telegram
@@ -4496,6 +4529,7 @@ function openSupport(){
 }
 $('sup-cancel').addEventListener('click',()=>closeM('modal-support'));
 $('sup-send').addEventListener('click',async function(){
+  tap('support');
   const t=$('sup-text').value.trim();
   if(t.length<3&&!supShots.length){toast('Напиши хоч кілька слів');return;}
   this.disabled=true;this.textContent='Надсилаю…';
@@ -4779,7 +4813,7 @@ async function openShare(){
     : 'Утримайте картинку пальцем і оберіть «Зберегти», щоб покласти її в галерею.';
   openM('modal-share');
 }
-$('btn-share').addEventListener('click',openShare);
+$('btn-share').addEventListener('click',()=>{tap('share.open');openShare();});
 $('share-close').addEventListener('click',()=>closeM('modal-share'));
 function saveShare(){
   if(!shareUrl)return false;
@@ -4795,6 +4829,7 @@ $('share-go').addEventListener('click',async()=>{
   try{
     const f=new File([shareBlob],'protaxi.jpg',{type:'image/jpeg'});
     await navigator.share({files:[f],text:'Мій підсумок у ProTaxi · t.me/ProTaxiApp_Bot/app'});
+    tap('share.done');
     return;
   }catch(e){
     if(e&&e.name==='AbortError')return;   /* людина сама закрила вікно */
@@ -4803,7 +4838,7 @@ $('share-go').addEventListener('click',async()=>{
   else toast('Утримайте картинку пальцем і оберіть «Зберегти»');
 });
 $('share-save').addEventListener('click',()=>{
-  if(saveShare())toast('Картинку збережено');
+  if(saveShare()){tap('share.done');toast('Картинку збережено');}
 });
 
 /* ══ АДМІНКА ══
@@ -4887,8 +4922,38 @@ function admPulseBody(){
     '<div class="metric"><div class="v">'+fmtN(v.liters||0)+'</div><div class="k">літрів</div></div></div>'+
     admRow('Середнє на руки за зміну',fmt(v.avg_shift||0))+
     admRow('Середній чек',fmt(v.avg_check||0))+
-    '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>';
+    '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>'+
+    admTaps();
 }
+/* Чим користуються. Ключі приходять з бази як є, а підписи живуть тут —
+   щоб додати нову кнопку до підрахунку, SQL міняти не треба. */
+const TAP_NAMES={
+  'screen:shift':'Екран зміни','screen:stats':'Екран статистики','screen:map':'Мапа',
+  'screen:tank':'Бак','screen:funds':'Відкладене','screen:settings':'Налаштування',
+  'screen:sub':'Екран підписки','screen:admin':'Адмін-панель',
+  'order.new':'Прийняти замовлення','shift.close':'Завершити зміну',
+  'refuel.open':'Відкрити заправку','refuel.save':'Зберегти заправку',
+  'share.open':'Відкрити підсумок картинкою','share.done':'Поділились підсумком',
+  'fund.spend':'Витрата з відкладеного','station.save':'Зберегти мережу АЗС',
+  'map.full':'Мапа на весь екран','support':'Написати в підтримку',
+  'backup.copy':'Скопіювати дані','gloss':'Словник понять',
+  'changelog':'Що нового','intro':'Як користуватись'
+};
+function admTaps(){
+  const t=(admPulse&&admPulse.taps)||null;
+  if(!t||!Object.keys(t).length)return '';
+  const rows=Object.keys(t).map(k=>({k:k,n:+((t[k]||{}).n)||0,u:+((t[k]||{}).u)||0}))
+    .filter(x=>x.n>0).sort((a,b)=>b.n-a.n);
+  if(!rows.length)return '';
+  const top=rows[0].n||1;
+  return '<div class="card"><div class="card-title">Чим користуються · за весь час</div>'+
+    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(TAP_NAMES[x.k]||x.k)+'</span>'+
+      '<b>'+fmtN(x.n)+' · '+x.u+' '+plDrv(x.u)+'</b></div>'+
+      admBar(Math.round(x.n/top*100))+'</div>').join('')+
+    '<p class="hint">Ліворуч — скільки разів натискали, праворуч — скільки різних водіїв цим користувалось. '+
+    'Один водій, який тисне сто разів, — це не сто водіїв.</p></div>';
+}
+const plDrv=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'водіїв':(b===1?'водій':((b>=2&&b<=4)?'водії':'водіїв'));};
 function admDash(d){
   const f=d.funnel||[],all=(f[0]&&f[0].n)||0;
   let h=admPulseBody();
@@ -5137,7 +5202,7 @@ async function renderAdmin(){
     if(id==='om-src')omHint(); else finCalc();
   });
 });
-$('btn-changelog').addEventListener('click',()=>renderChangelog(false));
+$('btn-changelog').addEventListener('click',()=>{tap('changelog');renderChangelog(false);});
 
 /* ══ СЛОВНИК ══
    Слова, якими застосунок рахує чужі гроші, мають бути зрозумілі без
@@ -5179,7 +5244,83 @@ function renderGloss(){
   ).join('');
   openM('modal-gloss');
 }
-$('btn-gloss').addEventListener('click',renderGloss);
+/* ══ ПОЛІТИКА ПРИВАТНОСТІ ══
+   Пишемо простими словами й називаємо все своїми іменами, включно з
+   лічильниками користування. Приховане завжди виглядає гірше за назване:
+   людина, яка шукає, до чого причепитись, має знайти відповідь, а не
+   привід. Той самий текст лежить у privacy.html — правити треба обидва. */
+const PRIVACY_DATE='Оновлено 26 серпня 2026 року';
+const PRIVACY=[
+ ['Коротко',[
+  'Ваші записи належать вам. Ми не продаємо їх, не передаємо службам таксі, податковій чи рекламодавцям.',
+  'Застосунок не питає ні прізвища, ні номера телефона, ні номера авто, ні платіжних даних.',
+  'Власник застосунку не бачить ваших сум і маршрутів. Він бачить лише знеособлені підсумки по всіх водіях разом.',
+  'Забрати всі свої записи одним файлом або видалити їх повністю можна будь-коли.']],
+ ['Що зберігається на вашому телефоні',[
+  'Зміни, замовлення, заправки, витрати з відкладеного й ваші налаштування.',
+  'Шлях за зміну — лише якщо ви самі ввімкнули геолокацію.',
+  'Ці дані лежать у памʼяті застосунку на вашому пристрої. Без інтернету він працює так само.']],
+ ['Що зберігається в хмарі',[
+  'Копія тих самих записів — щоб вони не залежали від одного телефона. Це працює тільки тоді, коли ви відкриваєте застосунок через Telegram.',
+  'Копія привʼязана до вашого Telegram-акаунта. З чужого акаунта її не відкрити: сервер перевіряє підпис, який видає сам Telegram.',
+  'Разом із копією зберігається те, що Telegram сам передає застосунку: ваш числовий ідентифікатор, імʼя та @нік, якщо він у вас є.']],
+ ['Лічильники користування',[
+  'Застосунок рахує, скільки разів ви відкривали кожен екран і натискали основні кнопки: прийняти замовлення, завершити зміну, записати заправку, поділитись підсумком.',
+  'Це лише числа — «екран статистики: 12 разів». Ні сум, ні адрес, ні тексту там немає.',
+  'Навіщо: щоб бачити, чим користуються, а що варто переробити або прибрати. Ці числа складаються в один підсумок по всіх водіях; хто саме натискав — не видно.']],
+ ['Звернення в підтримку',[
+  'Коли ви пишете в підтримку, ваш текст і знімки екрана, які ви додали, надходять власнику застосунку в Telegram.',
+  'Ви самі вирішуєте, що написати й що показати на знімку. Нічого, крім надісланого, застосунок не додає.',
+  'Відповідь приходить вам у бот від імені ProTaxi.']],
+ ['Чого застосунок не робить',[
+  'Не питає номер телефона, прізвище, номер авто, документи чи платіжні дані.',
+  'Не читає ваші повідомлення в Telegram і не має до них доступу.',
+  'Не має доступу до контактів, галереї, мікрофона чи інших застосунків. Знімок екрана у зверненні ви обираєте самі.',
+  'Не показує рекламу й не передає дані рекламним мережам.',
+  'Не стежить за вами між змінами: без увімкненої геолокації координат немає взагалі.']],
+ ['Геолокація',[
+  'Потрібна для мапи вулиць, шляху за зміну й погоди. Телефон окремо спитає дозвіл — останнє слово завжди за вами.',
+  'Вимкнути можна будь-коли: «Ще» → «Про застосунок» → «Гео вимкнено». Усе інше працюватиме, лише мапа лишиться порожньою.']],
+ ['Хто це бачить',[
+  'Ви — усе.',
+  'Власник застосунку — тільки знеособлені підсумки по всіх водіях разом: скільки людей працювало, скільки змін і замовлень, середні по всіх. Сум, маршрутів і замовлень окремого водія в панелі немає й не буде.',
+  'Більше ніхто. Служба таксі, податкова, банк чи страхова доступу до цих даних не мають.']],
+ ['Хто ще технічно причетний',[
+  'Telegram — через нього працює застосунок і приходять повідомлення бота.',
+  'Supabase — сервіс, на якому лежить хмарна копія. Дані зберігаються в захищеній базі, доступ до неї закритий правилами на рівні бази.',
+  'OpenStreetMap — з нього завантажуються картинки мапи.',
+  'Google Fonts — з нього завантажується шрифт.',
+  'Ці постачальники бачать лише те, що потрібно для роботи: факт запиту й технічні дані звʼязку. Ваші записи їм не передаються.']],
+ ['Скільки зберігається',[
+  'Записи зберігаються, доки ви користуєтесь застосунком.',
+  'Хмарна копія оновлюється при кожній зміні даних і зберігається, доки ви не попросите її видалити.',
+  'Звернення в підтримку зберігаються, щоб можна було повернутись до питання.']],
+ ['Як забрати або видалити свої дані',[
+  'Забрати: «Ще» → «Діагностика сховища» → «Скопіювати дані». Ви отримаєте всі свої записи одним текстом.',
+  'Видалити з телефона: видалити застосунок або іконку з екрана.',
+  'Видалити з хмари: напишіть у підтримку — «Ще» → «Написати в підтримку» — і попросіть видалити акаунт. Ми видалимо копію й звернення.']],
+ ['Ваші права',[
+  'Отримати копію своїх даних, виправити їх або видалити — будь-коли й без пояснення причин.',
+  'Дізнатись, що саме про вас зберігається — цей документ і є відповіддю; якщо чогось бракує, напишіть, доповнимо.']],
+ ['Вік',[
+  'Застосунок призначений для повнолітніх водіїв і не розрахований на осіб молодше 18 років.']],
+ ['Зміни в цьому документі',[
+  'Якщо застосунок почне збирати щось нове, ми напишемо про це тут і повідомимо у «Що нового». Дата оновлення завжди вгорі цього документа.']],
+ ['Звʼязок',[
+  'Питання про приватність — у підтримку застосунку або в бот @ProTaxiApp_Bot. Ми відповідаємо на кожне звернення.']]
+];
+function renderPrivacy(){
+  const b=$('pv-body');if(!b)return;
+  $('pv-date').textContent=PRIVACY_DATE;
+  b.innerHTML=PRIVACY.map(s=>'<div class="gl-g">'+esc(s[0])+'</div>'+
+    s[1].map(t=>'<div class="pv-p">'+esc(t)+'</div>').join('')).join('');
+  openM('modal-privacy');
+}
+$('btn-privacy').addEventListener('click',()=>{tap('privacy');renderPrivacy();});
+$('pv-close').addEventListener('click',()=>closeM('modal-privacy'));
+$('modal-privacy').addEventListener('click',e=>{if(e.target.id==='modal-privacy')closeM('modal-privacy');});
+
+$('btn-gloss').addEventListener('click',()=>{tap('gloss');renderGloss();});
 $('gloss-close').addEventListener('click',()=>closeM('modal-gloss'));
 $('modal-gloss').addEventListener('click',e=>{if(e.target.id==='modal-gloss')closeM('modal-gloss');});
 $('cl-close').addEventListener('click',async()=>{
@@ -5702,7 +5843,7 @@ $('rf-reset').addEventListener('click',e=>{
   document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',x===b));
   rfOdoLabel();disarm($('rf-save'));rfCalc();
 });
-$('btn-refuel').addEventListener('click',()=>openRefuel(null));
+$('btn-refuel').addEventListener('click',()=>{tap('refuel.open');openRefuel(null);});
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
 $('rf-save').addEventListener('click',function(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
@@ -5729,6 +5870,7 @@ $('rf-save').addEventListener('click',function(){
     /* новий бак уточнив реальну витрату — усі зміни перерахувались,
        різниця показує, скільки докласти в папку або забрати з неї */
     const diff=fuelPurse().should-wasShould;
+    tap('refuel.save');
     await persist();closeM('modal-refuel');renderAll();
     if(Math.abs(diff)>=1)toast(diff>0
       ? 'Перерахунок: доклади '+fmt(diff)+' у папку на пальне'
@@ -5778,7 +5920,7 @@ function renderFunds(){
   if(tq>0){$('tax-row').style.display='flex';$('tax-quarter').textContent=fmt(tq);}
   else $('tax-row').style.display='none';
 }
-$('btn-fund-exp').addEventListener('click',()=>{$('fx-date').value=todayStr();$('fx-amount').value='';$('fx-desc').value='';openM('modal-fund');});
+$('btn-fund-exp').addEventListener('click',()=>{tap('fund.spend');$('fx-date').value=todayStr();$('fx-amount').value='';$('fx-desc').value='';openM('modal-fund');});
 $('fx-cancel').addEventListener('click',()=>closeM('modal-fund'));
 $('fx-save').addEventListener('click',async()=>{
   const a=num($('fx-amount').value);
@@ -6005,6 +6147,7 @@ document.querySelectorAll('#st-mode .mode').forEach(b=>b.addEventListener('click
 $('st-name').addEventListener('input',stCalc);
 $('st-cancel').addEventListener('click',()=>closeM('modal-station'));
 $('st-save').addEventListener('click',async()=>{
+  tap('station.save');
   const name=($('st-name').value||'').trim().slice(0,24);
   if(!name){toast('Впишіть назву мережі');return;}
   const val=num($('st-val').value),price=num($('st-price').value),s=data.settings;
