@@ -608,6 +608,8 @@ html.map-full .tabbar{display:none}
       <button class="chip" id="chip-day"><span id="chip-day-lbl">Обрати день</span><input type="date" id="pick-day"></button>
     </div>
 
+    <button class="btn btn-ghost btn-sm" id="btn-share" style="margin:0 0 12px">Поділитись підсумком</button>
+
     <div class="stat-grid">
       <div class="stat stat-main"><div class="v" id="s-personal">₴0</div><div class="k">На руки</div></div>
       <div class="stat"><div class="v" id="s-gross">₴0</div><div class="k">Виручка</div></div>
@@ -1164,6 +1166,18 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: картинка з підсумком -->
+<div class="modal-bg" id="modal-share">
+  <div class="modal">
+    <h3>Підсумок картинкою</h3>
+    <img id="share-img" alt="Підсумок" style="width:100%;border-radius:18px;display:block;margin-bottom:12px">
+    <p class="hint" id="share-hint" style="margin:0 0 12px;text-align:center"></p>
+    <button class="btn btn-primary" id="share-go">Поділитись</button>
+    <button class="btn btn-ghost" id="share-save">Зберегти у файл</button>
+    <button class="btn btn-ghost" id="share-close">Закрити</button>
+  </div>
+</div>
+
 <!-- Модалка: знижка на АЗС -->
 <div class="modal-bg" id="modal-station">
   <div class="modal">
@@ -1255,7 +1269,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.24';
+const APP_VER='1.25';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1972,7 +1986,7 @@ document.addEventListener('click',function(e){
 
 function openM(id){$(id).classList.add('open');}
 function closeM(id){$(id).classList.remove('open');}
-['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-station','modal-account','modal-changelog'].forEach(id=>{
+['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-station','modal-share','modal-account','modal-changelog'].forEach(id=>{
   $(id).addEventListener('click',e=>{if(e.target.id===id)closeM(id);});
 });
 
@@ -4450,6 +4464,126 @@ function subWarnHTML(){
     return '<div class="sub-warn" data-screen="sub"><b>Ознайомчий період завершується</b> — лишилось '+left+' '+plDay(left)+'. Натисніть, щоб переглянути умови.</div>';
   return '';
 }
+
+/* ══ ПІДСУМОК КАРТИНКОЮ ══
+   Водій ділиться своїм результатом, а картинка сама розповідає, звідки вона.
+   Малюємо на canvas: жодних бібліотек, працює й без мережі. */
+const SHARE_W=1080, SHARE_H=1350;
+function periodTitle(){
+  const m={today:'Сьогодні',yesterday:'Вчора',week:'За тиждень',month:'За місяць',
+           year:'За рік',all:'За весь час'};
+  if(period==='day')return fmtDate(dayCursor);
+  return m[period]||'Підсумок';
+}
+function shareStats(){
+  const es=data.entries.filter(e=>inPeriod(e.date));
+  const personal=es.reduce((a,e)=>a+((e.calc&&+e.calc.personal)||0),0);
+  const gross=es.reduce((a,e)=>a+(+e.gross||0),0);
+  const oc=es.reduce((a,e)=>a+(e.oc||0),0);
+  const hours=es.reduce((a,e)=>a+(+e.hours||0),0);
+  const km=es.reduce((a,e)=>a+(+e.km||0),0);
+  return {personal,gross,oc,hours,km,rate:hours>0?personal/hours:0,shifts:es.length};
+}
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();
+}
+const SHARE_FONT='-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif';
+function drawShare(){
+  const cv=document.createElement('canvas');
+  cv.width=SHARE_W;cv.height=SHARE_H;
+  const c=cv.getContext('2d');
+  const st=shareStats();
+
+  /* тло: темне з мʼятним сяйвом */
+  c.fillStyle='#22252B';c.fillRect(0,0,SHARE_W,SHARE_H);
+  let g=c.createRadialGradient(SHARE_W*0.86,-120,40,SHARE_W*0.86,-120,760);
+  g.addColorStop(0,'rgba(59,224,166,.34)');g.addColorStop(1,'rgba(59,224,166,0)');
+  c.fillStyle=g;c.fillRect(0,0,SHARE_W,SHARE_H);
+  g=c.createRadialGradient(-80,SHARE_H+80,40,-80,SHARE_H+80,700);
+  g.addColorStop(0,'rgba(59,224,166,.20)');g.addColorStop(1,'rgba(59,224,166,0)');
+  c.fillStyle=g;c.fillRect(0,0,SHARE_W,SHARE_H);
+
+  const P=84;
+  /* марка */
+  c.font='800 40px '+SHARE_FONT;
+  const mw=c.measureText('ProTaxi').width+56;
+  c.fillStyle='#3BE0A6';roundRect(c,P,P,mw,74,22);c.fill();
+  c.fillStyle='#101010';c.textBaseline='middle';c.textAlign='left';
+  c.fillText('ProTaxi',P+28,P+38);
+  c.font='500 30px '+SHARE_FONT;c.fillStyle='#9DA3AE';
+  c.fillText('фінанси водія',P+mw+22,P+38);
+
+  /* період */
+  c.font='700 34px '+SHARE_FONT;c.fillStyle='#3BE0A6';
+  c.fillText(periodTitle().toUpperCase(),P,P+178);
+
+  /* головна цифра */
+  c.font='800 150px '+SHARE_FONT;c.fillStyle='#F5F6F8';
+  c.fillText(fmt(st.personal),P,P+306);
+  c.font='500 38px '+SHARE_FONT;c.fillStyle='#9DA3AE';
+  c.fillText('на руки — після комісії, пального й запасу',P,P+400);
+
+  /* картки з цифрами */
+  const cells=[
+    ['Виручка',fmt(st.gross)],
+    ['Замовлень',String(st.oc)],
+    ['На лінії',fmtHours(st.hours)],
+    ['На руки за годину',st.rate>0?fmt(st.rate):'—'],
+    ['Пробіг',st.km>0?fmt1(st.km)+' км':'—'],
+    ['Змін',String(st.shifts)]
+  ];
+  const cw=(SHARE_W-P*2-24)/2, ch=160, top=P+455;
+  cells.forEach((cell,i)=>{
+    const x=P+(i%2)*(cw+24), y=top+Math.floor(i/2)*(ch+22);
+    c.fillStyle='rgba(255,255,255,.055)';roundRect(c,x,y,cw,ch,30);c.fill();
+    c.strokeStyle='rgba(255,255,255,.07)';c.lineWidth=2;c.stroke();
+    c.font='500 30px '+SHARE_FONT;c.fillStyle='#9DA3AE';
+    c.fillText(cell[0],x+34,y+56);
+    c.font='800 58px '+SHARE_FONT;c.fillStyle='#F5F6F8';
+    c.fillText(cell[1],x+34,y+110);
+  });
+
+  /* підпис знизу */
+  const fy=SHARE_H-P-150;
+  c.fillStyle='rgba(255,255,255,.05)';roundRect(c,P,fy,SHARE_W-P*2,150,34);c.fill();
+  c.strokeStyle='rgba(59,224,166,.35)';c.lineWidth=2;c.stroke();
+  c.font='700 40px '+SHARE_FONT;c.fillStyle='#F5F6F8';
+  c.fillText('Порахуйте свою зміну',P+38,fy+58);
+  c.font='800 38px '+SHARE_FONT;c.fillStyle='#3BE0A6';
+  c.fillText('t.me/ProTaxiApp_Bot/app',P+38,fy+108);
+  return cv;
+}
+let shareBlob=null,shareUrl='';
+async function openShare(){
+  const st=shareStats();
+  if(!st.shifts){toast('За цей період ще немає змін');return;}
+  const cv=drawShare();
+  shareUrl=cv.toDataURL('image/jpeg',0.92);
+  $('share-img').src=shareUrl;
+  shareBlob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.92));
+  const can=!!(navigator.canShare&&shareBlob&&navigator.canShare({files:[new File([shareBlob],'x.jpg',{type:'image/jpeg'})]}));
+  $('share-go').style.display=can?'block':'none';
+  $('share-hint').textContent=can
+    ? 'Картинку можна надіслати в Telegram, Instagram або зберегти в галерею.'
+    : 'Утримайте картинку пальцем і оберіть «Зберегти», щоб покласти її в галерею.';
+  openM('modal-share');
+}
+$('btn-share').addEventListener('click',openShare);
+$('share-close').addEventListener('click',()=>closeM('modal-share'));
+$('share-go').addEventListener('click',async()=>{
+  if(!shareBlob)return;
+  try{
+    const f=new File([shareBlob],'protaxi.jpg',{type:'image/jpeg'});
+    await navigator.share({files:[f],text:'Мій підсумок у ProTaxi · t.me/ProTaxiApp_Bot/app'});
+  }catch(e){}
+});
+$('share-save').addEventListener('click',()=>{
+  if(!shareUrl)return;
+  const a=document.createElement('a');
+  a.href=shareUrl;a.download='protaxi-'+todayStr()+'.jpg';
+  document.body.appendChild(a);a.click();a.remove();
+});
 
 /* ══ АДМІНКА ══
    Картка зі статистикою зʼявляється тільки тому, чий Telegram ID записаний
