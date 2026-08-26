@@ -842,7 +842,6 @@ html.map-full .tabbar{display:none}
     <div class="sub-table" id="sub-table"></div>
     <button class="btn btn-primary sub-cta" id="sub-go">Продовжити</button>
     <p class="sub-fine" id="sub-hint"></p>
-    <p class="sub-fine">Записи зберігаються незалежно від стану підписки. Резервну копію у файл можна вивантажити будь-коли.</p>
   </section>
 
   <section class="screen adm" id="screen-admin">
@@ -1320,7 +1319,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.37';
+const APP_VER='1.38';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5964,9 +5963,9 @@ function renderAll(){renderShift();setChips();renderStats();renderTank();renderF
   dayCursor=todayStr();
   $('pick-day').value=dayCursor;
   const real=store.names.filter(n=>n!=='memory');
-  $('storage-note').textContent=real.length
-    ? 'Дані пишуться одразу в кілька сховищ ('+real.join(', ')+') — відкрита сесія нікуди не дінеться.'
-    : 'Увага: тимчасове сховище. Зробіть копію у файл.';
+  /* Поки сховище працює — мовчимо. Обіцянка «нічого не зникне» сама наводить
+     людину на думку, що щось може зникнути; озиваємось лише коли справді біда. */
+  $('storage-note').textContent=real.length?'':'Увага: тимчасове сховище. Зробіть копію у файл.';
   if(!real.length)toast('Тимчасовий режим: зроби копію у файл');
   $('save-state').textContent=data.savedAt
     ? 'Останнє збереження: '+fmtDate(dateOf(data.savedAt))+' о '+hms(data.savedAt)+' · версія '+APP_VER
