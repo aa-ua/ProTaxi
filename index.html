@@ -302,10 +302,16 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .chips{display:flex;gap:8px;margin-bottom:12px}
 /* Часті періоди — на видноті, решта в списку: інакше пів екрана займають
    кнопки, а цифри доводиться шукати прокруткою. */
-.pwrap{position:relative}
-#chip-more{display:flex;align-items:center;gap:6px}
-#chip-more svg{width:14px;height:14px;transition:transform .2s ease}
-.pwrap.open #chip-more svg{transform:rotate(180deg)}
+.pwrap{position:relative;margin-left:auto}
+/* кнопка-іконка, поки обраний один із трьох частих періодів: так усе
+   вміщається в один рядок. Обрали інший — вона розкривається з назвою. */
+#chip-more{display:flex;align-items:center;gap:0;padding:9px 11px}
+#chip-more svg{width:17px;height:17px;flex-shrink:0}
+#chip-more #chip-more-lbl{display:none}
+#chip-more.active{gap:8px;padding:9px 14px}
+#chip-more.active #chip-more-lbl{display:inline}
+.chips-period{flex-wrap:nowrap;align-items:center}
+.chips-period .chip{flex:0 0 auto;white-space:nowrap}
 .pmenu{display:none;position:absolute;right:0;top:calc(100% + 8px);z-index:60;
   flex-direction:column;gap:6px;padding:10px;border-radius:18px;background:var(--surface);
   border:1px solid var(--border);box-shadow:0 18px 40px rgba(0,0,0,.45);min-width:172px}
@@ -615,13 +621,13 @@ html.map-full .tabbar{display:none}
   </section>
 
   <section class="screen" id="screen-stats">
-    <div class="chips">
+    <div class="chips chips-period">
       <button class="chip" data-period="today">Сьогодні</button>
       <button class="chip" data-period="yesterday">Вчора</button>
       <button class="chip active" data-period="week">Тиждень</button>
       <div class="pwrap">
-        <button class="chip" id="chip-more" type="button"><span id="chip-more-lbl">Інший період</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+        <button class="chip" id="chip-more" type="button" aria-label="Інший період"><span id="chip-more-lbl"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.6" y="5.2" width="16.8" height="15.2" rx="3"/><path d="M3.6 10h16.8M8.4 3.4v3.4M15.6 3.4v3.4"/></svg></button>
         <div class="pmenu" id="period-menu">
           <button class="chip" data-period="month">Місяць</button>
           <button class="chip" data-period="year">Рік</button>
@@ -1292,7 +1298,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.28';
+const APP_VER='1.29';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3395,7 +3401,7 @@ function setChips(){
   const more=$('chip-more'),lbl=$('chip-more-lbl');
   if(more&&lbl){
     more.classList.toggle('active',hidden);
-    lbl.textContent=hidden?(period==='day'?fmtDate(dayCursor):PERIOD_NAMES[period]):'Інший період';
+    lbl.textContent=hidden?(period==='day'?fmtDate(dayCursor):PERIOD_NAMES[period]):'';
   }
 }
 function closePeriodMenu(){const w=document.querySelector('.pwrap');if(w)w.classList.remove('open');}
@@ -4623,24 +4629,35 @@ async function openShare(){
   const can=!!(navigator.canShare&&shareBlob&&navigator.canShare({files:[new File([shareBlob],'x.jpg',{type:'image/jpeg'})]}));
   $('share-go').style.display=can?'block':'none';
   $('share-hint').textContent=can
-    ? 'Картинку можна надіслати в Telegram, Instagram або зберегти в галерею.'
+    ? 'Найпростіше — утримати картинку пальцем і зберегти в галерею. Кнопка нижче відкриває системне «Поділитись», якщо телефон дозволить.'
     : 'Утримайте картинку пальцем і оберіть «Зберегти», щоб покласти її в галерею.';
   openM('modal-share');
 }
 $('btn-share').addEventListener('click',openShare);
 $('share-close').addEventListener('click',()=>closeM('modal-share'));
+function saveShare(){
+  if(!shareUrl)return false;
+  const a=document.createElement('a');
+  a.href=shareUrl;a.download='protaxi-'+todayStr()+'.jpg';
+  document.body.appendChild(a);a.click();a.remove();
+  return true;
+}
+/* Telegram на телефоні часто відмовляє системному «Поділитись», хоч і каже,
+   що вміє. Мовчати в такому разі не можна — зберігаємо картинку й пояснюємо. */
 $('share-go').addEventListener('click',async()=>{
   if(!shareBlob)return;
   try{
     const f=new File([shareBlob],'protaxi.jpg',{type:'image/jpeg'});
     await navigator.share({files:[f],text:'Мій підсумок у ProTaxi · t.me/ProTaxiApp_Bot/app'});
-  }catch(e){}
+    return;
+  }catch(e){
+    if(e&&e.name==='AbortError')return;   /* людина сама закрила вікно */
+  }
+  if(saveShare())toast('Telegram не пустив у «Поділитись» — картинку збережено у файл');
+  else toast('Утримайте картинку пальцем і оберіть «Зберегти»');
 });
 $('share-save').addEventListener('click',()=>{
-  if(!shareUrl)return;
-  const a=document.createElement('a');
-  a.href=shareUrl;a.download='protaxi-'+todayStr()+'.jpg';
-  document.body.appendChild(a);a.click();a.remove();
+  if(saveShare())toast('Картинку збережено');
 });
 
 /* ══ АДМІНКА ══
