@@ -1253,8 +1253,8 @@ html.map-full .tabbar{display:none}
       <button class="wchip" data-full="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 3.6h8.2l1.4 5.2-5.5 11.6H8.4L3.9 8.8z"/><path d="M4.6 11.4h11"/></svg></span>Частково</button>
     </div>
     <div class="wchips" id="rf-reset">
-      <button class="wchip" data-reset="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8a8 8 0 1 1-2.6-5.9"/><path d="M20.4 4.2v5h-5"/></svg></span>Лічильник обнулено</button>
-      <button class="wchip on" data-reset="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14"/><path d="M13.4 6.6 18.8 12l-5.4 5.4"/></svg></span>Лічильник далі</button>
+      <button class="wchip on" data-reset="1"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8a8 8 0 1 1-2.6-5.9"/><path d="M20.4 4.2v5h-5"/></svg></span>Лічильник обнулено</button>
+      <button class="wchip" data-reset="0"><span class="e"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h14"/><path d="M13.4 6.6 18.8 12l-5.4 5.4"/></svg></span>Лічильник далі</button>
     </div>
     <div class="hint" id="rf-calc" style="margin:0 0 6px;text-align:center"></div>
     <div class="hint" id="rf-days" style="display:none;margin:0 0 12px;text-align:center"></div>
@@ -1377,7 +1377,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.49';
+const APP_VER='1.50';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5582,11 +5582,17 @@ function openRefuel(id){
   $('rf-title').textContent=r?'Редагувати заправку':'Заправка';
   $('rf-liters').value=r?r.liters:'';
   $('rf-price').value=r?(+r.price).toFixed(2):'';
-  $('rf-odo').value=r?r.odo:(lastOdometer()>0?fmt1(lastOdometer()).replace(',','.'):'');
+  /* Показник тягнемо з останнього, що є в системі: спершу з відкритої зміни
+     (останнє замовлення), а якщо її немає — з останньої закритої. Водій
+     майже завжди приїжджає на заправку одразу після замовлення. */
+  const prefill=lastOdometer()||lastKnownOdo();
+  $('rf-odo').value=r?r.odo:(prefill>0?fmt1(prefill).replace(',','.'):'');
   $('rf-date').value=r?r.date:todayStr();
   const full=r?!!r.full:true;
   document.querySelectorAll('#rf-full .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.full==='1')===full));
-  const wasReset=r?!!r.reset:false;
+  /* Більшість заправляється до повного й обнуляє лічильник — з цього й
+     починаємо, а хто робить інакше, перемкне двома дотиками. */
+  const wasReset=r?!!r.reset:true;
   document.querySelectorAll('#rf-reset .wchip').forEach(x=>x.classList.toggle('on',(x.dataset.reset==='1')===wasReset));
   $('rf-del').style.display=r?'block':'none';
   renderRfStations();
@@ -5646,7 +5652,10 @@ $('rf-save').addEventListener('click',function(){
   if(pr<=0){toast('Вкажіть ціну — '+FK().price);return;}
   const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
   if(dup){toast('Заправка з таким одометром уже є');return;}
-  arm(this,rfId?'Точно зберегти?':'Точно записати?',async()=>{
+  /* Найчастіша помилка тут — одометр: його або лишили від попередньої
+     заправки, або вписали пробіг замість показника. Тому перепитуємо
+     не «точно?», а саме про це число. */
+  arm(this,'Одометр '+fmt1(odo)+' км — вірно?',async()=>{
     const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
     const stPick=rfStation();
     const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
