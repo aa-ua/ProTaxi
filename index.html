@@ -1161,7 +1161,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.10';
+const APP_VER='1.11';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3549,7 +3549,7 @@ function renderWeather(es){
     if(w)ords.push({w,amount:+o.amount||0,min:oMin(o)});
   });});
   if(!ords.length){
-    box.innerHTML='<div class="empty">Погода запишеться сама з першим замовленням — дозволь геолокацію, коли Safari спитає</div>';
+    box.innerHTML='<div class="empty">Погода запишеться сама з першим замовленням — дозвольте геолокацію, коли браузер спитає</div>';
     return;
   }
   const grp={};
