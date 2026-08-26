@@ -448,6 +448,20 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .seg-note{font-size:12.5px;font-weight:600;color:var(--muted)}
 /* Список служб: чипи по вмісту, у кілька рядків */
 .wchip.sm{flex:0 0 auto;min-width:0;padding:9px 14px;font-size:12.5px;font-weight:700}
+/* Налаштування згорнуті в розділи: інакше це нескінченна стрічка полів,
+   у якій нічого не знайти. Стан кожного розділу памʼятається. */
+.acc{background:var(--surface);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.acc-h{display:flex;align-items:center;gap:12px;width:100%;padding:16px 18px;background:none;border:0;
+  color:var(--text);font-family:inherit;font-size:15.5px;font-weight:700;text-align:left;cursor:pointer}
+.acc-h .t{flex:1;min-width:0}
+.acc-h .s{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:3px}
+.acc-h svg{width:18px;height:18px;flex-shrink:0;color:var(--muted);transition:transform .22s ease}
+.acc[data-open="1"] .acc-h svg{transform:rotate(180deg)}
+.acc-b{display:none;padding:0 18px 6px}
+.acc[data-open="1"] .acc-b{display:block}
+.acc-b .card{background:none;border-radius:0;padding:0 0 16px;margin:0}
+.acc-b .card+.card{border-top:1px solid var(--line);padding-top:16px}
+.acc-b .card-title{margin-bottom:10px}
 .modal .row-btn{display:flex;gap:10px}
 .modal .row-btn .btn{margin-top:0}
 .btn-warn{background:var(--amber);color:#101010}
@@ -814,6 +828,9 @@ html.map-full .tabbar{display:none}
 
     <div class="sect">Мої налаштування</div>
 
+    <div class="acc" data-acc="fuel">
+      <button class="acc-h" type="button"><span class="t">Пальне і заправки<span class="s">вид пального, витрата, знижки на АЗС</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Пальне</div>
       <div class="modes" id="fuel-kind">
@@ -840,6 +857,12 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="st-note"></p>
     </div>
 
+      </div>
+    </div>
+
+    <div class="acc" data-acc="money">
+      <button class="acc-h" type="button"><span class="t">Гроші й податки<span class="s">служба, комісія, запас, податки</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Розрахунок</div>
       <div class="wchips" id="plat-list"></div>
@@ -853,10 +876,19 @@ html.map-full .tabbar{display:none}
         <button class="mode" data-fm="km">Гривнями<span class="sub">за кілометр</span></button>
       </div>
       <p class="hint" id="fund-note"></p>
-      <div class="field" style="margin-top:12px"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
-      <p class="hint">Актуально для ФОП. Якщо податки не відкладаються — залиште 0.</p>
+      <div class="grid2" style="margin-top:12px">
+        <div class="field"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
+        <div class="field"><label>Фіксовані, ₴ на місяць</label><input type="number" inputmode="decimal" id="set-taxfix" placeholder="0"></div>
+      </div>
+      <p class="hint">Для ФОП: відсоток — це єдиний податок з виручки, фіксовані — ЄСВ і ставка, які платяться однаково щомісяця. Сума за місяць розкидається по днях. Не платите — залиште нулі.</p>
     </div>
 
+      </div>
+    </div>
+
+    <div class="acc" data-acc="car">
+      <button class="acc-h" type="button"><span class="t">Авто<span class="s">своє чи орендоване, оренда</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Авто</div>
       <div class="modes" id="car-mode">
@@ -881,6 +913,12 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="rent-note"></p>
     </div>
 
+      </div>
+    </div>
+
+    <div class="acc" data-acc="goals">
+      <button class="acc-h" type="button"><span class="t">Цілі<span class="s">ціль на день і на що збираєте</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Цілі</div>
       <div class="field"><label>Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
@@ -890,10 +928,16 @@ html.map-full .tabbar{display:none}
       </div>
     </div>
 
+      </div>
+    </div>
+
     <button class="btn btn-primary" id="btn-set-save">Зберегти налаштування</button>
 
     <div class="sect">Застосунок</div>
 
+    <div class="acc" data-acc="help">
+      <button class="acc-h" type="button"><span class="t">Підтримка й хмара<span class="s">звернення до автора, синхронізація</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Підтримка</div>
       <div class="ins" id="tg-who" style="display:none"><span class="k">Обліковий запис</span><span class="v" id="tg-name">—</span></div>
@@ -903,6 +947,12 @@ html.map-full .tabbar{display:none}
     </div>
 
 
+      </div>
+    </div>
+
+    <div class="acc" data-acc="about">
+      <button class="acc-h" type="button"><span class="t">Про застосунок<span class="s">версія, підписка, знайомство, приватність</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Про застосунок</div>
       <div class="ins"><span class="k">Версія</span><span class="v" id="about-ver">—</span></div>
@@ -921,6 +971,12 @@ html.map-full .tabbar{display:none}
       <p class="hint">Геолокація живить погоду, мапу вулиць і шлях за зміну. Телефон окремо спитає дозвіл — останнє слово завжди за тобою. Вимкнеш — усе інше працюватиме, лише мапа лишиться порожньою.</p>
     </div>
 
+      </div>
+    </div>
+
+    <div class="acc" data-acc="data">
+      <button class="acc-h" type="button"><span class="t">Дані і сховище<span class="s">копія записів, діагностика, стирання</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
     <div class="card">
       <div class="card-title">Діагностика сховища</div>
       <p class="hint" id="storage-note" style="margin:0 0 10px"></p>
@@ -944,6 +1000,9 @@ html.map-full .tabbar{display:none}
         <button class="btn" id="wipe-final" disabled style="margin-top:12px">Крок 3: утримуй 2 секунди</button>
       </div>
     </div>
+      </div>
+    </div>
+
   </section>
 </div>
 
@@ -1193,7 +1252,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.14';
+const APP_VER='1.15';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1237,7 +1296,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,platform:'',acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'petrol',fuelGrade:'a95',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{}};
 let period='week';
 let dayCursor='';
@@ -1748,7 +1807,10 @@ function calc(inp,s){
   const rent=rentForShift(s,base,inp.rentShifts);
   const net=base-rent;
   const fund=fundFor(net,+inp.km||0,s);
-  const tax=(gross+tips)*s.taxPct/100;
+  /* Фіксовані платежі ФОП — сума за місяць. Розкидаємо по днях, а день
+     ділимо між змінами, як і оренду: інакше дві сесії коштували б як дві доби. */
+  const taxFix=Math.max(0,+s.taxFixed||0)/30/Math.max(1,+inp.rentShifts||1);
+  const tax=(gross+tips)*s.taxPct/100+taxFix;
   const personal=net-fund-tax;
   return{commission,acquiring,fuel,rent,net,fund,tax,personal};
 }
@@ -2569,7 +2631,7 @@ function captureFinishPoint(id){
 /* ── МАПА ЗОН ── */
 let map=null,zoneLayer=null,pathLayer=null,raionLayer=null,mapMode='rate',showPath=false;
 let leafletState='idle',leafletCbs=[]; /* idle|loading|ready|failed — правильна черга замість забудькуватого прапорця */
-const CITY_CENTER=[48.4647,35.0462]; /* запасний варіант, поки немає жодної точки */
+const CITY_CENTER=[50.4501,30.5234]; /* запасний варіант, поки немає жодної точки */
 /* Центр беремо з власних замовлень водія: застосунок працює в будь-якому місті */
 function homeCenter(){
   const pts=[];
@@ -5155,10 +5217,11 @@ $('fx-save').addEventListener('click',async()=>{
 function renderSettings(){
   const s=data.settings;
   $('set-comm').value=s.commissionPct;$('set-tax').value=s.taxPct;$('set-tankl').value=s.tankLiters;
+  $('set-taxfix').value=+s.taxFixed||'';
   renderCarMode();
   renderRentMode();
   renderFundMode();
-  renderFuelKind();renderStations();renderPlatform();
+  renderFuelKind();renderStations();renderPlatform();renderAcc();
   renderSupport();renderCloud();renderAdmin();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
@@ -5429,6 +5492,22 @@ $('cheap-list').addEventListener('click',async e=>{
    відсоток водій вписує сам: він різний у різних містах і за рівнем водія. */
 const PLATFORMS=['Uklon','Bolt','Uber','OnTaxi','Opti','Taxi 838','Shark Taxi','Своя служба'];
 const platName=()=>String((data.settings&&data.settings.platform)||'').trim();
+/* Який розділ налаштувань відкритий — памʼятаємо, щоб не шукати щоразу */
+function renderAcc(){
+  const open=new Set(Array.isArray(data.settings.accOpen)?data.settings.accOpen:[]);
+  document.querySelectorAll('#screen-settings .acc').forEach(a=>{
+    a.dataset.open=open.has(a.dataset.acc)?'1':'0';
+  });
+}
+document.addEventListener('click',async e=>{
+  const h=e.target.closest('#screen-settings .acc-h');if(!h)return;
+  const a=h.closest('.acc'),was=a.dataset.open==='1';
+  a.dataset.open=was?'0':'1';
+  const set=new Set(Array.isArray(data.settings.accOpen)?data.settings.accOpen:[]);
+  if(was)set.delete(a.dataset.acc); else set.add(a.dataset.acc);
+  data.settings.accOpen=Array.from(set);
+  await persist();
+});
 function renderPlatform(){
   const box=$('plat-list');if(!box)return;
   const cur=platName();
@@ -5496,6 +5575,7 @@ $('btn-set-save').addEventListener('click',async()=>{
     commissionPct:num($('set-comm').value),
     tankLiters:num($('set-tankl').value)||50,
     taxPct:num($('set-tax').value),
+    taxFixed:num($('set-taxfix').value),
     fuelPrice:num($('set-price').value),
     consumption:num($('set-cons').value),
     dailyGoal:num($('set-goal').value),
