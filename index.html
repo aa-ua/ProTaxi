@@ -1302,7 +1302,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.32';
+const APP_VER='1.33';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4434,9 +4434,12 @@ const subPrice=b=>{
   const n=Math.round(v*100)%100===0?Math.round(v):v.toFixed(2).replace('.',',');
   return c==='USD'?('$'+n):(n+' ₴');
 };
-/* поки триває бета — не замикаємо нікого */
-const subBeta=()=>!!(bill&&bill.beta);
-const subActive=()=>!bill||subBeta()||bill.active!==false;
+/* Поки оформлення закрите (PAY_OPEN=false), не замикаємо взагалі нікого:
+   людині нема як заплатити, тож і відмовляти їй у новій зміні нема за що.
+   Це не залежить від прапорця beta в базі — щоб замок не міг увімкнутись
+   сам собою, поки оплати не існує. */
+const subBeta=()=>!PAY_OPEN||!!(bill&&bill.beta);
+const subActive=()=>!PAY_OPEN||!bill||subBeta()||bill.active!==false;
 const SUB_FEATURES=[
   ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й запас віднімаються автоматично. Видно, скільки залишилось на руки'],
   ['Оцінка кожного замовлення','Замовлення порівнюється з вашим середнім темпом: видно, на чому ви заробляєте, а на чому втрачаєте час'],
@@ -4477,7 +4480,7 @@ function renderSub(){
     $('sub-go').style.display='none';$('sub-hint').textContent='';
     return;
   }
-  if(b.beta){
+  if(b.beta||!PAY_OPEN){
     $('sub-pill').className='sub-pill on';
     $('sub-pill').textContent='тестова версія';
     $('sub-big').textContent='Доступ відкрито';
