@@ -24,7 +24,6 @@
 <meta property="og:image" content="https://aa-ua.github.io/ProTaxi/cover.png">
 <meta property="og:url" content="https://aa-ua.github.io/ProTaxi/">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="screen-orientation" content="portrait">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&display=swap" rel="stylesheet">
 <style>
@@ -627,18 +626,6 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
   cursor:pointer;padding:0;box-shadow:0 2px 10px rgba(0,0,0,.35);backdrop-filter:blur(6px)}
 .map-fs svg{width:19px;height:19px}
 /* На весь екран */
-/* Застосунок вертикальний: у лежачому телефоні картки й плитки не читаються,
-   а мапа лізе на пів екрана. Планшетів і компʼютерів це не стосується —
-   умова спрацьовує лише на низькому екрані, тобто на телефоні набік. */
-.rotate{display:none}
-@media (orientation:landscape) and (max-height:520px){
-  .app,.tabbar,.topbar{display:none!important}
-  .rotate{display:flex;position:fixed;inset:0;z-index:9998;background:var(--bg);
-    flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
-  .rotate svg{width:54px;height:54px;color:var(--yellow)}
-  .rotate b{font-size:19px;font-weight:800}
-  .rotate span{font-size:14px;color:var(--muted);max-width:30ch;line-height:1.5}
-}
 html.map-full body{overflow:hidden}
 html.map-full .map-card{position:fixed;inset:0;z-index:70;margin:0;padding:0;border-radius:0;background:var(--bg)}
 html.map-full #map{aspect-ratio:auto;height:100%;border-radius:0}
@@ -1380,12 +1367,6 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
-<div class="rotate">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7.2" y="2.6" width="9.6" height="18.8" rx="2.6"/><path d="M10.4 5.4h3.2"/><path d="M4 12a8 8 0 0 1 2.6-5.9"/><path d="M3.4 5.2v3.6h3.6"/></svg>
-  <b>Поверніть телефон</b>
-  <span>ProTaxi працює вертикально: так цифри читаються з одного погляду, не відриваючись від дороги.</span>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <nav class="tabbar">
@@ -1412,13 +1393,10 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.53';
+const APP_VER='1.54';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
-/* Android і встановлена іконка вміють замкнути орієнтацію; iOS у Safari — ні,
-   там працює тільки заставка «поверніть телефон» вище. Тому пробуємо тихо. */
-try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('portrait').catch(function(){});}catch(e){}
 /* УВАГА: ключі не змінюються ніколи, інакше записи "загубляться" при оновленні */
 const KEY='uklon-driver-finance-v2';
 const BAK=KEY+'-bak';
@@ -2458,11 +2436,6 @@ function renderShift(){
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
   if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийміть перше</div>';
   html+='</div><p class="hint">Дотик до замовлення завершує або відкриває його для редагування</p></div>';
-  /* Випадково відкриту зміну має бути як скасувати одразу, не завершуючи її
-     й не шукаючи потім у статистиці. Дія незворотна, тому підтвердження
-     трискладове — випадково пройти всі три дотики неможливо. */
-  html+='<button class="btn btn-danger" id="btn-drop-shift" style="margin-top:18px">Скасувати зміну</button>'+
-        '<p class="hint" style="text-align:center;margin-top:8px">Зміна зникне разом із записаними в ній замовленнями. Щоб зберегти їх, натисніть «Завершити сесію».</p>';
   root.innerHTML=html;
 
   const box=$('active-orders');
@@ -2478,30 +2451,6 @@ function renderShift(){
   if(live)$('btn-finish-live').addEventListener('click',()=>openFinish(live.id));
   $('btn-order').addEventListener('click',openNewOrder);
   $('btn-close-open').addEventListener('click',openCloseShift);
-  const drop=$('btn-drop-shift');
-  if(drop){
-    let step=0,dropT=null;
-    const reset=()=>{step=0;drop.textContent='Скасувати зміну';drop.classList.remove('hot');};
-    drop.addEventListener('click',async()=>{
-      clearTimeout(dropT);
-      step++;
-      if(step===1){drop.textContent='Точно скасувати?';drop.classList.add('hot');}
-      else if(step===2){
-        const n=(data.active&&data.active.orders||[]).length;
-        const one=(n%10===1&&n%100!==11);
-        drop.textContent=n?((one?'Зникне ':'Зникнуть ')+n+' '+plOrd(n)+'. Точно?'):'Зміна зникне. Точно?';
-      }
-      else{
-        reset();
-        data.active=null;stopTrack();await persist();renderShift();renderAll();
-        tap('shift.drop');
-        toast('Зміну скасовано');
-        return;
-      }
-      /* передумав — за десять секунд кнопка сама повертається у спокій */
-      dropT=setTimeout(reset,10000);
-    });
-  }
   updateLive();
 }
 
