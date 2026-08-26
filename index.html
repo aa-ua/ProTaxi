@@ -1300,7 +1300,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.30';
+const APP_VER='1.31';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2983,16 +2983,25 @@ function renderMapLayers(){
   const val=s=>mapMode==='avg'?s.avg:mapMode==='freq'?s.n:s.rate;
   if(ss.length){
     const vs=ss.map(val),mn=Math.min(...vs),mx=Math.max(...vs);
-    const lines=ss.map(s=>{
+    /* Товщина — це наїжджене: чим частіше вулиця трапляється, тим лінія
+       помітніша. Ростемо логарифмом, інакше одна популярна вулиця робить
+       решту невидимими. Під лінією йде м'яке сяйво — так вони читаються
+       як потоки, а не як намальовані маркером дороги. */
+    const nMax=Math.max(2,...ss.map(x=>+x.n||1));
+    const wOf=k=>1.5+5.3*(Math.log(1+Math.max(1,+k||1))/Math.log(1+nMax));
+    const lines=[];
+    ss.forEach(s=>{
       const t=mx>mn?(val(s)-mn)/(mx-mn):0.5;
-      return L.polyline(s.pts,{
-        color:colorFor(t),weight:4+Math.min(6,s.n),
-        opacity:.85,lineCap:'round',lineJoin:'round'
+      const col=colorFor(t),w=wOf(s.n);
+      lines.push(L.polyline(s.pts,{color:col,weight:w+4.5,opacity:.16,
+        lineCap:'round',lineJoin:'round',interactive:false}));
+      lines.push(L.polyline(s.pts,{
+        color:col,weight:w,opacity:.95,lineCap:'round',lineJoin:'round'
       }).bindPopup(
         '<b>'+esc(s.name)+'</b><br>'+s.n+' замовл.'+
         (s.rate>0?'<br>Темп: '+fmt(s.rate)+'/год':'')+
         (s.avg>0?'<br>Чек: '+fmt(s.avg):'')
-      );
+      ));
     });
     zoneLayer=L.layerGroup(lines).addTo(map);
     const b=L.latLngBounds([].concat.apply([],ss.map(s=>s.pts)));
