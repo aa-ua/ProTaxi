@@ -567,6 +567,13 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .modal .divider{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em}
 .modal .divider::before,.modal .divider::after{content:"";flex:1;height:1px;background:var(--border)}
 .modal-scroll{max-height:72vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -20px;padding:0 20px}
+.gl-g{font-size:11.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--yellow);margin:18px 0 2px}
+.gl-g:first-child{margin-top:2px}
+.gl{padding:12px 0;border-bottom:1px solid var(--line)}
+.gl:last-child{border-bottom:none}
+.gl b{display:block;font-size:15px;font-weight:800;margin-bottom:3px}
+.gl span{display:block;font-size:13.5px;line-height:1.45;color:var(--muted);font-weight:400}
 .rel{padding:14px 0;border-bottom:1px solid var(--border)}
 .rel:last-child{border-bottom:none}
 .rel-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
@@ -1037,6 +1044,7 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="sub-soon-note" style="display:none;margin-top:6px">Умови зʼявляться, коли відкриється оформлення. Поки триває тестування, застосунок працює без обмежень.</p>
       <button class="btn btn-ghost" id="btn-intro" style="margin-top:10px">Як користуватись</button>
       <button class="btn btn-ghost" id="btn-changelog" style="margin-top:10px">Що нового</button>
+      <button class="btn btn-ghost" id="btn-gloss" style="margin-top:10px">Словник понять</button>
     </div>
 
     <div class="card">
@@ -1327,6 +1335,16 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: словник понять -->
+<div class="modal-bg" id="modal-gloss">
+  <div class="modal">
+    <h3>Словник понять</h3>
+    <p class="hint" style="margin:0 0 12px">Що означає кожне слово, яким застосунок рахує ваші гроші.</p>
+    <div class="modal-scroll" id="gloss-body"></div>
+    <button class="btn btn-primary" id="gloss-close" style="margin-top:14px">Зрозуміло</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <nav class="tabbar">
@@ -1353,7 +1371,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.43';
+const APP_VER='1.44';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4493,7 +4511,16 @@ $('sup-send').addEventListener('click',async function(){
   }
 });
 $('btn-help').addEventListener('click',openSupport);
-$('admin-refresh').addEventListener('click',renderAdmin);
+/* Кнопка мусить показувати, що вона щось зробила: без відповіді натискання
+   виглядає як зламане, навіть коли дані просто не змінились. А відмову
+   сервера інакше видно тільки в діагностиці. */
+$('admin-refresh').addEventListener('click',async function(){
+  const was=this.textContent;
+  this.disabled=true;this.textContent='Оновлюю…';
+  try{await renderAdmin();}catch(e){}
+  this.disabled=false;this.textContent=was;
+  toast(admWhy==='доступ є'?'Оновлено':('Не вийшло — '+admWhy));
+});
 
 /* ══ ПІДПИСКА ══
    Перший місяць безкоштовно, далі продовження. Якщо сервер мовчить або
@@ -5042,6 +5069,50 @@ async function renderAdmin(){
   });
 });
 $('btn-changelog').addEventListener('click',()=>renderChangelog(false));
+
+/* ══ СЛОВНИК ══
+   Слова, якими застосунок рахує чужі гроші, мають бути зрозумілі без
+   здогадок. Тут лише те, що справді зустрічається на екранах, — не
+   загальний фінансовий словник. */
+const GLOSS=[
+ ['Гроші за зміну',[
+  ['Виручка','Уся сума, яку ви отримали від пасажирів за період: готівкою й карткою разом. Це ще не заробіток — з неї належить віднімати витрати.'],
+  ['Комісія платформи','Частина виручки, яку забирає служба таксі. Відсоток ви вписуєте самі в налаштуваннях — він різний у різних містах і за рівнем водія.'],
+  ['Еквайринг','Плата за приймання оплати карткою. Береться тільки із замовлень, оплачених карткою, і понад комісію платформи.'],
+  ['Чисте','Виручка мінус комісія, еквайринг, пальне й оренда, плюс чайові. Те, що лишилось до відкладань і податків.'],
+  ['Запас','Частина кожної зміни, яку застосунок відкладає окремо. На своєму авто — на ремонт, на орендованому — на оренду наперед. Гроші нікуди не діваються, просто рахуються окремо, щоб не витратились.'],
+  ['На руки','Головна цифра. Чисте мінус запас і податки — стільки насправді ваше.'],
+  ['Свій клієнт','Замовлення повз платформу: постійний пасажир, домовленість напряму. Комісія з нього не рахується, еквайринг теж.']]],
+ ['Темп і оцінка',[
+  ['Темп','Скільки гривень на руки виходить за годину. Головна міра вигідності: дві однакові за сумою поїздки різні, якщо одна забрала вдвічі більше часу.'],
+  ['Ціна за кілометр','Виручка поділена на пробіг. Показує, наскільки щільно ви їздите: багато порожнього пробігу — цифра падає.'],
+  ['Середній чек','Середня сума одного замовлення за період.'],
+  ['Світлофор замовлень','Кольорова смужка біля замовлення. Зелена — воно вигідніше за ваш звичайний темп, червона — гірше. Порівняння йде з вашими ж завершеними замовленнями, не з чужими.'],
+  ['Ціль дня','Скільки ви хочете мати на руки за день. Застосунок рахує, скільки ще замовлень і часу до неї лишилось — за вашою статистикою саме в цей день тижня.'],
+  ['На лінії','Час, який ви справді провели в замовленнях. Очікування між ними сюди не входить.']]],
+ ['Пальне й авто',[
+  ['Одометр','Показник добового лічильника. Його обнуляють на заправці — саме тому застосунок питає про обнулення.'],
+  ['Витрата','Скільки палива йде на 100 км. Рахується від повного бака до повного за вашими чеками, а не за паспортом авто.'],
+  ['Від повного до повного','Спосіб порахувати витрату чесно: беруться дві заправки «до повного», а все, що залито між ними, ділиться на пройдений шлях.'],
+  ['Чиста ціна літра','Ціна на табло мінус знижка вашої мережі. Вигідна не та мережа, де більша знижка, а та, де менша решта.'],
+  ['Папка на пальне','Скільки грошей уже «згоріло» в баку, але ще не витрачено на заправку. Бачите, скільки відкласти, щоб наступна заправка не була несподіванкою.'],
+  ['Накопичення на бак','Лік від останньої заправки: скільки треба на повний бак за нинішньою ціною.']]],
+ ['Податки й оренда',[
+  ['Відсоток податку','Частина виручки, яку ви віддаєте як єдиний податок ФОП.'],
+  ['Фіксовані платежі','Те, що платиться щомісяця незалежно від заробітку: ЄСВ і ставка. Застосунок ділить суму на дні, щоб вона не падала однією брилою.'],
+  ['Оренда','Плата за авто. Може бути сумою за період або відсотком від чистого. Сума за добу ділиться між змінами того самого дня.']]]
+];
+function renderGloss(){
+  const body=$('gloss-body');if(!body)return;
+  body.innerHTML=GLOSS.map(g=>
+    '<div class="gl-g">'+esc(g[0])+'</div>'+
+    g[1].map(x=>'<div class="gl"><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>').join('')
+  ).join('');
+  openM('modal-gloss');
+}
+$('btn-gloss').addEventListener('click',renderGloss);
+$('gloss-close').addEventListener('click',()=>closeM('modal-gloss'));
+$('modal-gloss').addEventListener('click',e=>{if(e.target.id==='modal-gloss')closeM('modal-gloss');});
 $('cl-close').addEventListener('click',async()=>{
   closeM('modal-changelog');
   if(data.settings.seenVer!==APP_VER){data.settings.seenVer=APP_VER;await persist();}
