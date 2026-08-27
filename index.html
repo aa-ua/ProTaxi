@@ -122,6 +122,13 @@ html.in-tg .only-web{display:none}
 .field .tinp .tinp-v{position:absolute;inset:0;display:flex;align-items:center;
   padding:0 12px;font-size:16px;font-weight:700;color:var(--text);pointer-events:none}
 .field input:focus{outline:none;border-color:var(--yellow)}
+/* Список валют має виглядати як звичайне поле, а не як системний елемент */
+.field select{width:100%;height:48px;background:var(--surface2);border:1px solid transparent;border-radius:12px;
+  padding:0 34px 0 12px;color:var(--text);font-size:16px;font-weight:700;font-family:inherit;line-height:normal;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239DA3AE' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9.5 12 15.5 18 9.5'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:18px}
+.field select:focus{outline:none;border-color:var(--yellow)}
 input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none}
 input[type="time"],input[type="date"]{color-scheme:dark}
 
@@ -791,7 +798,7 @@ html.map-full .tabbar{display:none}
 
   <section class="screen" id="screen-map">
     <div class="chips">
-      <button class="chip active" data-mm="rate">₴/год</button>
+      <button class="chip active" data-mm="rate" data-cur="{c}/год">₴/год</button>
       <button class="chip" data-mm="avg">Чек</button>
       <button class="chip" data-mm="freq">Частота</button>
       <button class="chip" id="chip-path">Шлях</button>
@@ -953,7 +960,9 @@ html.map-full .tabbar{display:none}
       <div class="wchips" id="fuel-grade" style="margin-top:-2px"></div>
       <div class="grid2">
         <div class="field"><label id="lab-cons">Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
-        <div class="field"><label id="lab-price">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
+        <div class="field"><label>Валюта</label>
+          <select id="set-cur"></select></div>
+        <div class="field"><label id="lab-price" data-cur="Ціна, {c}/л">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
         <div class="field"><label id="lab-tankl">Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
       <p class="hint" id="fuel-note"></p>
@@ -990,7 +999,7 @@ html.map-full .tabbar{display:none}
       <p class="hint" id="fund-note"></p>
       <div class="grid2" style="margin-top:12px">
         <div class="field"><label>Податки, % від виручки</label><input type="number" inputmode="decimal" id="set-tax" placeholder="напр. 6"></div>
-        <div class="field"><label>Фіксовані, ₴ на місяць</label><input type="number" inputmode="decimal" id="set-taxfix" placeholder="0"></div>
+        <div class="field"><label data-cur="Фіксовані, {c} на місяць">Фіксовані, ₴ на місяць</label><input type="number" inputmode="decimal" id="set-taxfix" placeholder="0"></div>
       </div>
       <p class="hint">Для ФОП: відсоток — це єдиний податок з виручки, фіксовані — ЄСВ і ставка, які платяться однаково щомісяця. Сума за місяць розкидається по днях. Не платите — залиште нулі.</p>
     </div>
@@ -1016,7 +1025,7 @@ html.map-full .tabbar{display:none}
         <button class="mode" data-rm="sum">Сумою<span class="sub">фіксовано</span></button>
         <button class="mode" data-rm="pct">Відсотком<span class="sub">від чистого</span></button>
       </div>
-      <div class="field"><label id="lab-rent">Скільки платиш, ₴</label><input type="number" inputmode="decimal" id="set-rent" placeholder="0"></div>
+      <div class="field"><label id="lab-rent" data-cur="Скільки платиш, {c}">Скільки платиш, ₴</label><input type="number" inputmode="decimal" id="set-rent" placeholder="0"></div>
       <div class="modes" id="rent-period">
         <button class="mode" data-rp="day">За день</button>
         <button class="mode" data-rp="week">За тиждень</button>
@@ -1033,9 +1042,9 @@ html.map-full .tabbar{display:none}
       <div class="acc-b">
     <div class="card">
       <div class="card-title">Цілі</div>
-      <div class="field"><label>Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
+      <div class="field"><label data-cur="Денна ціль на руки, {c}">Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
       <div class="grid2">
-        <div class="field"><label id="lab-starget">Ціль накопичення, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
+        <div class="field"><label id="lab-starget" data-cur="Ціль накопичення, {c}">Ціль накопичення, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
         <div class="field"><label>На що збираєш</label><input type="text" id="set-sname" placeholder="Планове ТО"></div>
       </div>
     </div>
@@ -1168,7 +1177,7 @@ html.map-full .tabbar{display:none}
     <button class="fin-time" id="om-time-line" type="button"></button>
     <div class="field" id="om-time-box" style="display:none"><label>Час прийняття</label><input type="time" id="om-time"></div>
     <div class="grid2">
-      <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="om-amount" placeholder="0"></div>
+      <div class="field"><label data-cur="Сума, {c}">Сума, ₴</label><input type="number" inputmode="decimal" id="om-amount" placeholder="0"></div>
       <div class="field"><label>Одометр зараз, км</label><input type="number" inputmode="decimal" id="om-odo" step="0.1" placeholder="0"></div>
     </div>
     <div class="wchips" id="om-pay">
@@ -1203,7 +1212,7 @@ html.map-full .tabbar{display:none}
       <button class="btn btn-ghost btn-sm" id="fin-now">Завершення — зараз</button>
     </div>
     <div class="grid2">
-      <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="fin-amount"></div>
+      <div class="field"><label data-cur="Сума, {c}">Сума, ₴</label><input type="number" inputmode="decimal" id="fin-amount"></div>
       <div class="field"><label>Одометр в кінці</label><input type="number" inputmode="decimal" id="fin-odo-end" step="0.1"></div>
     </div>
     <div class="wchips" id="fin-pay">
@@ -1218,14 +1227,14 @@ html.map-full .tabbar{display:none}
       </div>
       <span class="seg-note" id="fin-src-note"></span>
     </div>
-    <div class="field" id="fin-cash-row"><label>Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
+    <div class="field" id="fin-cash-row"><label data-cur="Дав готівкою, {c}">Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
     <button class="btn btn-primary" id="fin-save">Підтвердити завершення</button>
     <button class="btn btn-ghost btn-sm" id="fin-more" type="button">Одометр на початку, чайові</button>
     <div id="fin-extra" style="display:none">
       <div class="grid2">
         <div class="field"><label>Одометр на початку</label><input type="number" inputmode="decimal" id="fin-odo-start" step="0.1"></div>
-        <div class="field"><label>Чайові, ₴</label><input type="number" inputmode="decimal" id="fin-tip" placeholder="0"></div>
+        <div class="field"><label data-cur="Чайові, {c}">Чайові, ₴</label><input type="number" inputmode="decimal" id="fin-tip" placeholder="0"></div>
       </div>
     </div>
     <div class="hint" id="fin-calc" style="margin:12px 0 6px;text-align:center"></div>
@@ -1242,7 +1251,7 @@ html.map-full .tabbar{display:none}
     <div class="grid2">
       <div class="field"><label>Час закриття</label><input type="time" id="cm-end"></div>
       <div class="field"><label>Одометр в кінці</label><input type="number" inputmode="decimal" id="cm-odo" step="0.1"></div>
-      <div class="field"><label>Чайові, ₴</label><input type="number" inputmode="decimal" id="cm-tips" placeholder="0"></div>
+      <div class="field"><label data-cur="Чайові, {c}">Чайові, ₴</label><input type="number" inputmode="decimal" id="cm-tips" placeholder="0"></div>
       <div class="field"><label>Фактично заправив, л</label><input type="number" inputmode="decimal" id="cm-liters" step="0.1" placeholder="авто"></div>
     </div>
     <div class="hint" id="cm-late" style="display:none;margin:-4px 0 12px"></div>
@@ -1267,7 +1276,7 @@ html.map-full .tabbar{display:none}
     <h3 id="rf-title">Заправка</h3>
     <div class="grid2">
       <div class="field"><label id="lab-rf-liters">Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label id="lab-rf-price">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label id="lab-rf-price" data-cur="Ціна за літр, {c}">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
       <div class="field"><label id="lab-rf-odo">Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
     </div>
@@ -1309,13 +1318,13 @@ html.map-full .tabbar{display:none}
     <p class="hint" id="st-preset-note" style="margin:-6px 0 12px">Мережу можна взяти зі списку. Знижки підставлені з програми Uklon DriverUP — виправте на свою, якщо у вас інша.</p>
     <div class="field"><label>Мережа</label><input type="text" id="st-name" maxlength="24" placeholder="ОККО" autocomplete="off"></div>
     <div class="modes" id="st-mode">
-      <button class="mode" data-sm="uah">Знижка ₴<span class="sub" id="st-sub-uah">з літра</span></button>
+      <button class="mode" data-sm="uah"><span data-cur="Знижка {c}">Знижка ₴</span><span class="sub" id="st-sub-uah">з літра</span></button>
       <button class="mode" data-sm="pct">Знижка %<span class="sub">від ціни</span></button>
     </div>
     <div class="grid2">
-      <div class="field"><label id="lab-st-val">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
-      <div class="field" id="st-gas-box"><label id="lab-st-gas">Знижка на газ, ₴</label><input type="number" inputmode="decimal" id="st-gas" step="0.01" placeholder="як на пальне"></div>
-      <div class="field"><label id="lab-st-price">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="з налаштувань"></div>
+      <div class="field"><label id="lab-st-val" data-cur="Знижка з літра, {c}">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
+      <div class="field" id="st-gas-box"><label id="lab-st-gas" data-cur="Знижка на газ, {c}">Знижка на газ, ₴</label><input type="number" inputmode="decimal" id="st-gas" step="0.01" placeholder="як на пальне"></div>
+      <div class="field"><label id="lab-st-price" data-cur="Ціна на табло, {c}/л">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="з налаштувань"></div>
     </div>
     <div class="hint" id="st-calc" style="margin:0 0 12px;text-align:center;white-space:pre-line"></div>
     <button class="btn btn-primary" id="st-save">Зберегти</button>
@@ -1332,7 +1341,7 @@ html.map-full .tabbar{display:none}
       <button class="wchip" data-fk="out">Витрата</button>
       <button class="wchip" data-fk="in">Поповнення</button>
     </div>
-    <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="fx-amount" placeholder="0"></div>
+    <div class="field"><label data-cur="Сума, {c}">Сума, ₴</label><input type="number" inputmode="decimal" id="fx-amount" placeholder="0"></div>
     <div class="field"><label>Опис</label><input type="text" id="fx-desc" placeholder="Заміна масла, гума..."></div>
     <div class="field"><label>Дата</label><input type="date" id="fx-date"></div>
     <p class="hint" id="fx-note" style="margin:0 0 12px"></p>
@@ -1426,7 +1435,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.66';
+const APP_VER='1.67';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1470,7 +1479,7 @@ const store={
 };
 
 const MAP_STYLES_KEYS=['light','dark'];
-const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'gas',fuelGrade:'gas',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
+const DEFAULTS={currency:'UAH',commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'gas',fuelGrade:'gas',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
 let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{},taps:{},gone:{}};
 
 /* ══ ПАМʼЯТЬ ПРО ВИДАЛЕНЕ ══
@@ -1537,9 +1546,38 @@ const $=id=>document.getElementById(id);
 const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:0;};
 /* 1.10 має бути новішою за 1.2, тому порівнюємо по частинах, а не як дріб */
 const verNum=v=>{const p=String(v||'0').split('.');return (+p[0]||0)*1000+(+p[1]||0);};
-/* Мінус ставимо перед гривнею, а не між нею й числом: «−₴80», а не «₴-80».
+/* ══ ВАЛЮТА ══
+   Водії їздять не лише в Україні: Польща, Словаччина, Румунія, Молдова,
+   Чехія, Угорщина. Розрахунок скрізь той самий — міняється тільки підпис.
+   Тому валюта ніде не перераховується: це позначка, а не курс. Курсів у
+   застосунку немає й не буде — вони застаріють того ж тижня, а водій
+   рахує в тих грошах, які тримає в руках.
+   `pre` — чи стоїть значок перед числом: «₴1 200», але «1 200 zł». */
+const CURRENCIES={
+  UAH:{s:'₴',  pre:true,  name:'Гривня',      cc:'Україна'},
+  PLN:{s:'zł', pre:false, name:'Злотий',      cc:'Польща'},
+  EUR:{s:'€',  pre:true,  name:'Євро',        cc:'Словаччина, Німеччина'},
+  CZK:{s:'Kč', pre:false, name:'Чеська крона',cc:'Чехія'},
+  RON:{s:'lei',pre:false, name:'Румунський лей',cc:'Румунія'},
+  MDL:{s:'lei',pre:false, name:'Молдовський лей',cc:'Молдова'},
+  HUF:{s:'Ft', pre:false, name:'Форинт',      cc:'Угорщина'}
+};
+const CUR=()=>CURRENCIES[(typeof data!=='undefined'&&data.settings&&data.settings.currency)||'UAH']||CURRENCIES.UAH;
+const CS=()=>CUR().s;
+/* Підписи, зашиті в розмітку, беруть значок звідси: у них лежить зразок
+   із {c}, і при зміні валюти вони перемальовуються всі разом. */
+function paintCurrency(){
+  document.querySelectorAll('[data-cur]').forEach(el=>{
+    el.textContent=el.dataset.cur.split('{c}').join(CS());
+  });
+}
+
+/* Мінус ставимо перед значком валюти, а не між ним і числом: «−₴80».
    З орендою від'ємний день — звичайна річ, тож це видно часто. */
-const fmt=n=>{const v=Math.round(n||0);return (v<0?'−₴':'₴')+Math.abs(v).toLocaleString('uk-UA');};
+const fmt=n=>{
+  const v=Math.round(n||0),c=CUR(),a=Math.abs(v).toLocaleString('uk-UA');
+  return c.pre?((v<0?'−'+c.s:c.s)+a):((v<0?'−':'')+a+' '+c.s);
+};
 /* просто число з розрядами, без гривні — для лічильників в адмінці */
 const fmtN=n=>Math.round(+n||0).toLocaleString('uk-UA');
 const fmt1=n=>(Math.round((n||0)*10)/10).toLocaleString('uk-UA');
@@ -1689,7 +1727,7 @@ function oMeta(o,e){
   const p=[];
   const m=oMin(o),k=oKm(o);
   if(m>0)p.push(Math.round(m)+' хв');
-  if(k>0)p.push(fmt1(k)+' км · '+fmt1(o.amount/k)+' ₴/км');
+  if(k>0)p.push(fmt1(k)+' км · '+fmt1(o.amount/k)+' '+CS()+'/км');
   if(m>=5)p.push(fmt(o.amount/(m/60))+'/год');
   /* пальне цього замовлення — частка від пального зміни за його кілометрами */
   if(e&&+e.km>0&&e.calc&&+e.calc.fuel>0&&k>0){
@@ -1897,26 +1935,33 @@ function rateFor(e){
 /* Вид пального міняє тільки одиниці й підписи: математика та сама —
    витрата на 100 км, помножена на ціну одиниці. Для електро це кВт·год. */
 const FUEL_KINDS={
-  petrol:{u:'л',p100:'л/100',per:'л/100 км',price:'₴/л',
-    cons:'Витрата, л/100 км',priceLab:'Ціна, ₴/л',tank:'Обʼєм бака, л',
+  petrol:{u:'л',p100:'л/100',per:'л/100 км',price:'{c}/л',
+    cons:'Витрата, л/100 км',priceLab:'Ціна, {c}/л',tank:'Обʼєм бака, л',
     tankShort:'Обʼєм бака',tankNom:'бак',tankGen:'бака',fullAcc:'повний бак',
     unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
-    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, ₴',go:'на заправку',
+    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, {c}',go:'на заправку',
     note:'Якщо їздите на газу — оберіть «Газ»: витрата на ньому зазвичай на 15–20% вища за бензинову.'},
-  gas:{u:'л',p100:'л/100',per:'л/100 км',price:'₴/л',
-    cons:'Витрата, л/100 км',priceLab:'Ціна, ₴/л',tank:'Обʼєм балона, л',
+  gas:{u:'л',p100:'л/100',per:'л/100 км',price:'{c}/л',
+    cons:'Витрата, л/100 км',priceLab:'Ціна, {c}/л',tank:'Обʼєм балона, л',
     tankShort:'Обʼєм балона',tankNom:'балон',tankGen:'балона',fullAcc:'повний балон',
     unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
-    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, ₴',go:'на заправку',
+    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, {c}',go:'на заправку',
     note:'Ставте свою реальну витрату на газу — вона зазвичай на 15–20% вища за бензинову.'},
-  ev:{u:'кВт·год',p100:'кВт·год/100',per:'кВт·год/100 км',price:'₴/кВт·год',
-    cons:'Витрата, кВт·год/100 км',priceLab:'Ціна, ₴/кВт·год',tank:'Ємність батареї, кВт·год',
+  ev:{u:'кВт·год',p100:'кВт·год/100',per:'кВт·год/100 км',price:'{c}/кВт·год',
+    cons:'Витрата, кВт·год/100 км',priceLab:'Ціна, {c}/кВт·год',tank:'Ємність батареї, кВт·год',
     tankShort:'Ємність батареї',tankNom:'заряд',tankGen:'батареї',fullAcc:'повний заряд',
     unitGen:'кіловат-години',many:'кіловат-години',cut:'з кВт·год',dyn:'Ціна кВт·год · динаміка',
-    rf:'кВт·год (з чека)',rfPrice:'Ціна за кВт·год, ₴',go:'на зарядку',
+    rf:'кВт·год (з чека)',rfPrice:'Ціна за кВт·год, {c}',go:'на зарядку',
     note:'Рахунок іде в кіловат-годинах: витрата на 100 км, ціна за кВт·год і ємність батареї.'}
 };
-function FK(s){s=s||(typeof data!=='undefined'&&data.settings)||{};return FUEL_KINDS[s.fuelKind]||FUEL_KINDS.petrol;}
+/* Значок валюти в підписах стоїть як {c} — підставляємо на місці, щоб
+   не тримати сім копій одного й того самого словника. */
+function FK(s){
+  s=s||(typeof data!=='undefined'&&data.settings)||{};
+  const o=FUEL_KINDS[s.fuelKind]||FUEL_KINDS.petrol,c=CS(),out={};
+  for(const k in o)out[k]=typeof o[k]==='string'?o[k].split('{c}').join(c):o[k];
+  return out;
+}
 const UU=()=>FK().u, U100=()=>FK().p100, UPR=()=>FK().price;
 
 /* Вид пального — це шкала (літри чи кіловат-години), марка — те, що реально
@@ -2061,8 +2106,8 @@ function fundBoth(fund,km,net,s){
   const pct=net>0?Math.round(fund/net*100):0;
   const perKm=km>0?fund/km:0;
   return s.fundMode==='km'
-    ? fmt1(+s.fundPerKm||0)+' ₴/км'+(net>0?' · це ≈'+pct+'% від чистого':'')
-    : (+s.fundPct||0)+'% від чистого'+(perKm>0?' · це ≈'+fmt1(perKm)+' ₴/км':'');
+    ? fmt1(+s.fundPerKm||0)+' '+CS()+'/км'+(net>0?' · це ≈'+pct+'% від чистого':'')
+    : (+s.fundPct||0)+'% від чистого'+(perKm>0?' · це ≈'+fmt1(perKm)+' '+CS()+'/км':'');
 }
 
 function calc(inp,s){
@@ -2511,7 +2556,7 @@ function renderShift(){
          У того, хто вже працював, поле підставлене, і сюди не потрапляє. */
       if(num($('open-odo').value)<=0){
         const nt=$('open-note');
-        if(nt&&this.dataset.armed!=='1')nt.innerHTML='<b>Без одометра не буде пробігу.</b> А без пробігу застосунок не порахує ні пального за зміну, ні ₴ за кілометр, ні холостий хід — лишиться тільки виручка. Вписати можна й потім, у замовленні.';
+        if(nt&&this.dataset.armed!=='1')nt.innerHTML='<b>Без одометра не буде пробігу.</b> А без пробігу застосунок не порахує ні пального за зміну, ні ціни за кілометр, ні холостий хід — лишиться тільки виручка. Вписати можна й потім, у замовленні.';
         arm(this,'Точно без одометра?',()=>startShift());
         return;
       }
@@ -2768,7 +2813,7 @@ function verdictWhy(o,b){
   const off=x=>x>0?Math.abs(x-1):0;
   if(k>=1.15){
     if(kk>=1.15&&off(kk)>=off(kt))
-      return 'Дорого за кілометр: '+fmt1(perKm)+' ₴/км проти '+fmt1(b.perKm)+' ₴/км '+koly+'.';
+      return 'Дорого за кілометр: '+fmt1(perKm)+' '+CS()+'/км проти '+fmt1(b.perKm)+' '+CS()+'/км '+koly+'.';
     if(kt>0&&kt<=0.85)
       return 'Ті самі гроші за менший час: '+Math.round(m)+' хв проти '+Math.round(b.avgMin)+' хв у середньому '+koly+'.';
     return 'Темп вищий за звичайний: '+fmt(r)+'/год проти '+fmt(b.rate)+'/год '+koly+'.';
@@ -2777,7 +2822,7 @@ function verdictWhy(o,b){
     if(kt>=1.15&&off(kt)>=off(kk))
       return 'Довго за ці гроші: '+Math.round(m)+' хв проти '+Math.round(b.avgMin)+' хв у середньому '+koly+'.';
     if(kk>0&&kk<=0.85)
-      return 'Дешево за кілометр: '+fmt1(perKm)+' ₴/км проти '+fmt1(b.perKm)+' ₴/км '+koly+'.';
+      return 'Дешево за кілометр: '+fmt1(perKm)+' '+CS()+'/км проти '+fmt1(b.perKm)+' '+CS()+'/км '+koly+'.';
     return 'Темп нижчий за звичайний: '+fmt(r)+'/год проти '+fmt(b.rate)+'/год '+koly+'.';
   }
   return 'Темп '+fmt(r)+'/год — майже як завжди ('+fmt(b.rate)+'/год '+koly+').';
@@ -2795,7 +2840,7 @@ function renderFinVerdict(o){
   h+='<div class="vr"><span class="n">Темп</span><span class="z">'+fmt(r)+'/год <span class="'+tone(k)+'">'+delta(k)+'</span></span></div>';
   if(perKm>0&&b.perKm>0){
     const kk=perKm/b.perKm;
-    h+='<div class="vr"><span class="n">Ціна за км</span><span class="z">'+fmt1(perKm)+' ₴ <span class="'+tone(kk)+'">'+delta(kk)+'</span></span></div>';
+    h+='<div class="vr"><span class="n">Ціна за км</span><span class="z">'+fmt1(perKm)+' '+CS()+' <span class="'+tone(kk)+'">'+delta(kk)+'</span></span></div>';
   }
   if(b.avgMin>0)
     h+='<div class="vr"><span class="n">Тривалість</span><span class="z">'+Math.round(m)+' хв <span class="n" style="font-weight:600">· у середньому '+Math.round(b.avgMin)+'</span></span></div>';
@@ -2840,7 +2885,7 @@ function finCalc(){
   let m=0;
   if(a&&b){m=(toMs('2000-01-01',b)-toMs('2000-01-01',a))/60000;if(m<0)m+=1440;}
   const p=[];
-  if(km>0)p.push(fmt1(km)+' км'+(amt>0?' · '+fmt1(amt/km)+' ₴/км':''));
+  if(km>0)p.push(fmt1(km)+' км'+(amt>0?' · '+fmt1(amt/km)+' '+CS()+'/км':''));
   if(m>0)p.push(Math.round(m)+' хв'+(amt>0?' · '+fmt(amt/(m/60))+'/год':''));
   if(km>0)p.push('пальне '+fmt(fuelCost(km,data.settings)));
   const tip=num($('fin-tip').value),cash=num($('fin-cash').value);
@@ -3955,7 +4000,7 @@ function renderOrdersAnalysis(){
     h+=r('Свої клієнти',ow.n+' '+plOrder(ow.n)+' · '+fmt(ow.sum),'');
     if(ow.saved>0)h+=r('Зекономлено на комісії','<span style="color:var(--yellow)">'+fmt(ow.saved)+'</span>','');
   }
-  if(cur.perKm>0)h+=r('Ціна за кілометр',fmt1(cur.perKm)+' ₴',chg(cur.perKm,prev&&prev.perKm,false));
+  if(cur.perKm>0)h+=r('Ціна за кілометр',fmt1(cur.perKm)+' '+CS(),chg(cur.perKm,prev&&prev.perKm,false));
   h+=r('Темп',fmt(cur.rate)+'/год',chg(cur.rate,prev&&prev.rate,false));
   h+=r('Середня поїздка',Math.round(cur.avgMin)+' хв'+(cur.avgKm>0?' · '+fmt1(cur.avgKm)+' км':''),'');
   if(cur.cons>0)h+=r('Витрата пального',fmt1(cur.cons)+' '+U100(),chg(cur.cons,prev&&prev.cons,true));
@@ -4105,7 +4150,7 @@ function renderMileage(es){
     add('З пасажиром',fmt1(ord)+' км · '+Math.round(ord/tot*100)+'%');
     add('Холостий хід',fmt1(idle)+' км · '+fmt(fuelCost(idle,data.settings))+' пального');
   }
-  if(gross>0)add('Виручка на кілометр',fmt1(gross/tot)+' ₴/км');
+  if(gross>0)add('Виручка на кілометр',fmt1(gross/tot)+' '+CS()+'/км');
   const liters=withOdo.reduce((a,e)=>a+(+e.liters||0),0);
   /* Кожна зміна вже порахована за ціною свого дня — складаємо готове,
      а не множимо літри на сьогоднішній цінник. */
@@ -4253,14 +4298,14 @@ function renderQuality(es){
   const bh=document.createElement('div');bh.className='hint';bh.style.margin='0 0 8px';
   bh.textContent='Розрахунок за сумою, яку видно в замовленні до прийняття: без урахування комісії та пального.';
   box.appendChild(bh);
-  add('Вигідно від','≈ '+fmt1(be)+' ₴/км');
+  add('Вигідно від','≈ '+fmt1(be)+' '+CS()+'/км');
   if(!ords.length){
     const n=document.createElement('div');n.className='hint';n.style.marginTop='8px';
     n.textContent='Поріг рахую з витрати '+fmt1(s.consumption)+' '+FK(s).per+' і холостого ходу. Завершуйте замовлення з одометром — і додам розбивку по дистанціях.';
     box.appendChild(n);return;
   }
   const pk=o=>o.amount/oKm(o);
-  add('Середня ціна кілометра',fmt1(ords.reduce((a,o)=>a+pk(o),0)/ords.length)+' ₴/км');
+  add('Середня ціна кілометра',fmt1(ords.reduce((a,o)=>a+pk(o),0)/ords.length)+' '+CS()+'/км');
   const timed=es.flatMap(e=>e.orders||[]).filter(o=>oMin(o)>0&&+o.amount>0);
   if(timed.length){
     const money=timed.reduce((a,o)=>a+ +o.amount,0);
@@ -4276,7 +4321,7 @@ function renderQuality(es){
     const list=ords.filter(o=>oKm(o)>=bk[0]&&oKm(o)<bk[1]);
     if(!list.length)return;
     const avg=list.reduce((a,o)=>a+pk(o),0)/list.length;
-    add(bk[2]+' · '+list.length+' зам.',fmt1(avg)+' ₴/км');
+    add(bk[2]+' · '+list.length+' зам.',fmt1(avg)+' '+CS()+'/км');
     if(list.length>=2&&(!bestB||avg>bestB.avg))bestB={label:bk[2],avg};
   });
   if(bestB){
@@ -4324,7 +4369,7 @@ function renderInsights(es){
   const hours=es.reduce((a,e)=>a+(+e.hours||0),0);
   const oc=es.reduce((a,e)=>a+(e.oc||0),0);
   const net=es.reduce((a,e)=>a+e.calc.net,0);
-  if(hours>=0.5)add('Реальна ставка','₴'+Math.round(net/hours).toLocaleString('uk-UA')+'/год чистими');
+  if(hours>=0.5)add('Реальна ставка',fmt(net/hours)+'/год чистими');
   if(oc>0)add('Середнє замовлення чистими',fmt(net/oc));
   const byDate={};
   data.entries.forEach(e=>{byDate[e.date]=(byDate[e.date]||0)+e.calc.net;});
@@ -4586,7 +4631,7 @@ function introSetupHTML(kind){
       '<button class="mode" data-cm="rent">Орендоване<span class="sub">збираю на оренду</span></button>'+
       '</div>'+
       '<div id="in-rent-box" style="display:none">'+
-      '<div class="field"><label>Скільки платиш за оренду, ₴</label><input type="number" inputmode="decimal" id="in-rent" placeholder="0"></div>'+
+      '<div class="field"><label>Скільки платиш за оренду, '+CS()+'</label><input type="number" inputmode="decimal" id="in-rent" placeholder="0"></div>'+
       '<div class="modes" id="in-rentper">'+
       '<button class="mode" data-rp="day">За день</button>'+
       '<button class="mode" data-rp="week">За тиждень</button>'+
@@ -4607,9 +4652,14 @@ function introSetupHTML(kind){
       '<p class="hint" id="in-fuel-note">'+k.note+'</p>';
   }
   return '<div class="wchips" id="in-plat" style="margin-bottom:14px"></div>'+
+    '<div class="field"><label>Валюта</label><select id="in-cur">'+
+      Object.keys(CURRENCIES).map(k=>{const c=CURRENCIES[k];
+        return '<option value="'+k+'"'+(k===(s.currency||'UAH')?' selected':'')+'>'+
+               esc(c.s+' · '+c.name+' · '+c.cc)+'</option>';}).join('')+
+    '</select></div>'+
     '<div class="grid2">'+
     '<div class="field"><label id="in-lab-comm">Комісія платформи, %</label><input type="number" inputmode="decimal" id="in-comm" value="'+(s.commissionPct||'')+'"></div>'+
-    '<div class="field"><label>Ціль на день, ₴ на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
+    '<div class="field"><label>Ціль на день, '+CS()+' на руки</label><input type="number" inputmode="decimal" id="in-goal" value="'+(s.dailyGoal||'')+'"></div>'+
     '</div>'+
     '<p class="hint">Відсоток у кожній службі свій — впишіть той, що знімають з вас. Ціль рахується від суми на руки, після пального й комісії.</p>';
 }
@@ -4627,7 +4677,13 @@ function renderIntro(){
   $('intro-skip').style.display=last?'none':'';
   if(sl.setup==='car')bindIntroCar();
   if(sl.setup==='fuel')bindIntroFuel();
-  if(sl.setup==='money')bindIntroMoney();
+  if(sl.setup==='money'){
+    bindIntroMoney();
+    const cu=$('in-cur');
+    if(cu)cu.addEventListener('change',()=>{
+      data.settings.currency=cu.value;paintCurrency();renderIntro();
+    });
+  }
 }
 function bindIntroMoney(){
   const box=$('in-plat');if(!box)return;
@@ -4682,6 +4738,8 @@ function grabIntro(){
     if(c>0)s.consumption=c; if(pr>0)s.fuelPrice=pr; if(tk>0)s.tankLiters=tk;
   }
   if(sl.setup==='money'){
+    const cu=$('in-cur');
+    if(cu&&CURRENCIES[cu.value])s.currency=cu.value;
     const cm=num($('in-comm').value),g=num($('in-goal').value);
     if(cm>=0&&$('in-comm').value!=='')s.commissionPct=cm;
     if(g>0)s.dailyGoal=g;
@@ -4915,7 +4973,7 @@ const SUB_FEATURES=[
   ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й відкладене віднімаються автоматично. Видно, скільки залишилось на руки'],
   ['Оцінка кожного замовлення','Замовлення порівнюється з вашим середнім темпом: видно, на чому ви заробляєте, а на чому втрачаєте час'],
   ['Пальне за фактом','Витрата рахується від повного бака до повного за вашими ж чеками, а не за паспортом авто'],
-  ['Дохідність вулиць і годин','Мапа показує, де ваш ₴/год вищий, а статистика — у які години та дні виходити вигідніше'],
+  ['Дохідність вулиць і годин','Мапа показує, де ваш заробіток за годину вищий, а статистика — у які години та дні виходити вигідніше'],
   ['Скільки ще до цілі','Застосунок рахує, скільки лишилось замовлень і часу до денної цілі — за вашою статистикою в цей день тижня'],
   ['Гроші на ремонт і оренду','Частина кожної зміни відкладається окремо, щоб ремонт або оренда не били по кишені']
 ];
@@ -5388,7 +5446,7 @@ function admAna(d){
      admRow('Середня комісія платформи',(st.avg_comm||0)+'%')+
      admRow('Середня ціль на день',fmt(st.avg_goal||0))+
      admRow('Середня витрата',(st.avg_cons||0)+' л/100')+
-     admRow('Середня ціна літра',fmt1(st.avg_price||0)+' ₴')+
+     admRow('Середня ціна літра',fmt1(st.avg_price||0)+' '+CS())+
      admRow('Середній бак',(st.avg_tank||0)+' л')+
      admRow('Середнє відкладення',(st.avg_fund||0)+'% від чистого')+
      '<p class="hint">Реальні цифри ринку, зібрані самі собою. Комісія й ціна літра тут — те, що водії бачать у себе, а не те, що пишуть у новинах.</p></div>';
@@ -6116,7 +6174,7 @@ function consLine(){
   const s=data.settings,avg=avgConsumption(),lp=lastPrice()||netPrice(s);
   const v=avg||+s.consumption||0;
   if(v<=0)return '—';
-  return fmt1(v)+' '+U100()+(lp>0?' · '+fmt1(v/100*lp)+' ₴/км':'');
+  return fmt1(v)+' '+U100()+(lp>0?' · '+fmt1(v/100*lp)+' '+CS()+'/км':'');
 }
 function savingHTML(){
   /* Поки немає жодної заправки, «наступного бака» не існує: рахувати нема від
@@ -6191,7 +6249,7 @@ function renderTank(){
     const totM=data.refuels.reduce((a,r)=>a+(+r.liters||0)*(+r.price||0),0);
     add('Заправок',data.refuels.length+' · '+fmt1(totL)+' л');
     add('Витрачено на пальне',fmt(totM));
-    add('Середня ціна '+FK().unitGen,totL>0?(totM/totL).toFixed(2)+' ₴':'—');
+    add('Середня ціна '+FK().unitGen,totL>0?(totM/totL).toFixed(2)+' '+CS():'—');
     if(ps.length){
       const km=ps.reduce((a,p)=>a+p.km,0);
       add('Пройдено по баках',fmt1(km)+' км');
@@ -6522,6 +6580,7 @@ function renderSettings(){
   renderFundMode();
   renderFuelKind();renderStations();renderPlatform();renderAcc();paintSubEntry();
   renderSupport();renderCloud();renderAdmin();
+  renderCurrency();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
   $('set-goal').value=s.dailyGoal;$('set-starget').value=s.serviceTarget;$('set-sname').value=s.serviceName;
 }
@@ -6610,7 +6669,7 @@ const PROGRAMS={
     gas:[['ОККО',1.5],['WOG',1.5],['УКРНАФТА',1.5],['SOCAR',1.5]],
     ev:[['FLASH · швидкі (DC)',2],['FLASH · повільні (AC)',1],['GO TO-U',8,null,'pct']]},
   bolt:{name:'Bolt · Boost',
-    note:'У Boost знижка залежить від вашого рівня — підставлено найбільшу (до 4 ₴/л на пальне, до 3 ₴/л на газ). Виправте на свою.',
+    note:'У Boost знижка залежить від вашого рівня — підставлено найбільшу (до 4 '+CS()+'/л на пальне, до 3 '+CS()+'/л на газ). Виправте на свою.',
     petrol:[['ОККО',4,3],['WOG',4,3],['УКРНАФТА',4,3],['SOCAR',4,3],['AMIC',4,3]],
     gas:[['ОККО',3],['WOG',3],['УКРНАФТА',3],['SOCAR',3],['AMIC',3]],
     ev:[]}
@@ -6659,7 +6718,7 @@ function renderStations(){
       const on=!!main&&st.id===main.id,v=stationVal(st,g);
       const one=st.mode==='pct'?('−'+fmt1(v)+'%'):('−'+fmt1(v)+' '+UPR());
       const gasCut=(st.valGas!==''&&st.valGas!=null&&g!=='gas')
-        ?' · на газ −'+fmt1(+st.valGas)+(st.mode==='pct'?'%':' ₴/л'):'';
+        ?' · на газ −'+fmt1(+st.valGas)+(st.mode==='pct'?'%':' '+CS()+'/л'):'';
       return '<div class="st-row'+(on?' on':'')+'" data-st="'+st.id+'">'+
         '<div style="flex:1;min-width:0">'+
           '<div class="d">'+esc(st.name)+(on?' <span class="approx">основна</span>':'')+'</div>'+
@@ -6687,7 +6746,7 @@ let stId=null,stMode='uah';
 function renderStMode(){
   const k=FK(),gas=data.settings.fuelKind==='petrol';
   document.querySelectorAll('#st-mode .mode').forEach(b=>b.classList.toggle('on',b.dataset.sm===stMode));
-  $('lab-st-val').textContent=stMode==='pct'?'Знижка, % від ціни':'Знижка '+k.cut+', ₴';
+  $('lab-st-val').textContent=stMode==='pct'?'Знижка, % від ціни':'Знижка '+k.cut+', '+CS();
   $('lab-st-price').textContent='Ціна на табло, '+k.price;
   $('st-gas-box').style.display=gas&&stMode!=='pct'?'':'none';
 }
@@ -6804,9 +6863,19 @@ $('plat-list').addEventListener('click',async e=>{
   data.settings.platform=(platName()===b.dataset.plat)?'':b.dataset.plat;
   renderPlatform();await persist();renderAll();
 });
+/* Валюта — це підпис, а не курс. Суми не перераховуються: водій вписує
+   те, що тримає в руках, і після переїзду просто міняє позначку. */
+function renderCurrency(){
+  const sel=$('set-cur');if(!sel)return;
+  const cur=(data.settings.currency)||'UAH';
+  sel.innerHTML=Object.keys(CURRENCIES).map(k=>{
+    const c=CURRENCIES[k];
+    return '<option value="'+k+'"'+(k===cur?' selected':'')+'>'+esc(c.s+' · '+c.name+' · '+c.cc)+'</option>';
+  }).join('');
+}
 function renderFundMode(){
   const s=data.settings,km=s.fundMode==='km';
-  $('lab-fund').textContent=fundLabel()+(km?', ₴ за кілометр':', % від чистого');
+  $('lab-fund').textContent=fundLabel()+(km?', '+CS()+' за кілометр':', % від чистого');
   $('set-fund').value=km?s.fundPerKm:s.fundPct;
   document.querySelectorAll('#fund-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.fm==='km')===km));
   $('fund-note').textContent=km
@@ -6817,6 +6886,12 @@ function grabFundField(){
   const s=data.settings;
   if(s.fundMode==='km')s.fundPerKm=num($('set-fund').value); else s.fundPct=num($('set-fund').value);
 }
+$('set-cur').addEventListener('change',async function(){
+  data.settings.currency=this.value;
+  paintCurrency();
+  await persist();renderSettings();renderAll();
+  toast('Валюта: '+CURRENCIES[this.value].name+'. Суми не перераховані — це лише позначка');
+});
 document.querySelectorAll('#fund-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
   grabFundField();                       /* спершу зберігаємо те, що людина щойно ввела */
   data.settings.fundMode=b.dataset.fm;
@@ -6827,7 +6902,7 @@ document.querySelectorAll('#fund-mode .mode').forEach(b=>b.addEventListener('cli
    туди-сюди нічого не стирає. Період має сенс лише для суми. */
 function renderRentMode(){
   const s=data.settings,pct=s.rentMode==='pct';
-  $('lab-rent').textContent=pct?'Скільки платиш, % від чистого':'Скільки платиш, ₴';
+  $('lab-rent').textContent=pct?'Скільки платиш, % від чистого':'Скільки платиш, '+CS();
   $('set-rent').value=pct?s.rentPct:s.rentAmount;
   document.querySelectorAll('#rent-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.rm==='pct')===pct));
   $('rent-period').style.display=pct?'none':'flex';
@@ -6935,7 +7010,7 @@ $('geo-tgl').addEventListener('click',async e=>{
   toast(data.settings.geoOn?'Геолокацію увімкнено':'Геолокацію вимкнено');
 });
 
-function renderAll(){renderShift();setChips();renderStats();renderTank();renderFunds();if($('diag-list'))renderDiag();syncGeoTgl();}
+function renderAll(){paintCurrency();renderShift();setChips();renderStats();renderTank();renderFunds();if($('diag-list'))renderDiag();syncGeoTgl();}
 
 (async function init(){
   await store.init();
