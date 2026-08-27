@@ -1426,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.65';
+const APP_VER='1.66';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5251,7 +5251,7 @@ function admPulseBody(){
     (admPulseErr?'<br><br>Сервер відповів: '+esc(admPulseErr.slice(0,120)):'')+'</p></div>';
   const w=p.who||[],v=p.vol||{};
   const top=Math.max(1,...w.map(x=>+x.v||0));
-  return admHero(p)+admPerChips()+
+  return admHero(p)+
     '<div class="card"><div class="card-title">Що робили водії</div>'+
     w.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(x.k)+'</span><b>'+(+x.v||0)+'</b></div>'+
       admBar(Math.round((+x.v||0)/top*100))+'</div>').join('')+
@@ -5581,6 +5581,14 @@ document.addEventListener('click',async function(e){
     await loadAdminBilling();admPaint();
   }catch(err){toast('Не вийшло');b.disabled=false;b.textContent=was;}
 });
+/* Перемикач періоду тягне за собою всю панель, а не лише живі цифри:
+   воронка, аналітика й відгуки рахуються за той самий відрізок. */
+async function loadAdminStats(){
+  try{
+    const st=await sbRpc('admin_stats',{p_init_data:TG.initData,p_period:admPeriod});
+    if(st)admData=st;
+  }catch(e){}
+}
 async function loadAdminBilling(){
   try{admBill=await sbRpc('admin_billing',{p_init_data:TG.initData});}catch(e){admBill=null;}
 }
@@ -5591,11 +5599,14 @@ async function loadAdminFolks(){
 function admPaint(){
   if(!admData)return;
   const box=$('admin-body');
-  box.innerHTML=admTab==='dash'?admDash(admData)
+  /* Перемикач стоїть над кожною вкладкою, де цифри залежать від часу.
+     У «Підписках» його немає: там не статистика, а поточний стан. */
+  const per=admTab==='pay'?'':admPerChips();
+  box.innerHTML=per+(admTab==='dash'?admDash(admData)
     :admTab==='ana'?admAna(admData)
     :admTab==='people'?admPeople(admData)
     :admTab==='pay'?admPay()
-    :admTalk(admData);
+    :admTalk(admData));
   document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.classList.toggle('active',c.dataset.at===admTab));
 }
 document.querySelectorAll('#admin-tabs .chip').forEach(c=>c.addEventListener('click',()=>{admTab=c.dataset.at;admPaint();window.scrollTo(0,0);}));
@@ -5605,7 +5616,8 @@ $('admin-body').addEventListener('click',async e=>{
   if(b.dataset.ap===admPeriod)return;
   admPeriod=b.dataset.ap;
   document.querySelectorAll('#adm-per .chip').forEach(x=>x.classList.toggle('active',x===b));
-  await loadAdminPulse();admPaint();
+  await Promise.all([loadAdminPulse(),loadAdminStats()]);
+  admPaint();
 });
 
 /* Чому немає щита в шапці — питання, на яке інакше не відповісти:
@@ -5623,7 +5635,7 @@ async function renderAdmin(){
   const done=()=>{if($('diag-list'))renderDiag();};
   if(!TG||!TG.initData){btn.style.display='none';admWhy='працює лише в Telegram';done();return;}
   try{
-    const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
+    const st=await sbRpc('admin_stats',{p_init_data:TG.initData,p_period:admPeriod});
     if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
     await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse(),loadAdminFolks()]);
