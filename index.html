@@ -1426,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.61';
+const APP_VER='1.62';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4396,6 +4396,13 @@ function renderDiag(){
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
   const tu=tgUser();
   if(tu)add('Telegram ID',tu.id);
+  /* Видно, яку мітку дало посилання. Без цього перевірити, чи працює
+     ?startapp=, можна лише через панель — а це довго й неочевидно. */
+  if(TG){
+    const sp=(function(){try{return TG.initDataUnsafe&&TG.initDataUnsafe.start_param;}catch(e){return null;}})();
+    add('Мітка з посилання',sp?esc(String(sp)):'немає — зайшли без мітки');
+    add('Записано як джерело',esc(trafficSrc())+(data.settings.srcSent?' · збережено':' · ще не збережено'));
+  }
   add('Адмін-панель',admWhy);
   box.innerHTML=rows.join('');
 
