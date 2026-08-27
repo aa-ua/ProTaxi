@@ -1426,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.63';
+const APP_VER='1.64';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4389,8 +4389,11 @@ function renderDiag(){
   const rows=[];
   const add=(k,v)=>rows.push('<div class="ins"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>');
   add('Активні сховища',real.length?real.join(', '):'немає');
-  add('Адреса',isFileProtocol()?'локальний файл':location.host);
-  add('Сторінка',isFileProtocol()?'—':(location.pathname||'/'));
+  /* Домен і шлях — інструмент власника, а не водія: водієві вони нічого
+     не пояснюють, зате показують, на чому все зроблено. Лишаємо тільки
+     ознаку «відкрито як файл» — вона справді стосується його даних. */
+  if(isFileProtocol())add('Адреса','локальний файл');
+  else if(admData){add('Адреса',location.host);add('Сторінка',location.pathname||'/');}
   add('Перевірка збереження',persistOK===true?'працює':persistOK===false?'обнуляється':'перевіримо при наступному запуску');
   add('Записів у пам\'яті',data.entries.length+' сесій · '+data.refuels.length+' заправок');
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
