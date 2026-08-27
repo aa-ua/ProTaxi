@@ -66,6 +66,13 @@ html.in-tg .only-web{display:none}
 .topbar{display:flex;align-items:center;gap:10px;padding:6px 2px 12px}
 .logo{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;background:var(--yellow);color:#101010;padding:5px 11px;border-radius:10px;letter-spacing:-.03em;white-space:nowrap}
 .logo-sub{font-weight:800;font-size:14px}
+/* Корона — спеціальний статус. Тонкий контур, як і решта значків. */
+.crown{display:none;background:none;border:0;padding:0 2px;margin:0;color:var(--amber);flex-shrink:0;cursor:pointer;line-height:0}
+.crown svg{width:19px;height:19px;display:block}
+.adm-crown{flex-shrink:0;width:38px;height:34px;border-radius:11px;border:none;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.adm-crown svg{width:19px;height:19px}
+.adm-crown.on{color:var(--amber);background:rgba(255,176,32,.14)}
+.adm-crown:disabled{opacity:.5}
 .logo-sub span{color:var(--muted);font-weight:600}
 .checker{height:6px;margin:0 2px 14px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--yellow) 0 10px,#1C1E23 10px 20px);opacity:.85}
 
@@ -673,6 +680,7 @@ html.map-full .tabbar{display:none}
 <div class="app">
   <header class="topbar">
     <div class="logo">ProTaxi</div>
+    <button class="crown" id="btn-crown" aria-label="Спеціальний статус"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18.2 3 8.6l5.6 4.1L12 5.6l3.4 7.1L21 8.6l-1 9.6z"/></svg></button>
     <div class="logo-sub">Фінанси <span>водія</span></div>
     <div class="topacts">
       <button class="avatar" id="btn-admin" data-screen="admin" aria-label="Адмін-панель" style="display:none">
@@ -1333,6 +1341,15 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: спеціальний статус -->
+<div class="modal-bg" id="modal-crown">
+  <div class="modal">
+    <h3>Спеціальний акаунт</h3>
+    <p class="hint" style="margin:0 0 16px">Ви серед перших, хто користується ProTaxi. Це акаунт бета-тестування: коли тестування завершиться, ви отримаєте бонус.</p>
+    <button class="btn btn-primary" id="crown-ok">Зрозуміло</button>
+  </div>
+</div>
+
 <!-- Модалка: акаунт -->
 <div class="modal-bg mid" id="modal-account">
   <div class="modal">
@@ -1409,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.60';
+const APP_VER='1.61';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2232,7 +2249,7 @@ document.addEventListener('click',function(e){
 
 function openM(id){$(id).classList.add('open');}
 function closeM(id){$(id).classList.remove('open');}
-['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-station','modal-share','modal-account','modal-changelog'].forEach(id=>{
+['modal-order','modal-finish','modal-close','modal-fund','modal-refuel','modal-station','modal-share','modal-account','modal-changelog','modal-crown'].forEach(id=>{
   $(id).addEventListener('click',e=>{if(e.target.id===id)closeM(id);});
 });
 
@@ -4854,11 +4871,20 @@ $('admin-refresh').addEventListener('click',async function(){
    ніж замкнути людину з її ж записами. */
 let bill=null;
 async function loadBilling(){
-  if(!TG||!TG.initData){bill=null;renderSub();return;}
+  if(!TG||!TG.initData){bill=null;renderSub();renderCrown();return;}
   try{bill=await sbRpc('billing',{p_init_data:TG.initData});}
   catch(e){bill=null;}
-  renderSub();renderShift();
+  renderSub();renderShift();renderCrown();
 }
+/* Корону показуємо лише за справжньою позначкою з бази, а не за subBeta():
+   поки оплата закрита, subBeta() віддає true всім — і корона перестала б
+   щось означати. */
+function renderCrown(){
+  const b=$('btn-crown');if(!b)return;
+  b.style.display=(bill&&bill.beta)?'block':'none';
+}
+$('btn-crown').addEventListener('click',()=>{tap('crown');openM('modal-crown');});
+$('crown-ok').addEventListener('click',()=>closeM('modal-crown'));
 /* Оплата ще не відкрита. Поставиш true — кнопка знову почне працювати,
    більше нічого міняти не треба. */
 const PAY_OPEN=false;
@@ -5131,7 +5157,8 @@ const admIco={
   ord  :'<rect x="4.5" y="3.5" width="15" height="17" rx="2.6"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/>',
   mail :'<rect x="3.5" y="5.5" width="17" height="13" rx="2.6"/><path d="M4.5 7.5l7.5 5.2 7.5-5.2"/>',
   fuel :'<path d="M5 20.5V5.2c0-.9.8-1.7 1.7-1.7h4.6c1 0 1.7.8 1.7 1.7v15.3M4 20.5h10.5"/><path d="M13 9.5h3a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V9l-2.4-2.6"/><path d="M5.5 9.5h7.5"/>',
-  key  :'<path d="M12 20.5s-7.2-4.3-7.2-9.6A4.1 4.1 0 0 1 12 8.4a4.1 4.1 0 0 1 7.2 2.5c0 5.3-7.2 9.6-7.2 9.6z"/>'
+  key  :'<path d="M12 20.5s-7.2-4.3-7.2-9.6A4.1 4.1 0 0 1 12 8.4a4.1 4.1 0 0 1 7.2 2.5c0 5.3-7.2 9.6-7.2 9.6z"/>',
+  crown:'<path d="M4 18.2 3 8.6l5.6 4.1L12 5.6l3.4 7.1L21 8.6l-1 9.6z"/>'
 };
 const admSvg=k=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+admIco[k]+'</svg>';
 const admTile=(ic,v,lab,sub,hi)=>'<div class="metric'+(hi?' hi':'')+'">'+admSvg(ic)+
@@ -5243,7 +5270,8 @@ const TAP_NAMES={
   'fund.spend':'Витрата з відкладеного','fund.add':'Поповнення відкладеного','station.save':'Зберегти мережу АЗС',
   'map.full':'Мапа на весь екран','support':'Написати в підтримку',
   'backup.copy':'Скопіювати дані','gloss':'Словник понять',
-  'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності'
+  'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності',
+  'crown':'Спеціальний статус'
 };
 /* Звідки приходять люди. Список ніде не заданий — які мітки трапились,
    такі й показуємо. «direct» — зайшов без мітки, «unknown» — був у базі
@@ -5428,15 +5456,55 @@ $('ar-send').addEventListener('click',async function(){
   this.disabled=false;this.textContent=was;
 });
 
-let admBill=null;
+let admBill=null,admFolks=null;
+/* Поки оплати немає, показувати «платять» і суму на місяць — обманювати
+   себе: нікого не замикає, ніхто нічого не заплатив, а цифра в плитці
+   виглядає як дохід. Тому до відкриття оплати тут інший, чесний вигляд:
+   скільки людей є, скільки з них зі спец-статусом і скільки просили
+   продовжити. Ціна зʼявиться разом з оплатою. */
+function admCrownSVG(){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18.2 3 8.6l5.6 4.1L12 5.6l3.4 7.1L21 8.6l-1 9.6z"/></svg>';
+}
+function admPeopleList(){
+  const p=admFolks;
+  if(!p||!Array.isArray(p.list))
+    return '<div class="card"><div class="card-title">Усі водії</div>'+
+      '<div class="empty">Списку ще немає</div>'+
+      '<p class="hint">Виконайте файл «Спеціальний статус і список водіїв» у Supabase — і сюди підтягнуться всі, хто є в застосунку.</p></div>';
+  if(!p.list.length)
+    return '<div class="card"><div class="card-title">Усі водії</div><div class="empty">Ще нікого немає</div></div>';
+  return '<div class="card"><div class="card-title">Усі водії · '+p.list.length+'</div>'+
+    p.list.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x.name||'')+
+      (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
+      '<span>з '+esc(String(x.joined||'').slice(0,10).split('-').reverse().slice(0,2).join('.'))+' · '+admAgo(x.seen)+
+      (x.src&&x.src!=='unknown'?' · '+esc(x.src):'')+'</span></div>'+
+      '<button class="adm-crown'+(x.beta?' on':'')+'" data-beta="'+x.id+
+      '" data-on="'+(x.beta?'0':'1')+'" aria-label="Спеціальний статус">'+admCrownSVG()+'</button></div>').join('')+
+    '<p class="hint">Корона — спеціальний статус. У водія вона зʼявляється біля назви застосунку, і йому приходить повідомлення в бот. Тап знімає статус назад.</p></div>';
+}
 function admPay(){
   const b=admBill;
+  if(!PAY_OPEN){
+    const p=admFolks;
+    return '<div class="card"><div class="card-title">Оформлення ще не відкрите</div>'+
+      '<p class="hint">Застосунок безкоштовний для всіх: нікого не замикає й оплати не просить. '+
+      'Коли оплата зʼявиться, сюди повернуться цифри підписки — хто платить, у кого коли закінчується.</p></div>'+
+      '<div class="metrics two">'+
+      admTile('users',(p&&p.total)||0,'водіїв усього','')+
+      admTile('crown',(p&&p.beta)||0,'зі спец-статусом','корона біля назви',true)+
+      '</div>'+
+      ((b&&+b.requests>0)?'<div class="metrics two">'+
+        admTile('mail',+b.requests||0,'просили продовжити','за 30 днів')+
+        admTile('live',(b&&b.trial)||0,'на пробному','поки ні на що не впливає')+
+        '</div>':'')+
+      admPeopleList();
+  }
   if(!b)return '<div class="card"><div class="empty">Підписки ще не увімкнені в базі</div>'+
-    '<p class="hint">Виконай крок 7 у Supabase — і тут зʼявляться цифри.</p></div>';
+    '<p class="hint">Виконайте файл про підписку у Supabase — і тут зʼявляться цифри.</p></div>';
   const l=b.list||[],r=b.requests_list||[];
   let h='<div class="metrics two">'+
     admTile('key',b.paying||0,'платять','по '+subPrice(b)+' на місяць',true)+
-    admTile('users',b.trial||0,'на пробному','закінчується у '+(b.soon||0))+
+    admTile('users',b.trial||0,'на пробному','з них '+(b.soon||0)+' скоро закінчиться')+
     '</div><div class="metrics two">'+
     admTile('mail',b.over||0,'доступ закінчився','')+
     admTile('live',subPrice({price:b.mrr,cur:b.cur}),'на місяць','заявок за 30 днів: '+(b.requests||0))+
@@ -5458,6 +5526,23 @@ function admPay(){
   return h;
 }
 document.addEventListener('click',async function(e){
+  const c=e.target.closest('.adm-crown');
+  if(c&&TG&&TG.initData){
+    c.disabled=true;
+    const on=c.dataset.on==='1';
+    try{
+      await sbRpc('admin_beta',{p_init_data:TG.initData,p_tg_id:+c.dataset.beta,p_on:on});
+      toast(on?'Спец-статус увімкнено':'Спец-статус знято');
+      await loadAdminFolks();admPaint();
+    }catch(err){
+      const m=String((err&&err.message)||err);
+      toast(/404|PGRST202|Could not find/i.test(m)
+        ? 'Спершу виконайте файл «Спеціальний статус і список водіїв»'
+        : 'Не вийшло');
+      c.disabled=false;
+    }
+    return;
+  }
   const b=e.target.closest('.adm-give');
   if(!b||!TG||!TG.initData)return;
   b.disabled=true;const was=b.textContent;b.textContent='…';
@@ -5469,6 +5554,9 @@ document.addEventListener('click',async function(e){
 });
 async function loadAdminBilling(){
   try{admBill=await sbRpc('admin_billing',{p_init_data:TG.initData});}catch(e){admBill=null;}
+}
+async function loadAdminFolks(){
+  try{admFolks=await sbRpc('admin_people',{p_init_data:TG.initData});}catch(e){admFolks=null;}
 }
 
 function admPaint(){
@@ -5503,7 +5591,7 @@ async function renderAdmin(){
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData});
     if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
-    await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse()]);
+    await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse(),loadAdminFolks()]);
     btn.style.display='';
     admWhy='доступ є';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
