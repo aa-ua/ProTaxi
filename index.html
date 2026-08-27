@@ -1426,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.62';
+const APP_VER='1.63';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4396,9 +4396,9 @@ function renderDiag(){
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
   const tu=tgUser();
   if(tu)add('Telegram ID',tu.id);
-  /* Видно, яку мітку дало посилання. Без цього перевірити, чи працює
-     ?startapp=, можна лише через панель — а це довго й неочевидно. */
-  if(TG){
+  /* Мітку показуємо ТІЛЬКИ власнику: водієві вона ні про що не каже —
+     він і сам знає, звідки прийшов, — а виглядає як стеження. */
+  if(TG&&admData){
     const sp=(function(){try{return TG.initDataUnsafe&&TG.initDataUnsafe.start_param;}catch(e){return null;}})();
     add('Мітка з посилання',sp?esc(String(sp)):'немає — зайшли без мітки');
     add('Записано як джерело',esc(trafficSrc())+(data.settings.srcSent?' · збережено':' · ще не збережено'));
@@ -5297,8 +5297,18 @@ function admSources(){
       '<b>'+(+x.n||0)+'</b></div>'+
       admBar(Math.round((+x.n||0)/top*100))+
       '<div class="fn-l">останній '+admAgo(x.last)+'</div></div>').join('')+
-    '<p class="hint">Мітка ставиться один раз — при першому вході. Посилання: '+
-    'https://t.me/'+SUPPORT_BOT+'/app?startapp=<b>мітка</b></p></div>';
+    '<p class="hint">Мітка ставиться один раз — при першому вході, і надалі не переписується.</p></div>'+
+    admLinks();
+}
+/* Посилання під рукою: тап копіює. Інакше щоразу доводиться згадувати,
+   як воно пишеться, і одруківка тихо створює нове «джерело». */
+function admLinks(){
+  return '<div class="card"><div class="card-title">Посилання для реклами</div>'+
+    SRC_LINKS.map(x=>'<div class="adm-u"><div class="n"><b>'+esc(x[1])+'</b>'+
+      '<span>'+esc(srcLink(x[0]).replace('https://',''))+'</span></div>'+
+      '<button class="adm-give" data-copy="'+esc(srcLink(x[0]))+'">копіювати</button></div>').join('')+
+    '<p class="hint">Мітка — це слово в кінці посилання. Можна вигадати будь-яке: '+
+    'у панелі зʼявиться саме воно. Головне — щоб для кожного місця було своє.</p></div>';
 }
 function admTaps(){
   const t=(admPulse&&admPulse.taps)||null;
@@ -5533,6 +5543,14 @@ function admPay(){
   return h;
 }
 document.addEventListener('click',async function(e){
+  const cp=e.target.closest('[data-copy]');
+  if(cp){
+    const was=cp.textContent;
+    try{await navigator.clipboard.writeText(cp.dataset.copy);cp.textContent='скопійовано';}
+    catch(err){cp.textContent='не вийшло';}
+    setTimeout(()=>{cp.textContent=was;},1400);
+    return;
+  }
   const c=e.target.closest('.adm-crown');
   if(c&&TG&&TG.initData){
     c.disabled=true;
@@ -5850,6 +5868,14 @@ function renderCloud(){
 /* Бот підтримки. Усередині Telegram кнопка просто повертає людину в чат з ним,
    поза Telegram — відкриває цей чат. */
 const SUPPORT_BOT='ProTaxiApp_Bot';
+/* Готові посилання для реклами. Мітка — це просто слово в кінці; список
+   тут лише щоб не набирати руками, база про нього нічого не знає. */
+const SRC_LINKS=[
+  ['threads','Threads'],['tiktok','TikTok'],['shorts','YouTube Shorts'],
+  ['youtube','YouTube'],['insta','Instagram'],['facebook','Facebook'],
+  ['telegram','Телеграм-канал'],['lichka','Особисті повідомлення']
+];
+const srcLink=k=>'https://t.me/'+SUPPORT_BOT+'?startapp='+k;
 function renderSupport(){
   const u=tgUser(),who=$('tg-who');
   if(u){
