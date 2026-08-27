@@ -1393,7 +1393,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.56';
+const APP_VER='1.57';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1438,7 +1438,42 @@ const store={
 
 const MAP_STYLES_KEYS=['light','dark'];
 const DEFAULTS={commissionPct:20,platform:'',taxFixed:0,acquiringPct:2,fundPct:20,fundMode:'pct',fundPerKm:3,carMode:'own',rentMode:'sum',rentAmount:0,rentPeriod:'day',rentPct:0,tankLiters:50,taxPct:0,fuelPrice:43.9,fuelKind:'gas',fuelGrade:'gas',stations:[],stationId:0,discMode:'uah',discUah:0,discPct:0,consumption:9,calcMode:'std',dailyGoal:1500,serviceTarget:20000,serviceName:'Планове ТО',gClientId:'',geoOn:true,mapStyle:'light'};
-let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{},taps:{}};
+let data={settings:{...DEFAULTS},entries:[],fundOps:[],refuels:[],active:null,raionCache:{},streets:{},taps:{},gone:{}};
+
+/* ══ ПАМʼЯТЬ ПРО ВИДАЛЕНЕ ══
+   Хмара зберігає всю копію цілком, і свіжіша перемагає. Через це видалення
+   могло воскреснути: досить, щоб інший пристрій (або старіша вкладка) зберіг
+   свою копію пізніше — і запис, який водій прибрав, повертався назад.
+   Тому окремо памʼятаємо, що саме видалено. Такі позначки їдуть у хмару
+   разом з усім, і при злитті видалене викидається з чужої копії теж. */
+const GONE_KEEP_D=180;
+function markGone(kind,id){
+  if(!data.gone||typeof data.gone!=='object')data.gone={};
+  if(id===undefined||id===null)return;
+  data.gone[kind+':'+id]=Date.now();
+}
+function pruneGone(g){
+  const out={},edge=Date.now()-GONE_KEEP_D*86400000;
+  Object.keys(g||{}).forEach(k=>{if((+g[k]||0)>edge)out[k]=+g[k];});
+  return out;
+}
+/* Лічильники тільки зростають, тому з кількох копій беремо найбільше:
+   резервна копія старіша за основну, і без цього її цифри перетерли б свіжі. */
+function mergeTaps(a,b){
+  const out={...(a||{})};
+  Object.keys(b||{}).forEach(k=>{const v=+b[k]||0;if(!(out[k]>=v))out[k]=v;});
+  return out;
+}
+/* Позначки з обох копій — це саме те, що не можна загубити при злитті */
+function mergeGone(a,b){
+  const out={...(a||{})};
+  Object.keys(b||{}).forEach(k=>{if(!out[k]||b[k]>out[k])out[k]=b[k];});
+  return pruneGone(out);
+}
+function dropGone(list,kind,g){
+  if(!Array.isArray(list))return [];
+  return list.filter(x=>!(g&&g[kind+':'+x.id]));
+}
 
 /* ══ ЛІЧИЛЬНИК ФУНКЦІЙ ══
    Скільки разів водій скористався кожною можливістю. Потрібно, щоб бачити,
@@ -2009,11 +2044,16 @@ function score(p){
 }
 async function load(){
   const raws=[...await store.getAll(KEY),...await store.getAll(BAK)];
-  let best=null,found=0;
+  let best=null,found=0,gone={},taps={};
   raws.forEach(r=>{
     const p=parseSave(r);
     if(!p)return;
     found++;
+    /* позначки про видалене й лічильники збираємо з УСІХ копій, а не лише
+       з найкращої: інакше резервна копія, у якій запис іще є, воскресила б
+       його, а її старі лічильники перетерли б свіжі */
+    gone=mergeGone(gone,p.gone);
+    taps=mergeTaps(taps,p.taps);
     if(!best){best=p;return;}
     const sb=score(best),sp=score(p);
     if(sp>sb||(sp===sb&&(p.savedAt||0)>(best.savedAt||0)))best=p;
@@ -2024,11 +2064,13 @@ async function load(){
     const sm=data.settings;
     if(+sm.dailyGoal===2000)sm.dailyGoal=1500;
     if(+sm.serviceTarget===8000)sm.serviceTarget=20000;
-    data.entries=best.entries||[];
-    data.fundOps=best.fundOps||[];
-    data.refuels=best.refuels||[];
+    data.gone=gone;
+    data.entries=dropGone(best.entries,'e',gone);
+    data.fundOps=dropGone(best.fundOps,'f',gone);
+    data.refuels=dropGone(best.refuels,'r',gone);
     data.raionCache=best.raionCache||{};
     data.streets=best.streets||{};
+    data.taps=taps;
     data.active=best.active||null;
     data.savedAt=best.savedAt||0;
     lastBak=best.bakAt||0;
@@ -2092,7 +2134,7 @@ async function load(){
     if(typeof data.active.odoStart==='undefined')data.active.odoStart=0;
   }
 }
-async function persist(){
+async function persist(nowPush){
   const now=Date.now();
   data.schema=SCHEMA; data.savedAt=now;
   const payload=JSON.stringify(data);
@@ -2102,7 +2144,7 @@ async function persist(){
     await store.set(BAK,payload);
   }
   if(!ok)toast('Не вдалося зберегти');
-  cloudPush();
+  cloudPush(nowPush);
   const st=$('save-state');
   if(st)st.textContent='Збережено сьогодні о '+hms(Date.now())+' · версія '+APP_VER;
 }
@@ -4139,7 +4181,8 @@ function renderHistory(){
     const net=document.createElement('div');net.className='hist-net';net.textContent=fmt(e.calc.net);
     const del=document.createElement('button');del.className='del';del.textContent='✕';
     del.addEventListener('click',()=>confirmDel(del,async()=>{
-      data.entries=data.entries.filter(x=>x.id!==e.id);await persist();renderAll();toast('Сесію видалено');
+      markGone('e',e.id);
+      data.entries=data.entries.filter(x=>x.id!==e.id);await persist(true);renderAll();toast('Сесію видалено');
     }));
     row.appendChild(main);row.appendChild(net);row.appendChild(del);box.appendChild(row);
   });
@@ -4203,8 +4246,15 @@ async function applyPayload(txt,quiet){
   const p=parseSave(txt);
   if(!p){if(!quiet)toast('Текст не підходить');return false;}
   data.settings={...DEFAULTS,...(p.settings||{})};
-  data.entries=p.entries||[];data.fundOps=p.fundOps||[];
-  data.refuels=p.refuels||[];data.active=p.active||null;
+  /* спершу зводимо позначки про видалене з обох боків, потім чистимо списки —
+     інакше запис, прибраний на цьому телефоні, повернувся б із чужої копії */
+  const g=mergeGone(data.gone,p.gone);
+  data.gone=g;
+  data.taps=mergeTaps(data.taps,p.taps);
+  data.entries=dropGone(p.entries,'e',g);
+  data.fundOps=dropGone(p.fundOps,'f',g);
+  data.refuels=dropGone(p.refuels,'r',g);
+  data.active=p.active||null;
   data.entries.forEach(en=>{
     if(!Array.isArray(en.orders))en.orders=[];
     en.oc=en.orders.length;
@@ -5453,13 +5503,15 @@ async function cloudPull(){
   renderCloud();
 }
 /* Після кожного збереження — тиха відправка, але не частіше ніж раз на 4 секунди */
-function cloudPush(){
+function cloudPush(now){
   if(!TG||!TG.initData)return;
   clearTimeout(cloudTimer);
+  /* Видалення шлемо одразу: якщо людина закриє застосунок швидше за чотири
+     секунди, хмара лишиться зі старою копією — і запис повернеться. */
   cloudTimer=setTimeout(async()=>{
     try{await cloudCall(data);cloudState='ok';}catch(e){cloudState='err';}
     renderCloud();
-  },4000);
+  },now?0:4000);
 }
 function renderCloud(){
   const el=$('cloud-state');if(!el)return;
@@ -5949,6 +6001,7 @@ $('rf-save').addEventListener('click',function(){
 });
 $('rf-del').addEventListener('click',function(){
   arm(this,'Точно видалити?',async()=>{
+    markGone('r',rfId);
     data.refuels=data.refuels.filter(x=>x.id!==rfId);
     recalcAll();await persist();closeM('modal-refuel');renderAll();toast('Заправку видалено');
   });
@@ -5976,7 +6029,8 @@ function renderFunds(){
       '<div class="hist-net neg">−'+fmt(o.amount)+'</div>';
     const del=document.createElement('button');del.className='del';del.textContent='✕';
     del.addEventListener('click',()=>confirmDel(del,async()=>{
-      data.fundOps=data.fundOps.filter(x=>x.id!==o.id);await persist();renderAll();toast('Витрату видалено');
+      markGone('f',o.id);
+      data.fundOps=data.fundOps.filter(x=>x.id!==o.id);await persist(true);renderAll();toast('Витрату видалено');
     }));
     row.appendChild(del);box.appendChild(row);
   });
