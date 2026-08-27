@@ -947,6 +947,14 @@ html.map-full .tabbar{display:none}
 
     <div class="sect">Мої налаштування</div>
 
+    <!-- Валюта стоїть окремо й вище за розділи: це перше, що міняє водій,
+         який працює не в Україні, і шукати її по акордеонах ні до чого. -->
+    <div class="card">
+      <div class="card-title">Валюта</div>
+      <div class="field" style="margin:0"><select id="set-cur"></select></div>
+      <p class="hint" style="margin:10px 0 0">Підпис до всіх сум у застосунку. Суми не перераховуються — курсів тут немає, ви вписуєте ті гроші, які тримаєте в руках.</p>
+    </div>
+
     <div class="acc" data-acc="fuel">
       <button class="acc-h" type="button"><span class="t">Пальне і заправки<span class="s">вид пального, витрата, знижки на АЗС</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
       <div class="acc-b">
@@ -960,8 +968,6 @@ html.map-full .tabbar{display:none}
       <div class="wchips" id="fuel-grade" style="margin-top:-2px"></div>
       <div class="grid2">
         <div class="field"><label id="lab-cons">Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
-        <div class="field"><label>Валюта</label>
-          <select id="set-cur"></select></div>
         <div class="field"><label id="lab-price" data-cur="Ціна, {c}/л">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
         <div class="field"><label id="lab-tankl">Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
@@ -1435,7 +1441,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.67';
+const APP_VER='1.68';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5256,7 +5262,7 @@ const admRow=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v
    перемикач періодів і те, що люди робили за цей період. Дані бере окрема
    RPC public.admin_pulse — вона одна вміє рахувати по днях. Немає її
    в базі — панель показує старий вигляд, без плиток. */
-let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0,admSrc=null;
+let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0,admSrc=null,admCur=null;
 const ADM_PERIODS=[['today','Сьогодні'],['yesterday','Вчора'],['week','Тиждень'],
                    ['month','Місяць'],['year','Рік'],['all','Весь час']];
 async function loadAdminPulse(){
@@ -5272,6 +5278,10 @@ async function loadAdminPulse(){
       const sr=await sbRpc('admin_sources',{p_init_data:TG.initData,p_period:admPeriod});
       if(seq===admPulseSeq)admSrc=sr;
     }catch(e){if(seq===admPulseSeq)admSrc=null;}
+    try{
+      const cr=await sbRpc('admin_currency',{p_init_data:TG.initData,p_period:admPeriod});
+      if(seq===admPulseSeq)admCur=cr;
+    }catch(e){if(seq===admPulseSeq)admCur=null;}
   }catch(e){
     if(seq!==admPulseSeq)return;
     const m=String((e&&e.message)||e);
@@ -5296,8 +5306,16 @@ function admHero(p){
     '</div>';
 }
 function admPerChips(){
+  /* Дата під перемикачем: інакше на «Місяці» чи «Році» не видно, який саме
+     відрізок узято, і цифри легко прочитати не так. */
+  const d=admData||{};
+  const span=(d.from&&d.to)
+    ? (d.from===d.to
+        ? '<div class="fn-l" style="margin:6px 0 0">'+esc(d.from.split('-').reverse().join('.'))+'</div>'
+        : '<div class="fn-l" style="margin:6px 0 0">'+esc(d.from.split('-').reverse().join('.'))+' — '+esc(d.to.split('-').reverse().join('.'))+'</div>')
+    : '';
   return '<div class="chips" id="adm-per">'+ADM_PERIODS.map(x=>
-    '<button class="chip'+(x[0]===admPeriod?' active':'')+'" data-ap="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>';
+    '<button class="chip'+(x[0]===admPeriod?' active':'')+'" data-ap="'+x[0]+'">'+x[1]+'</button>').join('')+'</div>'+span;
 }
 function admPulseBody(){
   const p=admPulse;
@@ -5325,6 +5343,7 @@ function admPulseBody(){
     admRow('Середній чек',fmt(v.avg_check||0))+
     '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>'+
     admSources()+
+    admCurrencies()+
     admTaps();
 }
 /* Чим користуються. Ключі приходять з бази як є, а підписи живуть тут —
@@ -5342,6 +5361,21 @@ const TAP_NAMES={
   'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності',
   'crown':'Спеціальний статус'
 };
+/* У якій валюті рахують водії. Потрібно, щоб бачити, куди насправді
+   поїхав застосунок: якщо половина в злотих, це вже інша аудиторія. */
+function admCurrencies(){
+  const d=admCur;
+  if(!d||!Array.isArray(d.rows)||!d.rows.length)return '';
+  const rows=d.rows.filter(x=>+x.n>0);
+  if(!rows.length)return '';
+  const top=Math.max(1,...rows.map(x=>+x.n||0));
+  const nice=k=>{const c=CURRENCIES[k];return c?(c.s+' · '+c.name+' · '+c.cc):k;};
+  return '<div class="card"><div class="card-title">Валюта водіїв · '+(+d.total||0)+' за період</div>'+
+    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(nice(x.cur))+'</span>'+
+      '<b>'+(+x.n||0)+'</b></div>'+admBar(Math.round((+x.n||0)/top*100))+'</div>').join('')+
+    '<p class="hint">Валюта — це підпис, а не курс: суми ніде не перераховуються.</p></div>';
+}
+
 /* Звідки приходять люди. Список ніде не заданий — які мітки трапились,
    такі й показуємо. «direct» — зайшов без мітки, «unknown» — був у базі
    ще до того, як мітки зʼявились. */
@@ -5483,7 +5517,16 @@ async function loadAdminTicks(){
   catch(e){admTicks=null;}
 }
 function admTalk(d){
-  const own=Array.isArray(admTicks),t=own?admTicks:(d.tick||[]);
+  /* Список звернень приходить окремою функцією, без періоду — тому
+     відсікаємо тут, за тими самими межами, що й уся панель. Інакше
+     перемикач «Сьогодні» нічого не міняв би у відгуках. */
+  const inPer=x=>{
+    const a=String(x&&x.at||'').slice(0,10);
+    if(!a||!d.from||!d.to)return true;
+    return a>=d.from&&a<=d.to;
+  };
+  const own=Array.isArray(admTicks);
+  const t=(own?admTicks:(d.tick||[])).filter(inPer);
   const card=x=>{
     const head='<div class="h"><b>'+esc(x.name||'')+
       (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b><span>'+admAgo(x.at)+'</span></div>'+
@@ -5641,10 +5684,14 @@ document.addEventListener('click',async function(e){
 });
 /* Перемикач періоду тягне за собою всю панель, а не лише живі цифри:
    воронка, аналітика й відгуки рахуються за той самий відрізок. */
+let admStatsSeq=0;
 async function loadAdminStats(){
+  /* та сама сторожа, що й у живих цифрах: клацнув два періоди підряд —
+     показуємо відповідь від останнього, а не від того, що прийшов пізніше */
+  const seq=++admStatsSeq;
   try{
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData,p_period:admPeriod});
-    if(st)admData=st;
+    if(seq===admStatsSeq&&st)admData=st;
   }catch(e){}
 }
 async function loadAdminBilling(){
