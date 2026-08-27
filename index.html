@@ -1400,7 +1400,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.58';
+const APP_VER='1.59';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1835,8 +1835,10 @@ function rateFor(e){
   if(s.calcMode==='exact'){
     const ps=tankPeriods();
     let hit=null;
-    if(+e.odoStart>0)hit=ps.find(p=>!p.viaReset&&e.odoStart>=p.fromOdo&&e.odoStart<=p.toOdo);
-    if(!hit&&e.date)hit=ps.find(p=>p.fromDate<=e.date&&e.date<=p.toDate);
+    /* Спершу за датою, і лише потім за одометром: лічильник добовий, те саме
+       число трапляється щодня — і пошук по ньому легко влучає в чужий бак. */
+    if(e.date)hit=ps.find(p=>p.fromDate<=e.date&&e.date<=p.toDate);
+    if(!hit&&+e.odoStart>0)hit=ps.find(p=>!p.viaReset&&e.odoStart>=p.fromOdo&&e.odoStart<=p.toOdo);
     if(hit)return{cons:hit.cons,price:hit.price||dayPrice,exact:true};
     const avg=avgConsumption();
     if(avg)return{cons:avg,price:dayPrice,exact:false};
@@ -1962,6 +1964,7 @@ function recalcAll(){
     e.oc=(e.orders&&e.orders.length)?e.orders.length:(+e.oc||0);
     e.cardGross=cardGrossOf(e);
     e.ownGross=ownGrossOf(e);
+    if(!e.manualTips&&tipsOf(e)>0)e.tips=tipsOf(e);
     e.rentShifts=shiftsOnDay(e.date,false);
     e.gross=(e.orders&&e.orders.length)?e.orders.reduce((a,o)=>a+(+o.amount||0),0):(+e.gross||0);
     e.calc=calc(e,data.settings);
@@ -2047,13 +2050,15 @@ function parseSave(raw){
 }
 let restored=false;
 let lastBak=0;
-function score(p){
+function score(p,gone){
   if(!p)return -1;
-  return (p.entries.length*1000)+(p.refuels?p.refuels.length:0)*20+(p.fundOps?p.fundOps.length:0)*10+(p.active?5:0);
+  const cnt=(list,kind)=>(gone?dropGone(list,kind,gone):(list||[])).length;
+  return (cnt(p.entries,'e')*1000)+cnt(p.refuels,'r')*20+cnt(p.fundOps,'f')*10+(p.active?5:0);
 }
 async function load(){
   const raws=[...await store.getAll(KEY),...await store.getAll(BAK)];
   let best=null,found=0,gone={},taps={};
+  const copies=[];
   raws.forEach(r=>{
     const p=parseSave(r);
     if(!p)return;
@@ -2063,8 +2068,14 @@ async function load(){
        його, а її старі лічильники перетерли б свіжі */
     gone=mergeGone(gone,p.gone);
     taps=mergeTaps(taps,p.taps);
+    copies.push(p);
+  });
+  /* Рахуємо записи ВЖЕ без видалених. Інакше стара резервна копія, у якій
+     видалена зміна ще лежить, виглядає «повнішою» за свіжу — перемагає її
+     й відкочує все, що водій встиг виправити після останньої копії. */
+  copies.forEach(p=>{
     if(!best){best=p;return;}
-    const sb=score(best),sp=score(p);
+    const sb=score(best,gone),sp=score(p,gone);
     if(sp>sb||(sp===sb&&(p.savedAt||0)>(best.savedAt||0)))best=p;
   });
   loadedFromStorage=!!best;
@@ -2329,7 +2340,9 @@ function todayTotals(){
   if(data.active&&dateOf(data.active.startT)===t){
     const gross=data.active.orders.reduce((a,o)=>a+(+o.amount||0),0);
     const km=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
-    const c=calc({gross,tips:0,km,liters:litersFor(km,data.settings),ownGross:ownGrossOf(data.active),
+    const lr=rateFor({date:t,odoStart:data.active.odoStart});
+    const c=calc({gross,tips:tipsOf(data.active),km,liters:km/100*lr.cons,fuelPrice:lr.price,
+      ownGross:ownGrossOf(data.active),cardGross:cardGrossOf(data.active),
       rentShifts:shiftsOnDay(t,true)},data.settings);
     add(c);
   }
@@ -2430,7 +2443,12 @@ function renderShift(){
     $('btn-open').addEventListener('click',async()=>{
       if(!subActive()){goScreen('sub');toast('Для нової зміни потрібна активна підписка');return;}
       const t=$('open-time').value||nowHM();
-      data.active={id:Date.now(),startT:toMs(todayStr(),t),odoStart:num($('open-odo').value),orders:[],path:[]};
+      /* Пів на першу ночі, а водій вписує 23:50 — він має на увазі вчорашній
+         вечір. Без цього зміна поїхала б на 23 години вперед: закрити її
+         не можна (час закриття «раніше» початку), і автозакриття її не бачить. */
+      let st0=toMs(todayStr(),t);
+      if(st0>Date.now()+60000)st0-=86400000;
+      data.active={id:Date.now(),startT:st0,odoStart:num($('open-odo').value),orders:[],path:[]};
       await persist();renderShift();startTrack();toast('Сесію розпочато о '+t);
     });
     return;
@@ -2449,17 +2467,26 @@ function renderShift(){
   const estKm=factKm>0?factKm:ordKm*k;
   const approx=factKm<=0;
 
-  const liters=litersFor(estKm,s);
-  const c=calc({gross,tips:0,liters,km:estKm,ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
+  /* Рахуємо тими самими правилами, що й закриття зміни: з еквайрингом,
+     чайовими й ціною пального того дня. Інакше сума стрибала б у мить
+     закриття — водій бачив би одне число, а в статистику лягало інше. */
+  const lr=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
+  const liters=estKm/100*lr.cons;
+  const c=calc({gross,tips:tipsOf(a),liters,km:estKm,fuelPrice:lr.price,
+    ownGross:ownGrossOf(a),cardGross:cardGrossOf(a),
+    rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
 
   /* Кладемо підрахунок поруч із самою зміною: бот бере цифри звідси, а не
      рахує їх окремо. Інакше два підрахунки з часом розійдуться, і водієві
      прийде сума, якої він у застосунку не бачить. */
   const goal=+s.dailyGoal||0;
+  /* Ціль — денна, тому відсоток рахуємо від усього дня, а не від цієї сесії:
+     інакше в другу зміну за день бот показував би менше, ніж картка «Ціль дня». */
+  const dayNet=dateOf(a.startT)===todayStr()?todayTotals().personal:c.personal;
   a.live={gross:Math.round(gross),personal:Math.round(c.personal),
           orders:a.orders.length,goal:goal>0?goal:null,
-          left:goal>0?Math.max(0,Math.round(goal-c.personal)):null,
-          goalPct:goal>0?Math.round(c.personal/goal*100):null};
+          left:goal>0?Math.max(0,Math.round(goal-dayNet)):null,
+          goalPct:goal>0?Math.round(dayNet/goal*100):null};
 
   const stale=dateOf(a.startT)!==todayStr();
   let html=
@@ -2785,10 +2812,14 @@ $('fin-del').addEventListener('click',function(){
 const isOwn=o=>!!(o&&o.own);
 function ownGrossOf(e){return ((e&&e.orders)||[]).filter(isOwn).reduce((a,o)=>a+(+o.amount||0),0);}
 function cardGrossOf(e){return ((e&&e.orders)||[]).filter(o=>o.pay==='card'&&!isOwn(o)).reduce((a,o)=>a+(+o.amount||0),0);}
+function tipsOf(e){return ((e&&e.orders)||[]).reduce((a,o)=>a+(+o.tip||0),0);}
 function recalcEntry(e){
   e.oc=(e.orders&&e.orders.length)?e.orders.length:(+e.oc||0);
   e.cardGross=cardGrossOf(e);
   e.ownGross=ownGrossOf(e);
+  /* Чайові тягнемо із замовлень — але тільки якщо вони там є: суму, вписану
+     руками при закритті зміни, перетирати нема за що. */
+  if(!e.manualTips&&tipsOf(e)>0)e.tips=tipsOf(e);
   e.gross=(e.orders||[]).reduce((a,o)=>a+(+o.amount||0),0);
   const r=rateFor(e);
   if(!e.manualLiters)e.liters=(+e.km||0)/100*r.cons;
@@ -3594,7 +3625,8 @@ function closeShiftWith(o){
     id:a.id,date:dateOf(a.startT),startT:a.startT,endT,hours:(endT-a.startT)/3600000,
     odoStart:a.odoStart||0,odoEnd:+o.odoEnd||0,
     orders:a.orders,oc:a.orders.length,weather:o.weather||'',path:thinPath(a.path),
-    manualLiters:manual>0,kmEst:odoKm<=0&&km>0,auto:!!o.auto,...inp,calc:c
+    manualLiters:manual>0,manualTips:Math.abs((+o.tips||0)-tipsOf(a))>=0.01,
+    kmEst:odoKm<=0&&km>0,auto:!!o.auto,...inp,calc:c
   });
   data.active=null;
   stopTrack();
@@ -3602,7 +3634,11 @@ function closeShiftWith(o){
 }
 $('cm-save').addEventListener('click',async()=>{
   const a=data.active;if(!a)return;
-  const endT=toMs(dateOf(a.startT),$('cm-end').value||nowHM());
+  /* Нічна зміна: почав о 22:00, закриває о 06:00 — це наступна доба,
+     а не «раніше за початок». Переносимо на добу вперед, але тільки якщо
+     цей час уже настав: інакше зміна закривалася б у майбутньому. */
+  let endT=toMs(dateOf(a.startT),$('cm-end').value||nowHM());
+  if(endT<=a.startT&&endT+86400000<=Date.now()+3600000)endT+=86400000;
   if(endT<=a.startT){toast('Час закриття раніше початку');return;}
   const c=closeShiftWith({endT,odoEnd:num($('cm-odo').value),tips:num($('cm-tips').value),
                           liters:num($('cm-liters').value),weather:cmWeather});
@@ -3946,7 +3982,10 @@ function renderMileage(es){
   }
   if(gross>0)add('Виручка на кілометр',fmt1(gross/tot)+' ₴/км');
   const liters=withOdo.reduce((a,e)=>a+(+e.liters||0),0);
-  if(liters>0)add('Пальне за період',fmt1(liters)+' л · '+fmt(liters*(lastPrice()||netPrice())));
+  /* Кожна зміна вже порахована за ціною свого дня — складаємо готове,
+     а не множимо літри на сьогоднішній цінник. */
+  const fuelUah=withOdo.reduce((a,e)=>a+Math.max(0,(e.calc&&+e.calc.fuel)||0),0);
+  if(liters>0)add('Пальне за період',fmt1(liters)+' '+FK().u+' · '+fmt(fuelUah));
   if(ord>0){
     const note=document.createElement('div');note.className='hint';note.style.marginTop='8px';
     note.textContent='На кожні 100 км з пасажиром припадає '+Math.round(idle/ord*100)+' км порожнього пробігу.';
@@ -4986,7 +5025,13 @@ const admSvg=k=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const admTile=(ic,v,lab,sub,hi)=>'<div class="metric'+(hi?' hi':'')+'">'+admSvg(ic)+
   '<div class="v">'+v+'</div><div class="k">'+lab+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>';
 const admAgo=v=>{
-  const t=new Date(String(v||'').replace(' ','T')+':00').getTime();
+  /* База віддає час у UTC без позначки. Без «Z» браузер читав би його як
+     київський — і все виглядало б на 2–3 години свіжішим, ніж є. */
+  let sv=String(v||'').trim();
+  if(!sv)return '';
+  sv=sv.replace(' ','T');
+  if(!/(Z|[+-]\d\d:?\d\d)$/i.test(sv)){if(/T\d\d:\d\d$/.test(sv))sv+=':00';sv+='Z';}
+  const t=new Date(sv).getTime();
   if(!t)return '';
   const m=Math.floor((Date.now()-t)/60000);
   if(m<1)return 'щойно';
@@ -5003,12 +5048,24 @@ const admRow=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v
    перемикач періодів і те, що люди робили за цей період. Дані бере окрема
    RPC public.admin_pulse — вона одна вміє рахувати по днях. Немає її
    в базі — панель показує старий вигляд, без плиток. */
-let admPeriod='today',admPulse=null,admPulseErr='';
+let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0;
 const ADM_PERIODS=[['today','Сьогодні'],['yesterday','Вчора'],['week','Тиждень'],
                    ['month','Місяць'],['year','Рік'],['all','Весь час']];
 async function loadAdminPulse(){
-  try{admPulse=await sbRpc('admin_pulse',{p_init_data:TG.initData,p_period:admPeriod});admPulseErr='';}
-  catch(e){admPulse=null;admPulseErr=String((e&&e.message)||e);}
+  /* Клацнув «Сьогодні», а слідом «Весь час» — відповіді можуть прийти в
+     будь-якому порядку. Показуємо лише ту, що від останнього натискання. */
+  const seq=++admPulseSeq;
+  try{
+    const r=await sbRpc('admin_pulse',{p_init_data:TG.initData,p_period:admPeriod});
+    if(seq!==admPulseSeq)return;
+    admPulse=r;admPulseErr='';admPulseNoFn=false;
+  }catch(e){
+    if(seq!==admPulseSeq)return;
+    const m=String((e&&e.message)||e);
+    admPulse=null;admPulseErr=m;
+    /* «функції немає в базі» і «немає зв'язку» — різні поради */
+    admPulseNoFn=/404|PGRST202|does not exist/i.test(m);
+  }
 }
 function admPace(p){
   const t=+p.new_today||0,y=+p.new_yest||0,d=t-y;
@@ -5031,8 +5088,11 @@ function admPerChips(){
 }
 function admPulseBody(){
   const p=admPulse;
-  if(!p)return '<div class="card"><div class="empty">Живої статистики ще немає</div>'+
-    '<p class="hint">Виконайте крок 15 у Supabase — і тут зʼявляться цифри за періодами.'+
+  if(!p)return '<div class="card"><div class="empty">'+
+    (admPulseNoFn?'Живої статистики ще немає':'Не вдалося отримати статистику')+'</div>'+
+    '<p class="hint">'+(admPulseNoFn
+      ? 'Виконайте крок 15 у Supabase — і тут зʼявляться цифри за періодами.'
+      : 'Схоже на збій зв\'язку. Крок 15 виконувати не треба — спробуйте оновити.')+
     (admPulseErr?'<br><br>Сервер відповів: '+esc(admPulseErr.slice(0,120)):'')+'</p></div>';
   const w=p.who||[],v=p.vol||{};
   const top=Math.max(1,...w.map(x=>+x.v||0));
@@ -5065,7 +5125,7 @@ const TAP_NAMES={
   'fund.spend':'Витрата з відкладеного','station.save':'Зберегти мережу АЗС',
   'map.full':'Мапа на весь екран','support':'Написати в підтримку',
   'backup.copy':'Скопіювати дані','gloss':'Словник понять',
-  'changelog':'Що нового','intro':'Як користуватись'
+  'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності'
 };
 function admTaps(){
   const t=(admPulse&&admPulse.taps)||null;
@@ -6028,7 +6088,9 @@ $('rf-save').addEventListener('click',function(){
   const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
   if(l<=0){toast('Вкажіть '+FK().many+' з чека');return;}
   if(pr<=0){toast('Вкажіть ціну — '+FK().price);return;}
-  const dup=data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
+  /* Захист від подвійного натискання — лише коли одометр справді вписано:
+     дві різні заправки дня без показника обидві мають 0 і не є повтором. */
+  const dup=odo>0&&data.refuels.find(x=>x.id!==rfId&&+x.odo===odo&&x.date===($('rf-date').value||todayStr()));
   if(dup){toast('Заправка з таким одометром уже є');return;}
   /* Найчастіша помилка тут — одометр: його або лишили від попередньої
      заправки, або вписали пробіг замість показника. Тому перепитуємо
@@ -6036,12 +6098,17 @@ $('rf-save').addEventListener('click',function(){
   arm(this,'Одометр '+fmt1(odo)+' км — вірно?',async()=>{
     const prev=rfId?data.refuels.find(x=>x.id===rfId):null;
     const stPick=rfStation();
-    const rec={id:rfId||Date.now(),date:$('rf-date').value||todayStr(),liters:l,price:pr,odo,full:rfFull(),
+    const rfDate=$('rf-date').value||todayStr();
+    /* Час заправки: сьогоднішня — зараз, заднім числом — вечір того дня.
+       Момент обнулення лічильника — той самий час, а не «зараз»: інакше
+       вчорашня заправка, вписана сьогодні, обнуляла б сьогоднішній пробіг.
+       У вже збереженої заправки час лишаємо, поки не змінили дату. */
+    const keep=prev&&prev.date===rfDate;
+    const rfT=(keep&&+prev.t)||(rfDate===todayStr()?Date.now():toMs(rfDate,'23:59'));
+    const rec={id:rfId||Date.now(),date:rfDate,liters:l,price:pr,odo,full:rfFull(),
       stId:rfStId||0,st:(stPick&&stPick.name)||rfStName||'',fuel:rfGrade,
-      reset:rfReset(),resetAt:(prev&&prev.resetAt)||Date.now(),
-      /* час потрібен, щоб відрізнити зміну до заправки від зміни після неї.
-         Заправку заднім числом вважаємо вечірньою. */
-      t:(prev&&+prev.t)||(($('rf-date').value||todayStr())===todayStr()?Date.now():toMs($('rf-date').value,'23:59'))};
+      reset:rfReset(),resetAt:(keep&&+prev.resetAt)||rfT,
+      t:rfT};
     const wasShould=fuelPurse().should;
     if(rfId)data.refuels=data.refuels.map(x=>x.id===rfId?rec:x);
     else data.refuels.push(rec);
@@ -6061,7 +6128,7 @@ $('rf-del').addEventListener('click',function(){
   arm(this,'Точно видалити?',async()=>{
     markGone('r',rfId);
     data.refuels=data.refuels.filter(x=>x.id!==rfId);
-    recalcAll();await persist();closeM('modal-refuel');renderAll();toast('Заправку видалено');
+    recalcAll();await persist(true);closeM('modal-refuel');renderAll();toast('Заправку видалено');
   });
 });
 
@@ -6083,7 +6150,7 @@ function renderFunds(){
   if(!data.fundOps.length)box.innerHTML='<div class="empty">Витрат ще не було</div>';
   [...data.fundOps].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(o=>{
     const row=document.createElement('div');row.className='hist-item';
-    row.innerHTML='<div class="hist-main"><div class="d">'+(o.desc||'Витрата')+'</div><div class="s">'+fmtDate(o.date)+'</div></div>'+
+    row.innerHTML='<div class="hist-main"><div class="d">'+esc(o.desc||'Витрата')+'</div><div class="s">'+fmtDate(o.date)+'</div></div>'+
       '<div class="hist-net neg">−'+fmt(o.amount)+'</div>';
     const del=document.createElement('button');del.className='del';del.textContent='✕';
     del.addEventListener('click',()=>confirmDel(del,async()=>{
