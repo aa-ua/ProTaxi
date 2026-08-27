@@ -486,6 +486,11 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .mini-add:active{transform:scale(.94)}
 .gauge{display:flex;align-items:center;gap:18px}
 .can{width:96px;height:126px;flex-shrink:0}
+/* дві хвилі котяться в різні боки — рідина ніби гойдається */
+.can .w1{animation:canw 4.6s linear infinite}
+.can .w2{animation:canw 7s linear infinite reverse}
+@keyframes canw{to{transform:translateX(88px)}}
+@media (prefers-reduced-motion:reduce){.can .w1,.can .w2{animation:none}}
 .gauge-side{min-width:0;flex:1}
 .gauge-val{font-variant-numeric:tabular-nums;font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
 .gauge-val.low{color:#FF8A82}
@@ -499,6 +504,8 @@ html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
 .gauge-row input{width:64px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;
   padding:6px 8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;text-align:center}
 .gauge-row input:focus{outline:none;border-color:var(--yellow)}
+.gauge-edit{background:none;border:none;padding:0 0 1px;color:var(--text);font-family:inherit;
+  font-size:inherit;font-weight:800;cursor:pointer;border-bottom:1px dashed var(--border)}
 .save-block{margin-top:4px}
 .save-block .gauge-row b{font-variant-numeric:tabular-nums;font-size:18px;color:var(--yellow);letter-spacing:-.02em}
 .save-block .gauge-row b.ok{color:var(--green)}
@@ -820,7 +827,7 @@ html.map-full .tabbar{display:none}
 
   <section class="screen" id="screen-tank">
     <div class="card">
-      <div class="card-title row">Бак<button class="mini-add" id="btn-refuel" aria-label="Записати заправку">+</button></div>
+      <div class="card-title row"><span id="tank-title">Бак</span><button class="mini-add" id="btn-refuel" aria-label="Записати заправку">+</button></div>
       <div id="gauge-box"></div>
     </div>
 
@@ -1384,7 +1391,7 @@ html.map-full .tabbar{display:none}
   </button>
   <button class="tab" data-screen="tank">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V6a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v14"/><path d="M3 20h12"/><path d="M14 9h3a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0v-7l-2.5-3"/><path d="M6 9h6"/></svg>
-    Бак
+    <span id="tab-tank-lbl">Бак</span>
   </button>
   <button class="tab" data-screen="funds">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><path d="M16 15h2"/></svg>
@@ -1393,7 +1400,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.57';
+const APP_VER='1.58';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5664,23 +5671,40 @@ function renderPurse(){
   box.innerHTML=h;
 }
 /* Каністра. Заповнення росте знизу вгору, обрізане по формі корпусу. */
+/* Посудина залежить від пального: батарея для електро, каністра для решти.
+   Рідина всередині — дві хвилі, що котяться назустріч одна одній: так вона
+   «гойдається». Пальне жовте, заряд зелений, майже порожнє — червоне. */
 function canisterSVG(pct,low){
-  const X=14,Y=34,W=88,H=104;                 /* корпус */
-  const h=Math.max(pct>0?4:0,Math.round(H*pct));
-  const fill=low?'#E0574E':'var(--yellow)';
-  return '<svg class="can" viewBox="0 0 116 152" aria-hidden="true">'+
-    '<defs><clipPath id="canclip"><rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11"/></clipPath>'+
-    '<linearGradient id="cangrad" x1="0" y1="1" x2="0" y2="0">'+
-      '<stop offset="0" stop-color="'+(low?'#B9382F':'var(--yellow-deep)')+'"/>'+
-      '<stop offset="1" stop-color="'+fill+'"/></linearGradient></defs>'+
-    /* ручка й горловина */
+  const ev=(data.settings.fuelKind==='ev');
+  const X=ev?24:14, Y=ev?30:34, W=ev?68:88, H=ev?112:104;
+  const h=Math.max(pct>0?5:0,Math.round(H*pct));
+  const top=low?'#FF7A70':(ev?'#3BE0A6':'#FFC94D');
+  const deep=low?'#B9382F':(ev?'#1FA97A':'#D9940E');
+  const surf=Y+H-h, bot=Y+H, x0=X-132;
+  /* хвиля вдвічі ширша за посудину — щоб при русі не оголявся край */
+  let humps='';for(let i=0;i<8;i++)humps+=' q 22 -6 44 0';
+  const wave=(op)=>'<path class="'+(op?'w2':'w1')+'" d="M '+x0+' '+surf+humps+' V '+bot+' H '+x0+' Z" '+
+    'fill="url(#gg'+(ev?'e':'c')+')"'+(op?' opacity=".45"':'')+'/>';
+  const defs='<defs><clipPath id="gclip"><rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="'+(ev?13:11)+'"/></clipPath>'+
+    '<linearGradient id="gg'+(ev?'e':'c')+'" x1="0" y1="1" x2="0" y2="0">'+
+    '<stop offset="0" stop-color="'+deep+'"/><stop offset="1" stop-color="'+top+'"/></linearGradient></defs>';
+  if(ev){
+    return '<svg class="can" viewBox="0 0 116 152" aria-hidden="true">'+defs+
+      /* клема зверху */
+      '<rect x="44" y="16" width="28" height="16" rx="5" fill="var(--border)"/>'+
+      '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="13" fill="var(--surface2)"/>'+
+      '<g clip-path="url(#gclip)">'+wave(false)+wave(true)+'</g>'+
+      /* блискавка — прикмета батареї, як хрест у каністри */
+      '<g clip-path="url(#gclip)" opacity=".3"><path d="M64 52 L46 90 L58 90 L52 122 L74 80 L61 80 L70 52 Z" fill="var(--text)"/></g>'+
+      '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="13" fill="none" stroke="var(--border)" stroke-width="4"/>'+
+      '</svg>';
+  }
+  return '<svg class="can" viewBox="0 0 116 152" aria-hidden="true">'+defs+
     '<path d="M36 34 L36 22 Q36 15 43 15 L73 15 Q80 15 80 22 L80 34" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>'+
     '<rect x="86" y="21" width="20" height="13" rx="4" fill="var(--border)"/>'+
-    /* корпус */
     '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11" fill="var(--surface2)"/>'+
-    '<g clip-path="url(#canclip)"><rect x="'+X+'" y="'+(Y+H-h)+'" width="'+W+'" height="'+h+'" fill="url(#cangrad)"/></g>'+
-    /* хрест-навхрест, як на справжній каністрі */
-    '<g clip-path="url(#canclip)" opacity=".28"><path d="M30 52 L86 120 M86 52 L30 120" fill="none" stroke="var(--text)" stroke-width="3.5" stroke-linecap="round"/></g>'+
+    '<g clip-path="url(#gclip)">'+wave(false)+wave(true)+'</g>'+
+    '<g clip-path="url(#gclip)" opacity=".22"><path d="M30 52 L86 120 M86 52 L30 120" fill="none" stroke="var(--text)" stroke-width="3.5" stroke-linecap="round"/></g>'+
     '<rect x="'+X+'" y="'+Y+'" width="'+W+'" height="'+H+'" rx="11" fill="none" stroke="var(--border)" stroke-width="4"/>'+
     '</svg>';
 }
@@ -5692,7 +5716,8 @@ function renderGauge(){
 
   const rows=
     '<div class="gauge-row"><span>'+FK(s).tankShort+'</span>'+
-      '<span><input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'"> '+FK(s).u+'</span></div>'+
+      '<span class="v"><button class="gauge-edit" id="g-tankl-btn" type="button">'+fmt1(+s.tankLiters||0)+' '+FK(s).u+'</button>'+
+      '<input type="number" inputmode="decimal" id="g-tankl" value="'+(+s.tankLiters||0)+'" style="display:none"></span></div>'+
     '<div class="gauge-row"><span>Витрата</span><span class="v">'+consLine()+'</span></div>'+
     '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
       (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
@@ -5744,14 +5769,28 @@ function savingHTML(){
       : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Рахунок пішов від останньої заправки й обнулиться на наступній.</p>');
 }
 function bindGauge(){
-  const i=$('g-tankl');if(!i)return;
-  i.addEventListener('change',async()=>{
-    data.settings.tankLiters=num(i.value)||50;
-    await persist();renderTank();toast(FK().tankShort+' · '+fmt1(data.settings.tankLiters)+' '+FK().u);
-  });
+  const i=$('g-tankl'),b=$('g-tankl-btn');if(!i)return;
+  /* Поле вводу не стирчить постійно: стоїть звичайне число, а дотик до
+     нього відкриває ввід. Так рядок вирівняний з рештою показників. */
+  if(b)b.addEventListener('click',()=>{b.style.display='none';i.style.display='';i.focus();i.select();});
+  let done=false;
+  const save=async()=>{
+    if(done)return;done=true;
+    const v=num(i.value);
+    if(v>0&&v!==+data.settings.tankLiters){
+      data.settings.tankLiters=v;
+      await persist();toast(FK().tankShort+' · '+fmt1(v)+' '+FK().u);
+    }
+    renderTank();
+  };
+  i.addEventListener('change',save);
+  i.addEventListener('blur',save);
 }
 
 function renderTank(){
+  const ev=data.settings.fuelKind==='ev';
+  const tt=$('tank-title');if(tt)tt.textContent=ev?'Батарея':'Бак';
+  const tl=$('tab-tank-lbl');if(tl)tl.textContent=ev?'Заряд':'Бак';
   renderPurse();renderGauge();
   const s=data.settings;
   $('mode-std').classList.toggle('on',s.calcMode!=='exact');
@@ -5850,13 +5889,26 @@ function rfStation(){return stationsOf().find(x=>x.id===rfStId)||null;}
    спершу свої мережі, а далі решта відомих — щоб чек із випадкової заправки
    було куди записати. У чужої мережі знижки немає, і це чесно: нічого не
    вигадуємо. */
+/* Дім — теж «заправка» для електро. Тарифи державні й фіксовані (чинні
+   до 31.10.2026): день 4,32, ніч 2,16 (23:00–07:00, коефіцієнт 0,5).
+   Це єдине місце, де ціну ПІДСТАВЛЯЄМО: вдома чека немає, тож правило
+   «ціна лише з чека» тут не працює — але поле лишається редагованим,
+   і вже вписану руками ціну не перетираємо. */
+const EV_HOME=[{name:'Дім · ніч',price:2.16},{name:'Дім · день',price:4.32}];
 function rfStList(){
-  const own=stationsOf().map(st=>({id:st.id,name:st.name,own:true}));
+  const kind=data.settings.fuelKind||'petrol';
+  /* мережа показується лише у своєму виді пального: водієві на електро
+     БРСМ ні до чого, а водієві на газі — зарядки. Старі мережі без
+     позначки (заведені до 1.58) вважаємо бензогазовими. */
+  const own=stationsOf()
+    .filter(st=>kind==='ev'?st.k==='ev':(st.k||'petrol')!=='ev')
+    .map(st=>({id:st.id,name:st.name,own:true}));
   const have=new Set(own.map(x=>x.name.toLowerCase()));
   const rest=stPresets().filter(p=>!have.has(String(p.n).toLowerCase()))
     .map(p=>({id:0,name:p.n,own:false}));
+  const home=kind==='ev'?EV_HOME.map(h=>({id:0,name:h.name,own:false,home:h.price})):[];
   /* остання кнопка — для заправки, якої в списку немає */
-  return own.concat(rest,[{id:0,name:'Інша',own:false}]);
+  return home.concat(own,rest,[{id:0,name:'Інша',own:false}]);
 }
 function renderRfStations(){
   const box=$('rf-st'),fb=$('rf-fuel');if(!box)return;
@@ -5868,8 +5920,8 @@ function renderRfStations(){
       /* Без ціни під назвою: довгі назви («УКРНАФТА») не вміщались у кнопку,
          а ціну водій усе одно вписує з чека — вгадана лише збивала б з пантелику. */
       const on=st.own?(st.id===rfStId):(!rfStId&&rfStName===st.name);
-      return '<button class="wchip'+(on?' on':'')+'" data-sid="'+st.id+'" data-sname="'+esc(st.name)+'">'+
-        esc(st.name)+'</button>';
+      return '<button class="wchip'+(on?' on':'')+'" data-sid="'+st.id+'" data-sname="'+esc(st.name)+'"'+
+        (st.home?' data-home="'+st.home+'"':'')+'>'+esc(st.name)+'</button>';
     }).join('');
   }
   const gs=gradesFor(data.settings.fuelKind);
@@ -5885,6 +5937,10 @@ $('rf-st').addEventListener('click',e=>{
   const b=e.target.closest('.wchip');if(!b)return;
   rfStId=+b.dataset.sid||0;
   rfStName=rfStId?'':(b.dataset.sname||'');
+  /* домашній тариф підставляємо лише в порожнє поле: вписане руками — святе */
+  if(b.dataset.home&&!num($('rf-price').value)){
+    $('rf-price').value=(+b.dataset.home).toFixed(2);
+  }
   renderRfStations();disarm($('rf-save'));rfCalc();
 });
 $('rf-fuel').addEventListener('click',e=>{
@@ -6165,8 +6221,8 @@ async function applyProgram(key){
   rows.forEach(r=>{
     const nm=r[0],val=r[1],gas=r[2],mode=r[3]||'uah';
     const has=s.stations.find(x=>normNet(x.name)===normNet(nm));
-    if(has){has.val=val;has.mode=mode;if(gas!=null)has.valGas=gas;has.prog=key;upd++;}
-    else{s.stations.push({id:id++,name:nm,val:val,valGas:gas==null?'':gas,price:0,mode:mode,prog:key});added++;}
+    if(has){has.val=val;has.mode=mode;if(gas!=null)has.valGas=gas;has.prog=key;if(!has.k)has.k=kind;upd++;}
+    else{s.stations.push({id:id++,name:nm,val:val,valGas:gas==null?'':gas,price:0,mode:mode,prog:key,k:kind});added++;}
   });
   if(!mainStation(s)&&s.stations.length)s.stationId=s.stations[0].id;
   recalcAll();await persist();renderStations();renderAll();
@@ -6177,27 +6233,40 @@ $('st-progs').addEventListener('click',e=>{
   applyProgram(b.dataset.prog);
 });
 
+/* Мережі свого виду пального: водієві на електро бензинові знижки ні до
+   чого, і навпаки. Старі записи без позначки k вважаємо бензогазовими. */
+function stationsOfKind(s){
+  s=s||data.settings;
+  const kind=s.fuelKind||'petrol';
+  return stationsOf(s).filter(st=>kind==='ev'?st.k==='ev':(st.k||'petrol')!=='ev');
+}
 function renderStations(){
   const box=$('st-list');if(!box)return;
-  const s=data.settings,l=stationsOf(s),main=mainStation(s);
+  const s=data.settings,l=stationsOfKind(s),main=mainStation(s);
   if(!l.length){
-    box.innerHTML='<div class="empty">Знижок ще немає. Додайте свої картки — і пальне рахуватиметься за реальною ціною, а не за цінником на табло</div>';
+    box.innerHTML='<div class="empty">'+(s.fuelKind==='ev'
+      ?'Знижок на зарядки ще немає. Додайте свої мережі — FLASH, GO TO-U чи інші.'
+      :'Знижок ще немає. Додайте свої картки — і пальне рахуватиметься за реальною ціною, а не за цінником на табло')+'</div>';
   }else{
     const g=defGrade(s);
     box.innerHTML=l.map(st=>{
-      const on=!!main&&st.id===main.id,cut=stationCut(st,s,g),net=stationNet(st,s,g);
+      /* Лише знижка, без обчисленої «по факту»: базова ціна на табло
+         міняється щотижня, і вчорашня цифра тут виглядала б обіцянкою. */
+      const on=!!main&&st.id===main.id,v=stationVal(st,g);
+      const one=st.mode==='pct'?('−'+fmt1(v)+'%'):('−'+fmt1(v)+' '+UPR());
+      const gasCut=(st.valGas!==''&&st.valGas!=null&&g!=='gas')
+        ?' · на газ −'+fmt1(+st.valGas)+(st.mode==='pct'?'%':' ₴/л'):'';
       return '<div class="st-row'+(on?' on':'')+'" data-st="'+st.id+'">'+
         '<div style="flex:1;min-width:0">'+
           '<div class="d">'+esc(st.name)+(on?' <span class="approx">основна</span>':'')+'</div>'+
-          '<div class="s">'+(cut>0.005?'−'+fmt1(cut)+(st.mode==='pct'?' ('+fmt1(stationVal(st,g))+'%)':'')+' · ':'')+
-            (net>0?'по факту '+fmt1(net)+' '+UPR():'ціну не вказано')+'</div>'+
+          '<div class="s">'+(v>0.005?'знижка '+one+gasCut:'знижки немає — лише запис у чеках')+'</div>'+
         '</div>'+
         '<button class="edit" data-edit="'+st.id+'">Змінити</button></div>';
     }).join('');
   }
   const k=FK(s);
   $('st-note').textContent=l.length
-    ? 'Ціни для марки «'+gradeName(defGrade(s))+'». Пальне рахується за ціною основної мережі, поки немає чеків заправок. Дотик до рядка робить мережу основною.'
+    ? 'Знижка віднімається від ціни на табло, яку ви вписуєте в чеку заправки. Дотик до рядка робить мережу основною.'
     : 'Якщо ви в Uklon або Bolt — натисніть кнопку нижче, і мережі підставляться самі. Або додайте свої: знижка '+k.cut+' чи відсотком.';
 }
 $('st-list').addEventListener('click',async e=>{
@@ -6280,7 +6349,7 @@ $('st-save').addEventListener('click',async()=>{
     const st=s.stations.find(x=>x.id===stId);
     if(st){st.name=name;st.val=val;st.valGas=gas;st.price=price;st.mode=stMode;}
   }else{
-    const st={id:Date.now(),name:name,val:val,valGas:gas,price:price,mode:stMode};
+    const st={id:Date.now(),name:name,val:val,valGas:gas,price:price,mode:stMode,k:s.fuelKind||'petrol'};
     s.stations.push(st);
     if(!mainStation(s)||s.stations.length===1)s.stationId=st.id;
   }
