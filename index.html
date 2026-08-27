@@ -1931,7 +1931,9 @@ function stationNet(st,s,g){
 function stationCut(st,s,g){return stationBase(st,s,g)-stationNet(st,s,g);}
 function mainStation(s){
   s=s||data.settings;
-  const l=stationsOf(s);if(!l.length)return null;
+  /* основною може бути лише мережа свого виду пального: інакше на електро
+     бензинова знижка тихо віднімалась би від ціни кіловата */
+  const l=stationsOfKind(s);if(!l.length)return null;
   return l.find(x=>x.id===s.stationId)||l[0];
 }
 /* Ціна одиниці, за якою рахуємо, поки немає чеків заправок:
