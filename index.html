@@ -14,7 +14,7 @@
 <link rel="icon" href="icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <title>ProTaxi · Фінанси водія</title>
-<meta name="description" content="ProTaxi рахує, скільки з кожної зміни справді залишається водієві: мінус комісія, еквайринг, пальне по чеках, оренда й запас на ремонт.">
+<meta name="description" content="ProTaxi рахує, скільки з кожної зміни справді залишається водієві: мінус комісія, еквайринг, пальне по чеках, оренда й відкладене на ремонт.">
 <!-- Як посилання виглядає, коли його кидають у чат. Адреси мусять бути повними —
      Telegram відносних не читає. Зміниться нікнейм чи назва репозиторію — правити тут. -->
 <meta property="og:type" content="website">
@@ -294,6 +294,7 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 #fin-verdict .vr .z{font-weight:800;font-variant-numeric:tabular-nums}
 #fin-verdict .vsum{margin-top:8px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px}
 #fin-verdict .vdot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex-shrink:0}
+#fin-verdict .vwhy{margin-top:5px;font-size:12.5px;line-height:1.4;color:var(--muted);font-weight:500}
 #fin-verdict .vsum.pos .vdot{background:var(--yellow)}
 #fin-verdict .vsum.neg .vdot{background:var(--red)}
 .orow .t{color:var(--muted);font-size:13px;width:88px;flex-shrink:0;font-variant-numeric:tabular-nums}
@@ -870,11 +871,14 @@ html.map-full .tabbar{display:none}
       <div class="fund-balance" id="fund-balance">₴0</div>
       <div class="progress"><div class="fill" id="fund-fill"></div></div>
       <div class="progress-text"><span id="fund-target-text">ціль ₴0</span><span id="fund-pct">0%</span></div>
-      <button class="btn btn-ghost" id="btn-fund-exp" style="margin-top:14px">Витрата із запасу</button>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn btn-ghost" id="btn-fund-add" style="flex:1;margin:0">Поповнити</button>
+        <button class="btn btn-ghost" id="btn-fund-exp" style="flex:1;margin:0">Витрата</button>
+      </div>
       <p class="hint" id="fund-hint"></p>
     </div>
     <div class="card">
-      <div class="card-title">Витрати із запасу</div>
+      <div class="card-title" id="fundops-title">Витрати й поповнення</div>
       <div id="fundops-list"></div>
     </div>
     <div class="card">
@@ -961,7 +965,7 @@ html.map-full .tabbar{display:none}
     </div>
 
     <div class="acc" data-acc="money">
-      <button class="acc-h" type="button"><span class="t">Гроші й податки<span class="s">служба, комісія, запас, податки</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <button class="acc-h" type="button"><span class="t">Гроші й податки<span class="s">служба, комісія, відкладене, податки</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
       <div class="acc-b">
     <div class="card">
       <div class="card-title">Розрахунок</div>
@@ -1023,7 +1027,7 @@ html.map-full .tabbar{display:none}
       <div class="card-title">Цілі</div>
       <div class="field"><label>Денна ціль на руки, ₴</label><input type="number" inputmode="decimal" id="set-goal"></div>
       <div class="grid2">
-        <div class="field"><label>Ціль запасу, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
+        <div class="field"><label id="lab-starget">Ціль накопичення, ₴</label><input type="number" inputmode="decimal" id="set-starget"></div>
         <div class="field"><label>На що збираєш</label><input type="text" id="set-sname" placeholder="Планове ТО"></div>
       </div>
     </div>
@@ -1098,7 +1102,7 @@ html.map-full .tabbar{display:none}
       <div class="card-title" style="color:var(--red)">Небезпечна зона</div>
       <button class="btn btn-danger" id="btn-wipe">Стерти всі дані…</button>
       <div id="wipe-zone" style="display:none;margin-top:14px">
-        <p class="hint" style="margin:0 0 4px">Крок 2 з 3: проведи повзунок до кінця. Це зітре всі сесії, заправки й запас назавжди — спершу зроби повну копію вище.</p>
+        <p class="hint" style="margin:0 0 4px">Крок 2 з 3: проведи повзунок до кінця. Це зітре всі сесії, заправки й відкладене назавжди — спершу зроби повну копію вище.</p>
         <input type="range" id="wipe-slider" min="0" max="100" value="0" step="1">
         <button class="btn" id="wipe-final" disabled style="margin-top:12px">Крок 3: утримуй 2 секунди</button>
       </div>
@@ -1315,10 +1319,15 @@ html.map-full .tabbar{display:none}
 <!-- Модалка: витрата з фонду -->
 <div class="modal-bg mid" id="modal-fund">
   <div class="modal">
-    <h3>Витрата із запасу</h3>
+    <h3 id="fx-title">Витрата</h3>
+    <div class="wchips" id="fx-kind" style="margin-bottom:14px">
+      <button class="wchip" data-fk="out">Витрата</button>
+      <button class="wchip" data-fk="in">Поповнення</button>
+    </div>
     <div class="field"><label>Сума, ₴</label><input type="number" inputmode="decimal" id="fx-amount" placeholder="0"></div>
     <div class="field"><label>Опис</label><input type="text" id="fx-desc" placeholder="Заміна масла, гума..."></div>
     <div class="field"><label>Дата</label><input type="date" id="fx-date"></div>
+    <p class="hint" id="fx-note" style="margin:0 0 12px"></p>
     <button class="btn btn-primary" id="fx-save">Записати витрату</button>
     <button class="btn btn-ghost" id="fx-cancel">Скасувати</button>
   </div>
@@ -1400,7 +1409,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.59';
+const APP_VER='1.60';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1611,24 +1620,47 @@ function setPay(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x
    Середній рахуємо як гроші/час сумарно, а не середнє від середніх —
    інакше кілька коротких дорогих поїздок перекошують базу. */
 let _baseCache=null,_baseStamp=0;
-function orderBaseline(){
-  if(_baseCache&&Date.now()-_baseStamp<4000)return _baseCache;
+/* ══ СВІТЛОФОР ЗАМОВЛЕНЬ ══
+   З чим порівнюємо — це поточний тиждень, понеділок–неділя. Місто, ціни й
+   попит міняються, тому середнє за весь час швидко перестає щось означати.
+   Поки в тижні менше пʼяти замовлень — беремо минулий тиждень; немає й там —
+   кольорів немає взагалі: на трьох замовленнях висновок був би вигадкою. */
+const ORD_MIN=5;
+function weekStart(ts){
+  const d=new Date(ts);d.setHours(0,0,0,0);
+  d.setDate(d.getDate()-((d.getDay()+6)%7));   /* 0 = понеділок */
+  return d.getTime();
+}
+function baselineIn(from,to){
   let money=0,min=0,km=0,n=0;
-  (data.entries||[]).forEach(e=>(e.orders||[]).forEach(o=>{
+  const eat=o=>{
     if(!o.endT||!o.amount)return;
+    if(o.endT<from||o.endT>=to)return;
     const m=oMin(o); if(m<=0)return;
     money+=+o.amount||0; min+=m; km+=oKm(o); n++;
-  }));
-  _baseCache={n:n,rate:min>0?money/(min/60):0,perKm:km>0?money/km:0,
+  };
+  (data.entries||[]).forEach(e=>(e.orders||[]).forEach(eat));
+  /* поточна зміна теж рахується: інакше в понеділок світлофор мовчав би */
+  if(data.active)(data.active.orders||[]).forEach(eat);
+  return{n:n,rate:min>0?money/(min/60):0,perKm:km>0?money/km:0,
     avgMin:n>0?min/n:0,avgKm:n>0?km/n:0,avgSum:n>0?money/n:0};
-  _baseStamp=Date.now();
+}
+function orderBaseline(){
+  if(_baseCache&&Date.now()-_baseStamp<4000)return _baseCache;
+  const w=weekStart(Date.now()),wEnd=w+7*86400000;
+  let b=baselineIn(w,wEnd); b.src='week';
+  if(b.n<ORD_MIN){
+    const prev=baselineIn(w-7*86400000,w);
+    if(prev.n>=ORD_MIN){prev.src='prev';b=prev;}
+  }
+  _baseCache=b;_baseStamp=Date.now();
   return _baseCache;
 }
 function orderRate(o){const m=oMin(o);return m>0?(+o.amount||0)/(m/60):0;}
 /* g — помітно краще середнього, r — помітно гірше, a — близько до нього */
 function orderTone(o){
   const b=orderBaseline();
-  if(b.n<4||b.rate<=0||isOpen(o))return '';
+  if(b.n<ORD_MIN||b.rate<=0||isOpen(o))return '';
   const r=orderRate(o); if(r<=0)return '';
   const k=r/b.rate;
   if(k>=1.15)return ' tone-g';
@@ -2050,10 +2082,13 @@ function parseSave(raw){
 }
 let restored=false;
 let lastBak=0;
+/* Рахуємо ЛИШЕ записи. Відкрита зміна тут балів не додає: раніше копія з
+   нею отримувала перевагу, і скасована зміна поверталась із резервної копії,
+   бо та була «важчою» за свіжу. Хто новіший — вирішує savedAt. */
 function score(p,gone){
   if(!p)return -1;
   const cnt=(list,kind)=>(gone?dropGone(list,kind,gone):(list||[])).length;
-  return (cnt(p.entries,'e')*1000)+cnt(p.refuels,'r')*20+cnt(p.fundOps,'f')*10+(p.active?5:0);
+  return (cnt(p.entries,'e')*1000)+cnt(p.refuels,'r')*20+cnt(p.fundOps,'f')*10;
 }
 async function load(){
   const raws=[...await store.getAll(KEY),...await store.getAll(BAK)];
@@ -2330,6 +2365,25 @@ function renderHolidays(){
   }
 }
 
+/* ══ ВІДКРИТА СЕСІЯ ЯК ЗВИЧАЙНИЙ ЗАПИС ══
+   Одна формула на всі екрани. Раніше поточну зміну рахували в трьох місцях
+   окремо — і екран зміни, картка цілі та статистика показували різні суми
+   за той самий день. Тепер усі беруть цифри звідси. */
+function activeAsEntry(){
+  const a=data.active;if(!a)return null;
+  const s=data.settings;
+  const gross=(a.orders||[]).reduce((x,o)=>x+(+o.amount||0),0);
+  const km=activeKmEst();
+  const lr=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
+  const inp={gross,tips:tipsOf(a),liters:km/100*lr.cons,km,fuelPrice:lr.price,
+    cardGross:cardGrossOf(a),ownGross:ownGrossOf(a),
+    rentShifts:shiftsOnDay(dateOf(a.startT),true)};
+  return{id:a.id,date:dateOf(a.startT),startT:a.startT,endT:0,open:true,
+    hours:Math.max(0,(Date.now()-a.startT)/3600000),
+    odoStart:+a.odoStart||0,odoEnd:0,orders:a.orders||[],oc:(a.orders||[]).length,
+    weather:'',...inp,calc:calc(inp,s)};
+}
+
 /* Чистими за сьогодні: закриті зміни + оцінка активної */
 function todayTotals(){
   const t=todayStr();
@@ -2337,15 +2391,8 @@ function todayTotals(){
   const add=c=>{net+=c.net;personal+=c.personal;rent+=c.rent||0;
     costs+=(c.commission||0)+(c.acquiring||0)+(c.fuel||0)+(c.rent||0);};
   data.entries.filter(e=>e.date===t).forEach(e=>add(e.calc));
-  if(data.active&&dateOf(data.active.startT)===t){
-    const gross=data.active.orders.reduce((a,o)=>a+(+o.amount||0),0);
-    const km=data.active.orders.reduce((a,o)=>a+oKm(o),0)*idleFactor();
-    const lr=rateFor({date:t,odoStart:data.active.odoStart});
-    const c=calc({gross,tips:tipsOf(data.active),km,liters:km/100*lr.cons,fuelPrice:lr.price,
-      ownGross:ownGrossOf(data.active),cardGross:cardGrossOf(data.active),
-      rentShifts:shiftsOnDay(t,true)},data.settings);
-    add(c);
-  }
+  const ae=activeAsEntry();
+  if(ae&&ae.date===t)add(ae.calc);
   return{net,personal,costs,rent};
 }
 function todayNet(){return todayTotals().net;}
@@ -2434,14 +2481,26 @@ function renderShift(){
       '<div class="field"><label>Одометр, км</label><input type="number" inputmode="decimal" id="open-odo" step="0.1" placeholder="денний"'+(lastKnownOdo()>0?' value="'+fmt1(lastKnownOdo()).replace(',','.')+'"':'')+'></div>'+
       '</div>'+
       '<button class="btn btn-primary" id="btn-open">Розпочати сесію</button>'+
-      '<p class="hint">'+(lastKnownOdo()>0
-        ? 'Підставлено показник з минулої зміни — <b>'+fmt1(lastKnownOdo())+' км</b>. Звірте з лічильником в авто: від цієї цифри рахується весь пробіг і пальне.'
+      '<p class="hint" id="open-note">'+(lastKnownOdo()>0
+        ? 'Підставлено показник з останнього запису — <b>'+fmt1(lastKnownOdo())+' км</b>. Звірте з лічильником в авто: від цієї цифри рахується весь пробіг і пальне.'
         : (lastOdoWasReset()
           ? 'Після заправки лічильник обнулено, тож відлік починається з нуля. Якщо на панелі вже є кілометри — вкажіть їх.'
           : 'Вкажіть показник добового одометра. Далі кілометраж рахується за фактом, а не за картами.'))+'</p></div>'+
       boostCardHTML();
-    $('btn-open').addEventListener('click',async()=>{
+    $('btn-open').addEventListener('click',async function(){
       if(!subActive()){goScreen('sub');toast('Для нової зміни потрібна активна підписка');return;}
+      /* Без показника лічильника нема від чого рахувати пробіг, а без
+         пробігу — ні пального, ні ₴/км. Тому перепитуємо один раз.
+         У того, хто вже працював, поле підставлене, і сюди не потрапляє. */
+      if(num($('open-odo').value)<=0){
+        const nt=$('open-note');
+        if(nt&&this.dataset.armed!=='1')nt.innerHTML='<b>Без одометра не буде пробігу.</b> А без пробігу застосунок не порахує ні пального за зміну, ні ₴ за кілометр, ні холостий хід — лишиться тільки виручка. Вписати можна й потім, у замовленні.';
+        arm(this,'Точно без одометра?',()=>startShift());
+        return;
+      }
+      startShift();
+    });
+    async function startShift(){
       const t=$('open-time').value||nowHM();
       /* Пів на першу ночі, а водій вписує 23:50 — він має на увазі вчорашній
          вечір. Без цього зміна поїхала б на 23 години вперед: закрити її
@@ -2450,7 +2509,7 @@ function renderShift(){
       if(st0>Date.now()+60000)st0-=86400000;
       data.active={id:Date.now(),startT:st0,odoStart:num($('open-odo').value),orders:[],path:[]};
       await persist();renderShift();startTrack();toast('Сесію розпочато о '+t);
-    });
+    }
     return;
   }
 
@@ -2467,14 +2526,9 @@ function renderShift(){
   const estKm=factKm>0?factKm:ordKm*k;
   const approx=factKm<=0;
 
-  /* Рахуємо тими самими правилами, що й закриття зміни: з еквайрингом,
-     чайовими й ціною пального того дня. Інакше сума стрибала б у мить
-     закриття — водій бачив би одне число, а в статистику лягало інше. */
-  const lr=rateFor({date:dateOf(a.startT),odoStart:a.odoStart});
-  const liters=estKm/100*lr.cons;
-  const c=calc({gross,tips:tipsOf(a),liters,km:estKm,fuelPrice:lr.price,
-    ownGross:ownGrossOf(a),cardGross:cardGrossOf(a),
-    rentShifts:shiftsOnDay(dateOf(a.startT),true)},s);
+  /* Підрахунок один на всі екрани — див. activeAsEntry() */
+  const ae=activeAsEntry();
+  const liters=ae.liters, c=ae.calc;
 
   /* Кладемо підрахунок поруч із самою зміною: бот бере цифри звідси, а не
      рахує їх окремо. Інакше два підрахунки з часом розійдуться, і водієві
@@ -2503,7 +2557,7 @@ function renderShift(){
     '<div class="metric split"><div class="v neg">−'+fmt(c.commission)+'</div><div class="k">платформі</div></div>'+
     (c.rent>0?'<div class="metric split"><div class="v neg">−'+fmt(c.rent)+'</div><div class="k">оренда</div></div>':'')+
     '<div class="metric split"><div class="v neg">−'+fmt(c.fuel)+'</div><div class="k">пальне '+fmt1(liters)+' л</div></div>'+
-    '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">у запас</div></div>'+
+    '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">'+esc(fundTab())+'</div></div>'+
     '</div>'+
     '<div class="odo-note">'+fundLabel()+': '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
     (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуйте замовлення з одометром — і цифри стануть точними.</div>':'')+
@@ -2571,19 +2625,30 @@ window.addEventListener('pagehide',()=>{persist();});
 /* ── Прийняти замовлення ── */
 /* Показання лічильника з останньої завершеної зміни.
    Якщо після неї була заправка з обнуленням — лічильник пішов з нуля. */
+/* Останній відомий показник лічильника — з БУДЬ-ЯКОГО запису: зміни,
+   замовлення в ній чи заправки. Раніше дивились лише на підсумок зміни,
+   тому одометр, вписаний у замовленні, не підтягувався.
+   Беремо найбільше значення після останнього обнулення: між заправками
+   лічильник лише зростає. */
+function odoResetCut(){
+  return (data.refuels||[]).reduce((m,rf)=>
+    (rf.reset&&(+rf.resetAt||0)>m)?(+rf.resetAt||0):m,0);
+}
 function lastKnownOdo(){
-  let t=0,v=0;
+  const cut=odoResetCut();
+  let v=0;
+  const put=(t,x)=>{if(+x>0&&(!cut||(+t||0)>=cut))v=Math.max(v,+x);};
   (data.entries||[]).forEach(e=>{
-    const et=e.endT||e.startT||0;
-    if(et>=t){t=et;if(+e.odoEnd>0)v=+e.odoEnd;else if(+e.odoStart>0)v=+e.odoStart;}
+    const et=+e.endT||+e.startT||0;
+    put(et,e.odoEnd);put(+e.startT||et,e.odoStart);
+    (e.orders||[]).forEach(o=>{const ot=+o.endT||+o.t||0;put(ot,o.odoStart);put(ot,o.odoEnd);});
   });
-  if((data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t))return 0;
+  /* заправка теж знає показник — але та, що з обнуленням, знає його ДО нуля */
+  (data.refuels||[]).forEach(rf=>{if(!rf.reset)put(+rf.t||0,rf.odo);});
   return v;
 }
 function lastOdoWasReset(){
-  let t=0;
-  (data.entries||[]).forEach(e=>{const et=e.endT||e.startT||0;if(et>t)t=et;});
-  return t>0&&(data.refuels||[]).some(rf=>rf.reset&&(rf.resetAt||0)>t);
+  return odoResetCut()>0&&lastKnownOdo()<=0;
 }
 function lastOdometer(){
   const a=data.active;if(!a)return 0;
@@ -2672,16 +2737,44 @@ function findOrder(id){
   return null;
 }
 /* Порівняння конкретного замовлення з твоєю ж статистикою */
+/* Чому саме такий висновок — одним рядком і лише за його ж цифрами.
+   Називаємо ту причину, що відхилилась найсильніше: інакше водієві
+   доводиться самому порівнювати три числа. */
+function verdictWhy(o,b){
+  const m=oMin(o),km=oKm(o),amt=+o.amount||0;
+  const r=orderRate(o);
+  const k=b.rate>0?r/b.rate:1;
+  const perKm=km>0?amt/km:0;
+  const kk=(perKm>0&&b.perKm>0)?perKm/b.perKm:0;
+  const kt=(m>0&&b.avgMin>0)?m/b.avgMin:0;
+  const koly=b.src==='prev'?'минулого тижня':'цього тижня';
+  const off=x=>x>0?Math.abs(x-1):0;
+  if(k>=1.15){
+    if(kk>=1.15&&off(kk)>=off(kt))
+      return 'Дорого за кілометр: '+fmt1(perKm)+' ₴/км проти '+fmt1(b.perKm)+' ₴/км '+koly+'.';
+    if(kt>0&&kt<=0.85)
+      return 'Ті самі гроші за менший час: '+Math.round(m)+' хв проти '+Math.round(b.avgMin)+' хв у середньому '+koly+'.';
+    return 'Темп вищий за звичайний: '+fmt(r)+'/год проти '+fmt(b.rate)+'/год '+koly+'.';
+  }
+  if(k<=0.85){
+    if(kt>=1.15&&off(kt)>=off(kk))
+      return 'Довго за ці гроші: '+Math.round(m)+' хв проти '+Math.round(b.avgMin)+' хв у середньому '+koly+'.';
+    if(kk>0&&kk<=0.85)
+      return 'Дешево за кілометр: '+fmt1(perKm)+' ₴/км проти '+fmt1(b.perKm)+' ₴/км '+koly+'.';
+    return 'Темп нижчий за звичайний: '+fmt(r)+'/год проти '+fmt(b.rate)+'/год '+koly+'.';
+  }
+  return 'Темп '+fmt(r)+'/год — майже як завжди ('+fmt(b.rate)+'/год '+koly+').';
+}
 function renderFinVerdict(o){
   const box=$('fin-verdict'); if(!box)return;
   const b=orderBaseline();
   const m=oMin(o), r=orderRate(o);
-  if(isOpen(o)||b.n<4||b.rate<=0||m<=0||r<=0){box.style.display='none';return;}
+  if(isOpen(o)||b.n<ORD_MIN||b.rate<=0||m<=0||r<=0){box.style.display='none';return;}
   const km=oKm(o), perKm=km>0?(+o.amount||0)/km:0;
   const k=r/b.rate;
   const delta=v=>{const d=Math.round(v*100-100);return (d>0?'+':'')+d+'%';};
   const tone=v=>v>=1.15?'pos':(v<=0.85?'neg':'');
-  let h='<div class="vh">За твоєю статистикою</div>';
+  let h='<div class="vh">Порівняно з замовленнями '+(b.src==='prev'?'минулого тижня':'цього тижня')+' · '+b.n+'</div>';
   h+='<div class="vr"><span class="n">Темп</span><span class="z">'+fmt(r)+'/год <span class="'+tone(k)+'">'+delta(k)+'</span></span></div>';
   if(perKm>0&&b.perKm>0){
     const kk=perKm/b.perKm;
@@ -2689,8 +2782,9 @@ function renderFinVerdict(o){
   }
   if(b.avgMin>0)
     h+='<div class="vr"><span class="n">Тривалість</span><span class="z">'+Math.round(m)+' хв <span class="n" style="font-weight:600">· у середньому '+Math.round(b.avgMin)+'</span></span></div>';
-  const verdict=k>=1.15?['Вигідне замовлення','pos']:(k<=0.85?['Невигідне — довго за ці гроші','neg']:['Звичайне, близьке до середнього','']);
+  const verdict=k>=1.15?['Вигідне замовлення','pos']:(k<=0.85?['Невигідне замовлення','neg']:['Звичайне, близьке до середнього','']);
   h+='<div class="vsum '+verdict[1]+'"><i class="vdot"></i>'+verdict[0]+'</div>';
+  h+='<div class="vwhy">'+esc(verdictWhy(o,b))+'</div>';
   box.innerHTML=h; box.style.display='block';
 }
 function openFinish(id){
@@ -3600,7 +3694,10 @@ $('cm-weather').addEventListener('click',e=>{
 $('cm-back').addEventListener('click',()=>{disarm($('cm-cancelshift'));closeM('modal-close');});
 $('cm-cancelshift').addEventListener('click',function(){
   arm(this,'Точно скасувати?',async()=>{
-    data.active=null;stopTrack();await persist();closeM('modal-close');renderShift();toast('Сесію скасовано');
+    /* Позначка — щоб скасовану зміну не повернула ні резервна копія, ні
+       хмара; відправка одразу — щоб хмара не лишилась зі старим станом. */
+    if(data.active)markGone('e',data.active.id);
+    data.active=null;stopTrack();await persist(true);closeM('modal-close');renderShift();toast('Сесію скасовано');
   });
 });
 /* Один-єдиний шлях закриття зміни — і руками, і автоматично. Дві копії
@@ -3643,7 +3740,9 @@ $('cm-save').addEventListener('click',async()=>{
   const c=closeShiftWith({endT,odoEnd:num($('cm-odo').value),tips:num($('cm-tips').value),
                           liters:num($('cm-liters').value),weather:cmWeather});
   if(!c)return;
-  await persist();closeM('modal-close');renderAll();
+  /* одразу в хмару: оновлення сторінки за секунду після закриття не має
+     повертати зміну у відкритий стан */
+  await persist(true);closeM('modal-close');renderAll();
   tap('shift.close');
   toast('Сесію завершено: '+fmt(c.personal)+' на руки');
   if(gToken&&Date.now()<gExp)driveUp(true); /* тиха копія у Drive */
@@ -3790,7 +3889,9 @@ function periodBounds(){
 }
 function ordersStatsIn(from,to){
   let n=0,money=0,min=0,km=0,liters=0,shiftKm=0;
-  (data.entries||[]).forEach(e=>{
+  const ae=activeAsEntry();
+  const src=ae?[...(data.entries||[]),ae]:(data.entries||[]);
+  src.forEach(e=>{
     if(e.date<from||e.date>to)return;
     liters+=+e.liters||0; shiftKm+=+e.km||0;
     (e.orders||[]).forEach(o=>{
@@ -3848,6 +3949,10 @@ function renderOrdersAnalysis(){
 }
 function renderStats(){
   const es=data.entries.filter(e=>inPeriod(e.date));
+  /* Відкриту сесію показуємо нарівні із закритими: водій дивиться
+     «скільки я заробив сьогодні», а не «скільки вже записано». */
+  const ae=activeAsEntry();
+  if(ae&&inPeriod(ae.date))es.push(ae);
   $('s-personal').textContent=fmt(es.reduce((a,e)=>a+((e.calc&&+e.calc.personal)||0),0));
   $('s-gross').textContent=fmt(es.reduce((a,e)=>a+(+e.gross||0),0));
   $('s-orders').textContent=es.reduce((a,e)=>a+(e.oc||0),0).toLocaleString('uk-UA');
@@ -3861,7 +3966,10 @@ function renderDayDetail(){
   const box=$('day-detail');box.innerHTML='';
   if(period!=='today'&&period!=='yesterday'&&period!=='day')return;
   const dsel=period==='today'?todayStr():(period==='yesterday'?ydayStr():dayCursor);
-  const list=data.entries.filter(e=>e.date===dsel).sort((a,b)=>(a.startT||0)-(b.startT||0));
+  const ae=activeAsEntry();
+  const list=data.entries.filter(e=>e.date===dsel)
+    .concat(ae&&ae.date===dsel?[ae]:[])
+    .sort((a,b)=>(a.startT||0)-(b.startT||0));
   if(!list.length){
     box.innerHTML='<div class="card"><div class="empty">За '+fmtDate(dsel)+' сесій немає</div></div>';
     return;
@@ -3886,7 +3994,7 @@ function renderDayDetail(){
   list.forEach((e,ix)=>{
     const card=document.createElement('div');card.className='card';
     const ordKm=(e.orders||[]).reduce((a,o)=>a+oKm(o),0);
-    let h='<div class="card-title">'+(e.weather?WEMO[e.weather]+' ':'')+(list.length>1?'Сесія '+(ix+1)+' · ':fmtDate(e.date)+' · ')+(e.startT?hm(e.startT)+'–'+hm(e.endT):'')+' · '+fmtHours(e.hours)+'</div>';
+    let h='<div class="card-title">'+(e.weather?WEMO[e.weather]+' ':'')+(list.length>1?'Сесія '+(ix+1)+' · ':fmtDate(e.date)+' · ')+(e.startT?hm(e.startT)+'–'+(e.open?'триває':hm(e.endT)):'')+' · '+fmtHours(e.hours)+'</div>';
     h+='<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(+e.gross||0)+'</span></div>';
     if(+e.tips>0)h+='<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(+e.tips)+'</span></div>';
     h+='<div class="ins"><span class="k">Платформі'+(platName()?' · '+esc(platName()):'')+'</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
@@ -4163,7 +4271,10 @@ function renderQuality(es){
 
 function renderGoal(){
   const g=data.settings.dailyGoal||0;
-  const tn=todayNet();
+  /* Ціль вписується «на руки» — і рахувати треба на руки, як у картці на
+     екрані зміни. Раніше тут стояло чисте, тому дві смужки за той самий
+     день показували різні відсотки. */
+  const tn=todayTotals().personal;
   const p=g>0?Math.min(100,Math.round(tn/g*100)):0;
   $('goal-fill').style.width=p+'%';
   $('goal-text').textContent=fmt(tn)+' з '+fmt(g);
@@ -4302,7 +4413,8 @@ async function applyPayload(txt,quiet){
   data.entries=dropGone(p.entries,'e',g);
   data.fundOps=dropGone(p.fundOps,'f',g);
   data.refuels=dropGone(p.refuels,'r',g);
-  data.active=p.active||null;
+  /* відкриту зміну з чужої копії беремо лише якщо її не скасовували тут */
+  data.active=(p.active&&!g['e:'+p.active.id])?p.active:null;
   data.entries.forEach(en=>{
     if(!Array.isArray(en.orders))en.orders=[];
     en.oc=en.orders.length;
@@ -4359,7 +4471,7 @@ const CHANGELOG=[
   ],tip:'Синхронізація працює автоматично, поки застосунок відкрито через бота.'},
   {v:'1.0',d:'24.08.2026',items:[
     'Зміни й замовлення: скільки завгодно сесій за день, кожне замовлення з часом і одометром',
-    'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й запасу',
+    'Головна цифра — «На руки»: скільки лишається після комісії, еквайрингу, пального, оренди й відкладеного',
     'Оцінка замовлень: зелене — вигідніше за середній темп, червоне — гірше',
     'Оренда авто: сумою за день, тиждень чи місяць — або відсотком від чистого',
     'Відкладання: відсотком від чистого або гривнями за кілометр',
@@ -4412,15 +4524,15 @@ const INTRO=[
   p:'На початку — одна кнопка й показник одометра. На замовленні — сума, спосіб оплати й одометр. У кінці — здача та підсумок.<br><br>Постійних пасажирів можна позначати як <b>своїх</b>: комісія з таких замовлень не рахується.'},
  {ico:SVI.fuel,t:'Пальне за фактом, а не за паспортом',
   p:'Заправка записується з чека: мережа, марка, літри й ціна. Витрата рахується <b>від повного бака до повного</b>.<br><br>Бензин, газ чи електро — рахунок іде у ваших одиницях. Знижки Uklon або Bolt підставляються однією кнопкою.'},
- {ico:SVI.money,t:'Ціль дня і запас на ремонт',
-  p:'Застосунок показує не відсоток на смужці, а скільки ще <b>замовлень і часу</b> лишилось до денної цілі — за вашою статистикою саме в цей день тижня.<br><br>Частина кожної зміни лягає в запас: на ремонт, якщо авто своє, або на оренду наперед, якщо орендоване.'},
+ {ico:SVI.money,t:'Ціль дня і відкладене на ремонт',
+  p:'Застосунок показує не відсоток на смужці, а скільки ще <b>замовлень і часу</b> лишилось до денної цілі — за вашою статистикою саме в цей день тижня.<br><br>Частина кожної зміни відкладається: на ремонт, якщо авто своє, або на оренду наперед, якщо орендоване.'},
  {ico:SVI.map,t:'Де і коли ви заробляєте більше',
   p:'Кожне замовлення порівнюється з вашим власним темпом: <b>зелене — вигідніше, червоне — ні</b>.<br><br>Мапа забарвлює прибуткові вулиці вашого міста, а статистика показує найкращі години й дні тижня.'},
  {ico:SVI.lock,t:'Ваші гроші — ваша справа',
   p:'Записи зберігаються на вашому телефоні, а копія в хмарі <b>привʼязана до вашого Telegram</b> — з чужого акаунта її не відкрити.<br><br>Ці дані не передаються нікому: ні службі таксі, ні податковій, ні рекламодавцям. Ми не питаємо ні прізвища, ні номера авто, ні платіжних даних.'},
  {ico:SVI.warn,t:'Три хвилини, які все вирішують',
   p:'Далі — три коротких кроки: авто, пальне, гроші.<br><br><b>Поки ці цифри не вказані, застосунок рахує навмання.</b> Він не знає ні вашої комісії, ні витрати, ні ціни пального — і всі підсумки будуть неправильні.<br><br>Заповніть зараз: це швидше, ніж потім розбиратись, звідки взялись дивні суми. Змінити їх можна будь-коли в розділі «Ще».'},
- {setup:'car',t:'Крок 1 · Авто',p:'Своє чи орендоване. Від цього залежить, що віднімати з кожної зміни й на що збирати запас.'},
+ {setup:'car',t:'Крок 1 · Авто',p:'Своє чи орендоване. Від цього залежить, що віднімати з кожної зміни й на що збирати гроші.'},
  {setup:'fuel',t:'Крок 2 · Пальне',p:'Вид пального, витрата й ціна. Без цих трьох цифр пальне рахуватиметься навмання.'},
  {setup:'money',t:'Крок 3 · Гроші',p:'Служба, комісія й ціль на день. Останній крок — і можна працювати.'}
 ];
@@ -4763,7 +4875,7 @@ const subPrice=b=>{
 const subBeta=()=>!PAY_OPEN||!!(bill&&bill.beta);
 const subActive=()=>!PAY_OPEN||!bill||subBeta()||bill.active!==false;
 const SUB_FEATURES=[
-  ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й запас віднімаються автоматично. Видно, скільки залишилось на руки'],
+  ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й відкладене віднімаються автоматично. Видно, скільки залишилось на руки'],
   ['Оцінка кожного замовлення','Замовлення порівнюється з вашим середнім темпом: видно, на чому ви заробляєте, а на чому втрачаєте час'],
   ['Пальне за фактом','Витрата рахується від повного бака до повного за вашими ж чеками, а не за паспортом авто'],
   ['Дохідність вулиць і годин','Мапа показує, де ваш ₴/год вищий, а статистика — у які години та дні виходити вигідніше'],
@@ -4932,7 +5044,7 @@ function drawShare(){
   c.font='800 150px '+SHARE_FONT;c.fillStyle='#F5F6F8';
   c.fillText(fmt(st.personal),P,P+306);
   c.font='500 38px '+SHARE_FONT;c.fillStyle='#9DA3AE';
-  c.fillText('на руки — після комісії, пального й запасу',P,P+400);
+  c.fillText('на руки — після комісії, пального й відкладеного',P,P+400);
 
   /* картки з цифрами */
   const cells=[
@@ -5048,7 +5160,7 @@ const admRow=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v
    перемикач періодів і те, що люди робили за цей період. Дані бере окрема
    RPC public.admin_pulse — вона одна вміє рахувати по днях. Немає її
    в базі — панель показує старий вигляд, без плиток. */
-let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0;
+let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0,admSrc=null;
 const ADM_PERIODS=[['today','Сьогодні'],['yesterday','Вчора'],['week','Тиждень'],
                    ['month','Місяць'],['year','Рік'],['all','Весь час']];
 async function loadAdminPulse(){
@@ -5059,6 +5171,11 @@ async function loadAdminPulse(){
     const r=await sbRpc('admin_pulse',{p_init_data:TG.initData,p_period:admPeriod});
     if(seq!==admPulseSeq)return;
     admPulse=r;admPulseErr='';admPulseNoFn=false;
+    /* джерела живуть окремою функцією: щоб додати їх, не чіпаючи admin_pulse */
+    try{
+      const sr=await sbRpc('admin_sources',{p_init_data:TG.initData,p_period:admPeriod});
+      if(seq===admPulseSeq)admSrc=sr;
+    }catch(e){if(seq===admPulseSeq)admSrc=null;}
   }catch(e){
     if(seq!==admPulseSeq)return;
     const m=String((e&&e.message)||e);
@@ -5111,6 +5228,7 @@ function admPulseBody(){
     admRow('Середнє на руки за зміну',fmt(v.avg_shift||0))+
     admRow('Середній чек',fmt(v.avg_check||0))+
     '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>'+
+    admSources()+
     admTaps();
 }
 /* Чим користуються. Ключі приходять з бази як є, а підписи живуть тут —
@@ -5122,11 +5240,31 @@ const TAP_NAMES={
   'order.new':'Прийняти замовлення','shift.close':'Завершити зміну',
   'refuel.open':'Відкрити заправку','refuel.save':'Зберегти заправку',
   'share.open':'Відкрити підсумок картинкою','share.done':'Поділились підсумком',
-  'fund.spend':'Витрата з відкладеного','station.save':'Зберегти мережу АЗС',
+  'fund.spend':'Витрата з відкладеного','fund.add':'Поповнення відкладеного','station.save':'Зберегти мережу АЗС',
   'map.full':'Мапа на весь екран','support':'Написати в підтримку',
   'backup.copy':'Скопіювати дані','gloss':'Словник понять',
   'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності'
 };
+/* Звідки приходять люди. Список ніде не заданий — які мітки трапились,
+   такі й показуємо. «direct» — зайшов без мітки, «unknown» — був у базі
+   ще до того, як мітки зʼявились. */
+function admSources(){
+  const d=admSrc;
+  if(!d||!Array.isArray(d.rows))return '';
+  const rows=d.rows.filter(x=>+x.n>0);
+  if(!rows.length)return '<div class="card"><div class="card-title">Джерела трафіку</div>'+
+    '<div class="empty">За цей період ніхто не приходив</div></div>';
+  const top=Math.max(1,...rows.map(x=>+x.n||0));
+  const nice=k=>k==='direct'?'Без мітки':(k==='unknown'?'Були раніше':k);
+  return '<div class="card"><div class="card-title">Джерела трафіку · '+
+    (+d.total||0)+' за період</div>'+
+    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(nice(x.src))+'</span>'+
+      '<b>'+(+x.n||0)+'</b></div>'+
+      admBar(Math.round((+x.n||0)/top*100))+
+      '<div class="fn-l">останній '+admAgo(x.last)+'</div></div>').join('')+
+    '<p class="hint">Мітка ставиться один раз — при першому вході. Посилання: '+
+    'https://t.me/'+SUPPORT_BOT+'/app?startapp=<b>мітка</b></p></div>';
+}
 function admTaps(){
   const t=(admPulse&&admPulse.taps)||null;
   if(!t||!Object.keys(t).length)return '';
@@ -5203,7 +5341,7 @@ function admAna(d){
      admRow('Середня витрата',(st.avg_cons||0)+' л/100')+
      admRow('Середня ціна літра',fmt1(st.avg_price||0)+' ₴')+
      admRow('Середній бак',(st.avg_tank||0)+' л')+
-     admRow('Середній запас',(st.avg_fund||0)+'% від чистого')+
+     admRow('Середнє відкладення',(st.avg_fund||0)+'% від чистого')+
      '<p class="hint">Реальні цифри ринку, зібрані самі собою. Комісія й ціна літра тут — те, що водії бачать у себе, а не те, що пишуть у новинах.</p></div>';
 
   const use=d.use||[],un=d.users||0;
@@ -5403,7 +5541,7 @@ const GLOSS=[
   ['Еквайринг','Плата за приймання оплати карткою. Береться тільки із замовлень, оплачених карткою, і понад комісію платформи.'],
   ['Чисте','Виручка мінус комісія, еквайринг, пальне й оренда, плюс чайові. Те, що лишилось до відкладань і податків.'],
   ['Обслуговування · Оренда наперед','Частина кожної зміни, яку застосунок відкладає окремо. Розділ називається так, як ви обрали в налаштуваннях: на своєму авто — «Обслуговування» (ремонт, ТО, гума), на орендованому — «Оренда наперед». Гроші нікуди не діваються, просто рахуються окремо, щоб не витратились.'],
-  ['На руки','Головна цифра. Чисте мінус запас і податки — стільки насправді ваше.'],
+  ['На руки','Головна цифра. Чисте мінус відкладене і податки — стільки насправді ваше.'],
   ['Свій клієнт','Замовлення повз платформу: постійний пасажир, домовленість напряму. Комісія з нього не рахується, еквайринг теж.']]],
  ['Темп і оцінка',[
   ['Темп','Скільки гривень на руки виходить за годину. Головна міра вигідності: дві однакові за сумою поїздки різні, якщо одна забрала вдвічі більше часу.'],
@@ -5557,6 +5695,29 @@ async function cloudCall(payload){
   if(!r.ok)throw new Error('sync '+r.status+' '+(await r.text()).slice(0,120));
   return await r.json();
 }
+/* ══ ЗВІДКИ ПРИЙШЛА ЛЮДИНА ══
+   Посилання виду t.me/ProTaxiApp_Bot/app?startapp=tiktok відкриває застосунок
+   одразу, а мітку Telegram кладе в start_param. Бот для цього не потрібен:
+   параметр приходить прямо сюди. Немає мітки — це «direct».
+   Записуємо ОДИН раз на людину: цінна саме перша точка входу, тому сервер
+   другий запис ігнорує. */
+function trafficSrc(){
+  let v='';
+  try{v=(TG&&TG.initDataUnsafe&&TG.initDataUnsafe.start_param)||'';}catch(e){}
+  if(!v){try{v=new URLSearchParams(location.search).get('src')||'';}catch(e){}}
+  v=String(v).toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,32);
+  return v||'direct';
+}
+async function sendSrc(){
+  if(!TG||!TG.initData||data.settings.srcSent)return;
+  try{
+    const r=await sbRpc('touch_src',{p_init_data:TG.initData,p_src:trafficSrc()});
+    /* ok приходить лише тоді, коли рядок водія вже є; інакше спробуємо
+       наступного разу — сам факт мітки нікуди не дінеться */
+    if(r&&r.ok){data.settings.srcSent=1;await persist();}
+  }catch(e){}
+}
+
 /* Перший запуск: чия копія свіжіша — та й лишається */
 async function cloudPull(){
   if(!TG||!TG.initData)return;
@@ -5568,6 +5729,7 @@ async function cloudPull(){
       if(p)await applyPayload(JSON.stringify(res.payload),true);   /* тихо: людина нічого не натискала */
     }
     cloudState='ok';
+    sendSrc();                 /* рядок водія вже є — можна позначити джерело */
   }catch(e){cloudState='err';}
   renderCloud();
 }
@@ -6134,9 +6296,12 @@ $('rf-del').addEventListener('click',function(){
 
 /* ══ ФОНДИ ══ */
 function renderFunds(){
-  const spent=data.fundOps.reduce((a,o)=>a+(+o.amount||0),0);
+  /* Записи фонду бувають двох напрямків: витрата (стара поведінка, без
+     позначки) і поповнення руками. Старі записи без `in` — це витрати. */
+  const spent=data.fundOps.filter(o=>!o.in).reduce((a,o)=>a+(+o.amount||0),0);
+  const added=data.fundOps.filter(o=>o.in).reduce((a,o)=>a+(+o.amount||0),0);
   const earned=data.entries.reduce((a,e)=>a+e.calc.fund,0);
-  const bal=earned-spent;
+  const bal=earned+added-spent;
   $('fund-name').textContent=fundLabel()+' · '+(data.settings.serviceName||'ціль');
   const tl=$('tab-fund-lbl');if(tl)tl.textContent=fundTab();
   $('fund-hint').textContent=fundHint();
@@ -6147,15 +6312,15 @@ function renderFunds(){
   $('fund-target-text').textContent='ціль '+fmt(t);
   $('fund-pct').textContent=p+'%';
   const box=$('fundops-list');box.innerHTML='';
-  if(!data.fundOps.length)box.innerHTML='<div class="empty">Витрат ще не було</div>';
+  if(!data.fundOps.length)box.innerHTML='<div class="empty">Записів ще не було</div>';
   [...data.fundOps].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(o=>{
     const row=document.createElement('div');row.className='hist-item';
-    row.innerHTML='<div class="hist-main"><div class="d">'+esc(o.desc||'Витрата')+'</div><div class="s">'+fmtDate(o.date)+'</div></div>'+
-      '<div class="hist-net neg">−'+fmt(o.amount)+'</div>';
+    row.innerHTML='<div class="hist-main"><div class="d">'+esc(o.desc||(o.in?'Поповнення':'Витрата'))+'</div><div class="s">'+fmtDate(o.date)+'</div></div>'+
+      '<div class="hist-net '+(o.in?'pos">+':'neg">−')+fmt(o.amount)+'</div>';
     const del=document.createElement('button');del.className='del';del.textContent='✕';
     del.addEventListener('click',()=>confirmDel(del,async()=>{
       markGone('f',o.id);
-      data.fundOps=data.fundOps.filter(x=>x.id!==o.id);await persist(true);renderAll();toast('Витрату видалено');
+      data.fundOps=data.fundOps.filter(x=>x.id!==o.id);await persist(true);renderAll();toast(o.in?'Поповнення видалено':'Витрату видалено');
     }));
     row.appendChild(del);box.appendChild(row);
   });
@@ -6168,13 +6333,40 @@ function renderFunds(){
   if(tq>0){$('tax-row').style.display='flex';$('tax-quarter').textContent=fmt(tq);}
   else $('tax-row').style.display='none';
 }
-$('btn-fund-exp').addEventListener('click',()=>{tap('fund.spend');$('fx-date').value=todayStr();$('fx-amount').value='';$('fx-desc').value='';openM('modal-fund');});
+/* Відкладати можна не лише з таксі: у водія буває й інший заробіток, а
+   стежити за накопиченням зручно в одному місці. Тому запис у фонд має два
+   напрямки — витрата і поповнення. */
+let fxKind='out';
+function renderFxKind(){
+  document.querySelectorAll('#fx-kind .wchip').forEach(b=>b.classList.toggle('on',b.dataset.fk===fxKind));
+  const inMode=fxKind==='in';
+  $('fx-title').textContent=inMode?'Поповнення':'Витрата';
+  $('fx-desc').placeholder=inMode?'З іншої роботи, з премії...':'Заміна масла, гума...';
+  $('fx-save').textContent=inMode?'Записати поповнення':'Записати витрату';
+  $('fx-note').textContent=inMode
+    ? 'Гроші, відкладені не з таксі. Додаються до «'+fundLabel()+'» і наближають ціль.'
+    : 'Гроші, витрачені з «'+fundLabel()+'». Віднімаються від відкладеного.';
+}
+function openFundOp(kind){
+  fxKind=kind;
+  tap(kind==='in'?'fund.add':'fund.spend');
+  $('fx-date').value=todayStr();$('fx-amount').value='';$('fx-desc').value='';
+  renderFxKind();openM('modal-fund');
+}
+$('fx-kind').addEventListener('click',e=>{
+  const b=e.target.closest('.wchip');if(!b)return;
+  fxKind=b.dataset.fk;renderFxKind();
+});
+$('btn-fund-exp').addEventListener('click',()=>openFundOp('out'));
+$('btn-fund-add').addEventListener('click',()=>openFundOp('in'));
 $('fx-cancel').addEventListener('click',()=>closeM('modal-fund'));
 $('fx-save').addEventListener('click',async()=>{
   const a=num($('fx-amount').value);
   if(a<=0){toast('Вкажи суму');return;}
-  data.fundOps.push({id:Date.now(),date:$('fx-date').value||todayStr(),amount:a,desc:$('fx-desc').value.trim()});
-  await persist();closeM('modal-fund');renderAll();toast('Витрату записано');
+  data.fundOps.push({id:Date.now(),date:$('fx-date').value||todayStr(),amount:a,
+    desc:$('fx-desc').value.trim(),in:fxKind==='in'});
+  await persist();closeM('modal-fund');renderAll();
+  toast(fxKind==='in'?'Поповнення записано':'Витрату записано');
 });
 
 /* ══ НАЛАШТУВАННЯ ══ */
@@ -6207,7 +6399,7 @@ function renderCarMode(){
   document.querySelectorAll('#car-mode .mode').forEach(b=>b.classList.toggle('on',(b.dataset.cm==='rent')===rent));
   $('rent-card').style.display=rent?'':'none';
   $('car-note').textContent=rent
-    ? 'Оренда знімається з кожної зміни, а запас збирається на неї ж — щоб гроші на авто лежали окремо від твоїх.'
+    ? 'Оренда знімається з кожної зміни, а відкладене збирається на неї ж — щоб гроші на авто лежали окремо від твоїх.'
     : 'Оренда не рахується. Відкладається на ремонт, ТО й гуму — те, що рано чи пізно все одно доведеться платити.';
 }
 document.querySelectorAll('#car-mode .mode').forEach(b=>b.addEventListener('click',async()=>{
