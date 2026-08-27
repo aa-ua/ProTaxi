@@ -1426,7 +1426,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.64';
+const APP_VER='1.65';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4393,7 +4393,7 @@ function renderDiag(){
      не пояснюють, зате показують, на чому все зроблено. Лишаємо тільки
      ознаку «відкрито як файл» — вона справді стосується його даних. */
   if(isFileProtocol())add('Адреса','локальний файл');
-  else if(admData){add('Адреса',location.host);add('Сторінка',location.pathname||'/');}
+  else if(admView()){add('Адреса',location.host);add('Сторінка',location.pathname||'/');}
   add('Перевірка збереження',persistOK===true?'працює':persistOK===false?'обнуляється':'перевіримо при наступному запуску');
   add('Записів у пам\'яті',data.entries.length+' сесій · '+data.refuels.length+' заправок');
   add('Остання повна копія',data.backupAt?Math.floor((Date.now()-data.backupAt)/86400000)+' дн. тому':'ще не робив');
@@ -4401,12 +4401,13 @@ function renderDiag(){
   if(tu)add('Telegram ID',tu.id);
   /* Мітку показуємо ТІЛЬКИ власнику: водієві вона ні про що не каже —
      він і сам знає, звідки прийшов, — а виглядає як стеження. */
-  if(TG&&admData){
+  if(TG&&admView()){
     const sp=(function(){try{return TG.initDataUnsafe&&TG.initDataUnsafe.start_param;}catch(e){return null;}})();
     add('Мітка з посилання',sp?esc(String(sp)):'немає — зайшли без мітки');
     add('Записано як джерело',esc(trafficSrc())+(data.settings.srcSent?' · збережено':' · ще не збережено'));
   }
-  add('Адмін-панель',admWhy);
+  /* Про адмін-панель водієві знати нема чого — її для нього не існує. */
+  if(admView())add('Адмін-панель',admWhy);
   box.innerHTML=rows.join('');
 
   top.className='diag';
@@ -5611,6 +5612,12 @@ $('admin-body').addEventListener('click',async e=>{
    кнопка ховається на будь-яку відмову сервера. Причину кладемо в
    діагностику, щоб не гадати. */
 let admWhy='перевіряємо…';
+/* Рядки для власника показуємо, коли панель відповіла. Але якщо щит
+   зникне, причину теж треба десь побачити — для цього запасний хід:
+   відкрити адресу з ?adm=1. Водій про нього не знає й не потребує. */
+let admForce=false;
+try{admForce=new URLSearchParams(location.search).has('adm');}catch(e){}
+const admView=()=>!!admData||admForce;
 async function renderAdmin(){
   const btn=$('btn-admin');if(!btn)return;
   const done=()=>{if($('diag-list'))renderDiag();};
