@@ -600,6 +600,11 @@ textarea.io{width:100%;min-height:110px;background:var(--surface2);border:1px so
 .topacts{margin-left:auto;display:flex;gap:8px;flex-shrink:0}
 .logo-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 @media (max-width:359px){.logo-sub{display:none}}
+/* Тісно в шапці стає лише в одного — власника: у нього до корони додається
+   ще й щит адмінки, і підпис «Фінанси водія» обрізається посеред слова.
+   Тому правило вимагає ОБИДВІ ознаки. У звичайного водія з короною щита
+   немає, і в нього все лишається як було. Перевірено на 320–430 px. */
+@media (max-width:399px){html.has-crown.has-adm .logo-sub{display:none}}
 .avatar{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid transparent;color:var(--muted);font-family:inherit;font-weight:800;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .avatar svg{width:20px;height:20px}
 .soon{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);margin-left:8px;vertical-align:middle}
@@ -1461,7 +1466,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.69';
+const APP_VER='1.70';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4981,7 +4986,9 @@ async function loadBilling(){
    щось означати. */
 function renderCrown(){
   const b=$('btn-crown');if(!b)return;
-  b.style.display=(bill&&bill.beta)?'block':'none';
+  const on=!!(bill&&bill.beta);
+  b.style.display=on?'block':'none';
+  document.documentElement.classList.toggle('has-crown',on);
 }
 $('btn-crown').addEventListener('click',()=>{tap('crown');openM('modal-crown');});
 $('crown-ok').addEventListener('click',()=>closeM('modal-crown'));
@@ -5767,18 +5774,20 @@ const admView=()=>!!admData||admForce;
 async function renderAdmin(){
   const btn=$('btn-admin');if(!btn)return;
   const done=()=>{if($('diag-list'))renderDiag();};
-  if(!TG||!TG.initData){btn.style.display='none';admWhy='працює лише в Telegram';done();return;}
+  const hideShield=()=>{btn.style.display='none';document.documentElement.classList.remove('has-adm');};
+  if(!TG||!TG.initData){hideShield();admWhy='працює лише в Telegram';done();return;}
   try{
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData,p_period:admPeriod});
-    if(!st){btn.style.display='none';admWhy='сервер віддав порожню відповідь';done();return;}
+    if(!st){hideShield();admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
     await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse(),loadAdminFolks()]);
     btn.style.display='';
+    document.documentElement.classList.add('has-adm');
     admWhy='доступ є';
     $('admin-live').textContent=(st.active_1d||0)+' сьогодні';
     admPaint();
   }catch(e){
-    btn.style.display='none';
+    hideShield();
     const t=String((e&&e.message)||e);
     admWhy=/не власник/i.test(t) ? 'база не впізнала ваш Telegram ID (admin_id)'
          : /404|PGRST202|Could not find/i.test(t) ? 'функції admin_stats немає в базі'
