@@ -446,10 +446,13 @@ html.in-tg .modal-bg.mid .modal{max-height:none}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:14px}
 
-.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;box-shadow:0 8px 30px rgba(0,0,0,.4);
-  /* довгі підписи не вміщались у ширину екрана — переносимо рядок */
-  max-width:calc(100% - 36px);white-space:normal;text-align:center;line-height:1.35}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast{position:fixed;left:14px;right:14px;transform:translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14.5px;padding:13px 16px;border-radius:14px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;box-shadow:0 8px 30px rgba(0,0,0,.4);
+  /* На всю ширину, а не по центру: раніше стояло left:50% з максимальною
+     шириною, і повідомлення на кілька слів згорталось у вузький високий
+     стовпчик — читати важко, а місця займає більше. Тепер один-два рядки
+     майже від краю до краю. */
+  white-space:normal;text-align:center;line-height:1.32;text-wrap:balance}
+.toast.show{opacity:1;transform:translateY(0)}
 
 /* Поки відкрита клавіатура, нижня панель їде вниз — інакше вона накриває поле вводу */
 html.kbd .tabbar{transform:translate(-50%,115%);pointer-events:none}
@@ -1469,7 +1472,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.74';
+const APP_VER='1.75';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2544,7 +2547,7 @@ function setupGapHTML(){
   return '<div class="card setup-gap"><div class="card-title">Перевірте цифри перед першою зміною</div>'+
     '<p class="hint" style="margin:0 0 10px">Це заводські значення — вони не ваші. Поки вони стоять, застосунок рахуватиме чужі гроші, а підсумки виглядатимуть правдиво й будуть неправильні.</p>'+
     g.map(x=>'<div class="ins"><span class="k">'+esc(x.t)+'</span><span class="v" style="color:var(--amber)">'+
-      esc(fmt1(+data.settings[x.k]||0)+' '+x.u())+'</span></div>'+
+      esc(fmt1(+data.settings[x.k]||0)+(x.u()==='%'?'%':' '+x.u()))+'</span></div>'+
       '<p class="hint" style="margin:-2px 0 8px">'+esc(x.why)+'</p>').join('')+
     '<button class="btn btn-ghost" id="btn-setup-gap">Вписати свої</button></div>';
 }
