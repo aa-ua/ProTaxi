@@ -1466,7 +1466,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.72';
+const APP_VER='1.73';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5983,19 +5983,34 @@ async function cloudCall(payload){
    параметр приходить прямо сюди. Немає мітки — це «direct».
    Записуємо ОДИН раз на людину: цінна саме перша точка входу, тому сервер
    другий запис ігнорує. */
-function trafficSrc(){
+/* Мітка з посилання, як її дав Telegram цього разу. */
+function srcParam(){
   let v='';
   try{v=(TG&&TG.initDataUnsafe&&TG.initDataUnsafe.start_param)||'';}catch(e){}
   if(!v){try{v=new URLSearchParams(location.search).get('src')||'';}catch(e){}}
-  v=String(v).toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,32);
-  return v||'direct';
+  return String(v).toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,32);
+}
+/* ЗАПАМʼЯТОВУЄМО ОДРАЗУ, у себе на телефоні.
+   Рядок водія в базі зʼявляється лише після першого справжнього збереження,
+   а до того сервер мітку не приймає. Наступного разу застосунок відкриють
+   уже з меню бота — без мітки — і вона б загубилась назавжди, записавшись
+   як «direct». Саме через це реклама виглядала так, ніби не працює. */
+function rememberSrc(){
+  const v=srcParam();
+  if(v&&!data.settings.srcMark&&!data.settings.srcSent){
+    data.settings.srcMark=v;
+    persist();
+  }
+}
+function trafficSrc(){
+  return srcParam()||data.settings.srcMark||'direct';
 }
 async function sendSrc(){
   if(!TG||!TG.initData||data.settings.srcSent)return;
   try{
     const r=await sbRpc('touch_src',{p_init_data:TG.initData,p_src:trafficSrc()});
     /* ok приходить лише тоді, коли рядок водія вже є; інакше спробуємо
-       наступного разу — сам факт мітки нікуди не дінеться */
+       ще раз — мітка лежить у себе й нікуди не дінеться */
     if(r&&r.ok){data.settings.srcSent=1;await persist();}
   }catch(e){}
 }
@@ -6022,7 +6037,11 @@ function cloudPush(now){
   /* Видалення шлемо одразу: якщо людина закриє застосунок швидше за чотири
      секунди, хмара лишиться зі старою копією — і запис повернеться. */
   cloudTimer=setTimeout(async()=>{
-    try{await cloudCall(data);cloudState='ok';}catch(e){cloudState='err';}
+    try{
+      await cloudCall(data);cloudState='ok';
+      /* рядок водія щойно міг зʼявитись — саме час віддати мітку */
+      sendSrc();
+    }catch(e){cloudState='err';}
     renderCloud();
   },now?0:4000);
 }
@@ -7206,6 +7225,9 @@ function renderAll(){paintCurrency();renderShift();setChips();renderStats();rend
   if(data.active&&!(await autoCloseStale())){
     toast('Відкрита сесія на місці · з '+hm(data.active.startT));startTrack();
   }
+  /* мітку з посилання запамʼятовуємо ДО звернення в хмару: якщо рядка
+     водія ще немає, сервер її не прийме, а другого разу мітки вже не буде */
+  rememberSrc();
   cloudPull();
   setTimeout(loadBilling,1200);
   setTimeout(loadPrices,1500);
