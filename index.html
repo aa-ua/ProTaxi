@@ -81,6 +81,9 @@ html.in-tg .only-web{display:none}
 .adm-crown{flex-shrink:0;width:38px;height:34px;border-radius:11px;border:none;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .adm-crown svg{width:19px;height:19px}
 .adm-crown.on{color:var(--amber);background:rgba(255,176,32,.14)}
+/* Картка про незаповнені цифри: жовтий кант, бо це не помилка, а попередження */
+.setup-gap{border:1px solid rgba(255,176,32,.34)}
+.setup-gap .card-title{color:var(--amber)}
 .adm-crown:disabled{opacity:.5}
 .logo-sub span{color:var(--muted);font-weight:600}
 .checker{height:6px;margin:0 2px 14px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--yellow) 0 10px,#1C1E23 10px 20px);opacity:.85}
@@ -1466,7 +1469,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.73';
+const APP_VER='1.74';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2513,6 +2516,39 @@ function goalPace(){
   if(st.n<2||st.p<=0||st.h<=0)return null;
   return{perOrder:st.p/st.n,perHour:st.p/st.h,src:src};
 }
+/* ══ ЧИ ВПИСАНО ГОЛОВНЕ ══
+   Заводські цифри лишились — значить застосунок рахує не його гроші, а
+   вигадані. Це найтихіша з усіх помилок: підсумки виглядають правдиво,
+   але неправильні. Тому питаємо про них до першої зміни, а не після. */
+const SETUP_ASK=[
+  {k:'commissionPct',def:20,   t:'Комісія служби',    u:()=>'%',        why:'без неї виручка не перетворюється на чисте'},
+  {k:'fuelPrice',    def:43.9, t:'Ціна пального',     u:()=>UPR(),      why:'з неї рахується вартість кожного кілометра'},
+  {k:'consumption',  def:9,    t:'Витрата',           u:()=>U100(),     why:'скільки авто справді зʼїдає'},
+  {k:'dailyGoal',    def:1500, t:'Ціль на день',      u:()=>CS(),       why:'від неї рахується, скільки лишилось'},
+  {k:'tankLiters',   def:50,   t:'Обʼєм бака',        u:()=>FK().u,     why:'потрібен для залишку пального'}
+];
+function setupGaps(){
+  const s=data.settings;
+  return SETUP_ASK.filter(x=>{
+    const v=+s[x.k];
+    return !(v>0) || Math.abs(v-x.def)<0.001;   /* порожньо або заводське */
+  });
+}
+
+/* Показуємо ДО першої зміни: після неї нагадувати вже пізно — підсумки
+   тієї зміни однаково будуть порахованi заводськими цифрами. */
+function setupGapHTML(){
+  if((data.entries||[]).length)return '';
+  const g=setupGaps();
+  if(!g.length)return '';
+  return '<div class="card setup-gap"><div class="card-title">Перевірте цифри перед першою зміною</div>'+
+    '<p class="hint" style="margin:0 0 10px">Це заводські значення — вони не ваші. Поки вони стоять, застосунок рахуватиме чужі гроші, а підсумки виглядатимуть правдиво й будуть неправильні.</p>'+
+    g.map(x=>'<div class="ins"><span class="k">'+esc(x.t)+'</span><span class="v" style="color:var(--amber)">'+
+      esc(fmt1(+data.settings[x.k]||0)+' '+x.u())+'</span></div>'+
+      '<p class="hint" style="margin:-2px 0 8px">'+esc(x.why)+'</p>').join('')+
+    '<button class="btn btn-ghost" id="btn-setup-gap">Вписати свої</button></div>';
+}
+
 /* Картка «Ціль дня» для екрана зміни */
 function goalCardHTML(){
   const g=data.settings.dailyGoal||0;
@@ -2570,6 +2606,7 @@ function renderShift(){
   if(!data.active){
     root.innerHTML=
       subWarnHTML()+
+      setupGapHTML()+
       goalCardHTML()+
       '<div class="card"><div class="card-title">Нова сесія</div>'+
       '<div class="grid2">'+
@@ -2583,6 +2620,9 @@ function renderShift(){
           ? 'Після заправки лічильник обнулено, тож відлік починається з нуля. Якщо на панелі вже є кілометри — вкажіть їх.'
           : 'Вкажіть показник добового одометра. Далі кілометраж рахується за фактом, а не за картами.'))+'</p></div>'+
       boostCardHTML();
+    const bg=$('btn-setup-gap');
+    if(bg)bg.addEventListener('click',()=>{tap('setup.open');goScreen('settings');
+      const a=document.querySelector('.acc[data-acc="fuel"]');if(a)a.classList.add('open');});
     $('btn-open').addEventListener('click',async function(){
       if(!subActive()){goScreen('sub');toast('Для нової зміни потрібна активна підписка');return;}
       /* Без показника лічильника нема від чого рахувати пробіг, а без
@@ -2634,16 +2674,25 @@ function renderShift(){
      інакше в другу зміну за день бот показував би менше, ніж картка «Ціль дня». */
   const dayNet=dateOf(a.startT)===todayStr()?todayTotals().personal:c.personal;
   a.live={gross:Math.round(gross),personal:Math.round(c.personal),
+          paused:!!a.pausedAt,
           orders:a.orders.length,goal:goal>0?goal:null,
           left:goal>0?Math.max(0,Math.round(goal-dayNet)):null,
           goalPct:goal>0?Math.round(dayNet/goal*100):null};
 
   const stale=dateOf(a.startT)!==todayStr();
+  const paused=+a.pausedAt||0;
   let html=
+    (paused?'<div class="card setup-gap"><div class="card-title">Зміну поставлено на паузу</div>'+
+      '<p class="hint" style="margin:0 0 10px">Від останнього замовлення о '+hm(paused)+
+      ' минуло понад '+PAUSE_H+' год, і застосунок поставив зміну на паузу. '+
+      'Повертаєтесь на лінію — продовжуйте; закінчили — завершуйте, і час закриття візьметься за тим замовленням.</p>'+
+      '<button class="btn btn-primary" id="btn-resume">Продовжити зміну</button>'+
+      '<button class="btn btn-ghost" id="btn-finish-paused">Завершити зміну</button></div>':'')+
     '<div class="card"><div class="shift-hero">'+
     '<div class="live-line"><span class="live-dot"></span>Сесія триває · з '+hm(a.startT)+'</div>'+
     '<div class="hero-big">'+(approx&&estKm>0?'≈':'')+fmt(c.personal)+'</div>'+
-    '<div class="hero-sub">на руки · виручка '+fmt(gross)+' · на лінії <span id="t-elapsed">—</span></div>'+
+    '<div class="hero-sub">на руки · виручка '+fmt(gross)+' · на лінії <span id="t-elapsed">—</span>'+
+      (breakMs(a)>60000?' · перерва '+fmtHours(breakMs(a)/3600000):'')+'</div>'+
     '<div class="metrics">'+
     '<div class="metric"><div class="v">'+a.orders.length+'</div><div class="k">замовлень</div></div>'+
     '<div class="metric"><div class="v">'+(estKm>0?(approx?'≈':'')+fmt1(estKm):'—')+'</div><div class="k">км за зміну</div></div>'+
@@ -2667,6 +2716,7 @@ function renderShift(){
   }else{
     html+='<button class="btn btn-primary" id="btn-order">+ Прийняти замовлення</button>';
   }
+  if(!paused)html+='<button class="btn btn-ghost" id="btn-pause" style="margin-top:10px">Взяти паузу</button>';
   html+='<button class="btn btn-ghost" id="btn-close-open" style="margin-top:10px">Завершити сесію</button></div>';
 
   html+=goalCardHTML()+boostCardHTML();
@@ -2688,6 +2738,18 @@ function renderShift(){
   if(live)$('btn-finish-live').addEventListener('click',()=>openFinish(live.id));
   $('btn-order').addEventListener('click',openNewOrder);
   $('btn-close-open').addEventListener('click',openCloseShift);
+  const bp=$('btn-pause');
+  if(bp)bp.addEventListener('click',async()=>{
+    tap('shift.pause');pauseShift();await persist();renderAll();
+    toast('Пауза. Час перерви не піде в години на лінії');
+  });
+  const br=$('btn-resume');
+  if(br)br.addEventListener('click',async()=>{
+    tap('shift.resume');resumeShift();await persist();renderAll();
+    toast('Зміну продовжено');
+  });
+  const bf=$('btn-finish-paused');
+  if(bf)bf.addEventListener('click',openCloseShift);
   updateLive();
 }
 
@@ -3816,8 +3878,16 @@ function closeShiftWith(o){
   const inp={gross,tips:+o.tips||0,liters,fuelPrice:r.price,km,cardGross:cardGrossOf(a),
     ownGross:ownGrossOf(a),rentShifts:shiftsOnDay(dateOf(a.startT),true)};
   const c=calc(inp,data.settings);
+  /* Перерва не йде в години на лінії: інакше обід роздував би час і
+     занижував ₴/год. Якщо пауза триває й на момент закриття — рахуємо її
+     лише до часу закриття, а не до «зараз». */
+  let brk=(+a.breakMs||0);
+  if(a.pausedAt)brk+=Math.max(0,endT-(+a.pausedAt||0));
+  const brkH=Math.max(0,brk/3600000);
+  const rawH=(endT-a.startT)/3600000;
   data.entries.push({
-    id:a.id,date:dateOf(a.startT),startT:a.startT,endT,hours:(endT-a.startT)/3600000,
+    id:a.id,date:dateOf(a.startT),startT:a.startT,endT,
+    hours:Math.max(0,rawH-brkH),breakH:brkH>0.01?+brkH.toFixed(2):0,
     odoStart:a.odoStart||0,odoEnd:+o.odoEnd||0,
     orders:a.orders,oc:a.orders.length,weather:o.weather||'',path:thinPath(a.path),
     manualLiters:manual>0,manualTips:Math.abs((+o.tips||0)-tipsOf(a))>=0.01,
@@ -3855,7 +3925,29 @@ $('cm-save').addEventListener('click',async()=>{
    Нічого не стирається. Зміна із замовленнями стає звичайним записом
    у статистиці; порожню зміну, у якій водій не зробив жодного
    замовлення, зберігати нема сенсу — там немає що зберігати. */
-const AUTO_CLOSE_H=4;
+/* Дві межі замість однієї. Водій пішов обідати й забув — це ще не кінець
+   зміни, і закривати її зарано. Тому спершу ПАУЗА (за часом останнього
+   замовлення, а не «зараз»), а повне закриття — коли людини немає весь день.
+   Пауза потрібна не тільки водієві: без неї в панелі «на зміні» висіли б ті,
+   хто вже пішов, і цифра нічого не означала б. */
+/* Перерва рахується окремо від часу на лінії: обід не має роздувати
+   години й псувати ₴/год. Накопичене лежить у breakMs, поточна пауза —
+   в pausedAt, і додається до неї на льоту. */
+function breakMs(a){
+  a=a||data.active;if(!a)return 0;
+  return (+a.breakMs||0)+(a.pausedAt?Math.max(0,Date.now()-(+a.pausedAt||0)):0);
+}
+function pauseShift(when){
+  const a=data.active;if(!a||a.pausedAt)return;
+  a.pausedAt=when||Date.now();
+}
+function resumeShift(){
+  const a=data.active;if(!a||!a.pausedAt)return;
+  a.breakMs=(+a.breakMs||0)+Math.max(0,Date.now()-(+a.pausedAt||0));
+  delete a.pausedAt;
+}
+const PAUSE_H=3;
+const AUTO_CLOSE_H=8;
 function lastActiveT(a){
   const t=(a.orders||[]).reduce((m,o)=>Math.max(m,+o.endT||+o.t||0),0);
   return t||+a.startT||0;
@@ -3864,7 +3956,19 @@ async function autoCloseStale(){
   const a=data.active;if(!a)return false;
   if((a.orders||[]).some(isOpen))return false;   /* відкрите замовлення — не чіпаємо */
   const last=lastActiveT(a);
-  if(!last||Date.now()-last<AUTO_CLOSE_H*3600000)return false;
+  if(!last)return false;
+  const idle=Date.now()-last;
+  /* тиша менша за паузу — усе гаразд, зміна триває */
+  if(idle<PAUSE_H*3600000)return false;
+  /* від паузи до закриття — ставимо на паузу й чекаємо водія */
+  if(idle<AUTO_CLOSE_H*3600000){
+    if(!a.pausedAt){
+      pauseShift(last);
+      await persist();renderAll();
+      toast('Зміну поставлено на паузу о '+hm(last)+' — за останнім замовленням');
+    }
+    return false;
+  }
   const n=(a.orders||[]).length;
   const when=fmtDate(dateOf(a.startT));
   if(!n){
@@ -4104,6 +4208,7 @@ function renderDayDetail(){
     h+='<div class="ins"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
     h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
     if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
+    if(+e.breakH>0.01)h+='<div class="ins"><span class="k">Перерва</span><span class="v">'+fmtHours(+e.breakH)+'</span></div>';
     if(e.hours>=0.5)h+='<div class="ins"><span class="k">Ставка за зміну</span><span class="v">'+fmt(e.calc.net/e.hours)+'/год</span></div>';
     card.innerHTML=h;
     if(!(e.orders||[]).length&&(+e.oc>0)){
@@ -4771,21 +4876,34 @@ function grabIntro(){
     fitFundTarget();
   }
   if(sl.setup==='fuel'){
-    const c=num($('in-cons').value),pr=num($('in-price').value),tk=num($('in-tank').value);
+    /* поля читаємо обережно: якщо слайд не намальований, кидатись помилкою
+       посеред знайомства не можна — людина застрягне на кнопці «Далі» */
+    const c=num(($('in-cons')||{}).value),pr=num(($('in-price')||{}).value),tk=num(($('in-tank')||{}).value);
     if(c>0)s.consumption=c; if(pr>0)s.fuelPrice=pr; if(tk>0)s.tankLiters=tk;
   }
   if(sl.setup==='fuel')ensureHomeStations(s);
   if(sl.setup==='money'){
     const cu=$('in-cur');
     if(cu&&CURRENCIES[cu.value])s.currency=cu.value;
-    const cm=num($('in-comm').value),g=num($('in-goal').value);
-    if(cm>=0&&$('in-comm').value!=='')s.commissionPct=cm;
+    const ic=$('in-comm');
+    const cm=num((ic||{}).value),g=num(($('in-goal')||{}).value);
+    if(ic&&cm>=0&&ic.value!=='')s.commissionPct=cm;
     if(g>0)s.dailyGoal=g;
   }
 }
 function openIntro(){introIx=0;renderIntro();openM('modal-intro');}
-async function finishIntro(){
+/* Куди саме дійшов водій. Три кроки налаштувань мають свої назви, решта —
+   номер екрана: так у панелі одразу видно, чи люди тікають з першого
+   слайда, чи спотикаються саме на цифрах. */
+function introStep(i){
+  const sl=INTRO[i];
+  return sl&&sl.setup?('крок '+sl.setup):('екран '+(i+1));
+}
+async function finishIntro(skipped){
   data.settings.onboarded=1;
+  /* памʼятаємо, чи дочитав і де зупинився — це видно в панелі */
+  data.settings.introEnd=skipped?introStep(introIx):'дочитав';
+  tap(skipped?('intro.skip:'+introStep(introIx)):'intro.done');
   recalcAll();
   await persist();
   closeM('modal-intro');
@@ -4794,11 +4912,11 @@ async function finishIntro(){
 $('intro-next').addEventListener('click',async()=>{
   grabIntro();
   if(introIx<INTRO.length-1){introIx++;renderIntro();return;}
-  await finishIntro();
+  await finishIntro(false);
   toast('Готово. Можна відкривати першу зміну');
 });
 $('intro-back').addEventListener('click',()=>{if(introIx>0){grabIntro();introIx--;renderIntro();}});
-$('intro-skip').addEventListener('click',async()=>{await finishIntro();toast('Налаштування — у «Ще»');});
+$('intro-skip').addEventListener('click',async()=>{await finishIntro(true);toast('Налаштування — у «Ще»');});
 $('btn-intro').addEventListener('click',()=>{tap('intro');openIntro();});
 
 /* ══ ПІДТРИМКА ══
@@ -5300,7 +5418,7 @@ const admRow=(k,v)=>'<div class="ins"><span class="k">'+k+'</span><span class="v
    перемикач періодів і те, що люди робили за цей період. Дані бере окрема
    RPC public.admin_pulse — вона одна вміє рахувати по днях. Немає її
    в базі — панель показує старий вигляд, без плиток. */
-let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0,admSrc=null,admCur=null;
+let admPeriod='today',admPulse=null,admPulseErr='',admPulseNoFn=false,admPulseSeq=0,admSrc=null,admCur=null,admSet=null;
 const ADM_PERIODS=[['today','Сьогодні'],['yesterday','Вчора'],['week','Тиждень'],
                    ['month','Місяць'],['year','Рік'],['all','Весь час']];
 async function loadAdminPulse(){
@@ -5320,6 +5438,10 @@ async function loadAdminPulse(){
       const cr=await sbRpc('admin_currency',{p_init_data:TG.initData,p_period:admPeriod});
       if(seq===admPulseSeq)admCur=cr;
     }catch(e){if(seq===admPulseSeq)admCur=null;}
+    try{
+      const st2=await sbRpc('admin_setup',{p_init_data:TG.initData,p_period:admPeriod});
+      if(seq===admPulseSeq)admSet=st2;
+    }catch(e){if(seq===admPulseSeq)admSet=null;}
   }catch(e){
     if(seq!==admPulseSeq)return;
     const m=String((e&&e.message)||e);
@@ -5380,6 +5502,7 @@ function admPulseBody(){
     admRow('Середнє на руки за зміну',fmt(v.avg_shift||0))+
     admRow('Середній чек',fmt(v.avg_check||0))+
     '<p class="hint">Гроші тут тільки середні по всіх. Сум окремих водіїв у панелі немає й не буде.</p></div>'+
+    admSetup()+
     admSources()+
     admCurrencies()+
     admTaps();
@@ -5397,8 +5520,37 @@ const TAP_NAMES={
   'map.full':'Мапа на весь екран','support':'Написати в підтримку',
   'backup.copy':'Скопіювати дані','gloss':'Словник понять',
   'changelog':'Що нового','intro':'Як користуватись','privacy':'Політика приватності',
-  'crown':'Спеціальний статус'
+  'crown':'Спеціальний статус','intro.done':'Знайомство дочитано',
+  'shift.pause':'Взяв паузу','shift.resume':'Продовжив зміну',
+  'setup.open':'Відкрив налаштування з підказки'
 };
+/* Хто не вписав своїх цифр і де кинув знайомство. Найтихіша помилка:
+   підсумки виглядають правдиво, а рахуються заводськими значеннями. */
+function admSetup(){
+  const d=admSet;
+  if(!d||!Array.isArray(d.rows))return '';
+  const tot=+d.total||0;
+  if(!tot)return '';
+  const pct=n=>Math.round(n/Math.max(1,tot)*100);
+  const rows=d.rows.filter(x=>+x.n>0);
+  let h='<div class="card"><div class="card-title">Чи вписали свої цифри · '+tot+' за період</div>'+
+    '<div class="metrics two">'+
+    admTile('users',(+d.clean||0),'вписали головне','комісія, ціна, витрата',true)+
+    admTile('mail',tot-(+d.clean||0),'лишили заводські','підсумки в них неправильні')+
+    '</div>';
+  if(rows.length)h+='<div class="card">'+
+    '<div class="card-title">Що саме не чіпали</div>'+
+    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(x.k)+'</span>'+
+      '<b>'+(+x.n)+' · '+pct(+x.n)+'%</b></div>'+admBar(pct(+x.n))+'</div>').join('')+
+    '<p class="hint">Це заводські значення, які водій не міняв. Поки вони стоять, застосунок рахує не його гроші.</p></div>';
+  const intro=(d.intro||[]).filter(x=>+x.n>0);
+  if(intro.length)h+='<div class="card"><div class="card-title">Де кинули знайомство</div>'+
+    intro.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(x.k)+'</span>'+
+      '<b>'+(+x.n)+'</b></div>'+admBar(pct(+x.n))+'</div>').join('')+
+    '<p class="hint">«дочитав» — пройшов до кінця. Решта — екран, на якому натиснув «Пропустити».</p></div>';
+  return h;
+}
+
 /* У якій валюті рахують водії. Потрібно, щоб бачити, куди насправді
    поїхав застосунок: якщо половина в злотих, це вже інша аудиторія. */
 function admCurrencies(){
@@ -5444,6 +5596,13 @@ function admLinks(){
     '<p class="hint">Мітка — це слово в кінці посилання. Можна вигадати будь-яке: '+
     'у панелі зʼявиться саме воно. Головне — щоб для кожного місця було своє.</p></div>';
 }
+/* Ключі пропуску знайомства динамічні (intro.skip:крок fuel), тому підпис
+   до них складаємо тут, а не тримаємо сім рядків у словнику. */
+function tapName(k){
+  if(TAP_NAMES[k])return TAP_NAMES[k];
+  if(k.indexOf('intro.skip:')===0)return 'Пропустив знайомство · '+k.slice(11);
+  return k;
+}
 function admTaps(){
   const t=(admPulse&&admPulse.taps)||null;
   if(!t||!Object.keys(t).length)return '';
@@ -5452,7 +5611,7 @@ function admTaps(){
   if(!rows.length)return '';
   const top=rows[0].n||1;
   return '<div class="card"><div class="card-title">Чим користуються · за весь час</div>'+
-    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(TAP_NAMES[x.k]||x.k)+'</span>'+
+    rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(tapName(x.k))+'</span>'+
       '<b>'+fmtN(x.n)+' · '+x.u+' '+plDrv(x.u)+'</b></div>'+
       admBar(Math.round(x.n/top*100))+'</div>').join('')+
     '<p class="hint">Ліворуч — скільки разів натискали, праворуч — скільки різних водіїв цим користувалось. '+
