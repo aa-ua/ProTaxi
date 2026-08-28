@@ -67,8 +67,17 @@ html.in-tg .only-web{display:none}
 .logo{font-family:'Unbounded',sans-serif;font-weight:800;font-size:15px;background:var(--yellow);color:#101010;padding:5px 11px;border-radius:10px;letter-spacing:-.03em;white-space:nowrap}
 .logo-sub{font-weight:800;font-size:14px}
 /* Корона — спеціальний статус. Тонкий контур, як і решта значків. */
-.crown{display:none;background:none;border:0;padding:0 2px;margin:0;color:var(--amber);flex-shrink:0;cursor:pointer;line-height:0}
-.crown svg{width:19px;height:19px;display:block}
+.crown{display:none;background:none;border:0;padding:0 2px;margin:0 0 0 2px;color:var(--amber);flex-shrink:0;cursor:pointer;line-height:0}
+.crown svg{width:19px;height:19px;display:block;animation:crownGlow 2.8s ease-in-out infinite}
+/* Золото не просто жовте: воно світиться й переливається. Перелив дає
+   градієнт усередині значка, світло — тінь, що дихає. */
+@keyframes crownGlow{
+  0%,100%{filter:drop-shadow(0 0 2px rgba(255,176,32,.45))}
+  50%{filter:drop-shadow(0 0 8px rgba(255,214,120,.95))}
+}
+@media (prefers-reduced-motion:reduce){
+  .crown svg{animation:none;filter:drop-shadow(0 0 3px rgba(255,176,32,.5))}
+}
 .adm-crown{flex-shrink:0;width:38px;height:34px;border-radius:11px;border:none;background:var(--surface2);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .adm-crown svg{width:19px;height:19px}
 .adm-crown.on{color:var(--amber);background:rgba(255,176,32,.14)}
@@ -687,8 +696,8 @@ html.map-full .tabbar{display:none}
 <div class="app">
   <header class="topbar">
     <div class="logo">ProTaxi</div>
-    <button class="crown" id="btn-crown" aria-label="Спеціальний статус"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18.2 3 8.6l5.6 4.1L12 5.6l3.4 7.1L21 8.6l-1 9.6z"/></svg></button>
     <div class="logo-sub">Фінанси <span>водія</span></div>
+    <button class="crown" id="btn-crown" aria-label="Спеціальний статус"><svg viewBox="0 0 24 24" fill="none" stroke="url(#crg)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><defs><linearGradient id="crg" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#C6870F"/><stop offset=".42" stop-color="#FFF0BE"/><stop offset=".58" stop-color="#FFD469"/><stop offset="1" stop-color="#C6870F"/><animateTransform attributeName="gradientTransform" type="translate" values="-1 0;1 0;-1 0" dur="3.4s" repeatCount="indefinite"/></linearGradient></defs><path d="M4 18.2 3 8.6l5.6 4.1L12 5.6l3.4 7.1L21 8.6l-1 9.6z"/></svg></button>
     <div class="topacts">
       <button class="avatar" id="btn-admin" data-screen="admin" aria-label="Адмін-панель" style="display:none">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2 4.4 5.4v5.9c0 4.6 3.2 8.9 7.6 10.5 4.4-1.6 7.6-5.9 7.6-10.5V5.4L12 2.2zm-1.1 13.6-3.2-3.2 1.4-1.4 1.8 1.8 4.4-4.4 1.4 1.4-5.8 5.8z"/></svg>
@@ -968,10 +977,18 @@ html.map-full .tabbar{display:none}
       <div class="wchips" id="fuel-grade" style="margin-top:-2px"></div>
       <div class="grid2">
         <div class="field"><label id="lab-cons">Витрата, л/100 км</label><input type="number" inputmode="decimal" id="set-cons" step="0.1" placeholder="напр. 12"></div>
-        <div class="field"><label id="lab-price" data-cur="Ціна, {c}/л">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
+        <div class="field"><label id="lab-price">Ціна, ₴/л</label><input type="number" inputmode="decimal" id="set-price" step="0.01"></div>
         <div class="field"><label id="lab-tankl">Обʼєм бака, л</label><input type="number" inputmode="decimal" id="set-tankl" step="1" placeholder="50"></div>
       </div>
       <p class="hint" id="fuel-note"></p>
+    </div>
+
+    <!-- Домашня зарядка: тариф державний і майже не міняється, тому ціну
+         показуємо просто в списку. Видно тільки на електро. -->
+    <div class="card" id="home-card" style="display:none">
+      <div class="card-title">Домашня зарядка</div>
+      <div id="home-list"></div>
+      <p class="hint" id="home-note"></p>
     </div>
 
     <div class="card">
@@ -1282,7 +1299,7 @@ html.map-full .tabbar{display:none}
     <h3 id="rf-title">Заправка</h3>
     <div class="grid2">
       <div class="field"><label id="lab-rf-liters">Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
-      <div class="field"><label id="lab-rf-price" data-cur="Ціна за літр, {c}">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label id="lab-rf-price">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
       <div class="field"><label id="lab-rf-odo">Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
     </div>
@@ -1328,9 +1345,9 @@ html.map-full .tabbar{display:none}
       <button class="mode" data-sm="pct">Знижка %<span class="sub">від ціни</span></button>
     </div>
     <div class="grid2">
-      <div class="field"><label id="lab-st-val" data-cur="Знижка з літра, {c}">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
+      <div class="field"><label id="lab-st-val">Знижка з літра, ₴</label><input type="number" inputmode="decimal" id="st-val" step="0.01" placeholder="0"></div>
       <div class="field" id="st-gas-box"><label id="lab-st-gas" data-cur="Знижка на газ, {c}">Знижка на газ, ₴</label><input type="number" inputmode="decimal" id="st-gas" step="0.01" placeholder="як на пальне"></div>
-      <div class="field"><label id="lab-st-price" data-cur="Ціна на табло, {c}/л">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="з налаштувань"></div>
+      <div class="field"><label id="lab-st-price">Ціна на табло, ₴/л</label><input type="number" inputmode="decimal" id="st-price" step="0.01" placeholder="з налаштувань"></div>
     </div>
     <div class="hint" id="st-calc" style="margin:0 0 12px;text-align:center;white-space:pre-line"></div>
     <button class="btn btn-primary" id="st-save">Зберегти</button>
@@ -1360,8 +1377,11 @@ html.map-full .tabbar{display:none}
 <div class="modal-bg" id="modal-crown">
   <div class="modal">
     <h3>Спеціальний акаунт</h3>
-    <p class="hint" style="margin:0 0 16px">Ви серед перших, хто користується ProTaxi. Це акаунт бета-тестування: коли тестування завершиться, ви отримаєте бонус.</p>
-    <button class="btn btn-primary" id="crown-ok">Зрозуміло</button>
+    <p class="hint" style="margin:0 0 10px">Ви серед перших, хто користується ProTaxi. Поки триває тестування, застосунок для вас <b>повністю безкоштовний</b>.</p>
+    <p class="hint" style="margin:0 0 10px">Коли тестування завершиться, ви отримаєте <b>бонус</b> — за те, що були з самого початку.</p>
+    <p class="hint" style="margin:0 0 16px">Якщо помітите щось дивне — цифру, яка не сходиться, кнопку, що не працює, — напишіть у підтримку. Будемо дуже вдячні: саме з таких повідомлень застосунок і стає кращим.</p>
+    <button class="btn btn-primary" id="crown-support">Написати в підтримку</button>
+    <button class="btn btn-ghost" id="crown-ok">Зрозуміло</button>
   </div>
 </div>
 
@@ -1441,7 +1461,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.68';
+const APP_VER='1.69';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2215,6 +2235,9 @@ async function load(){
     if(+s.serviceTarget===8000)s.serviceTarget=20000;
     s.mine=true;
   }
+  /* Водій міг перейти на електро раніше або прийти з хмари — домашні
+     тарифи мають зʼявитись і тоді, а не лише після дотику в налаштуваннях. */
+  ensureHomeStations(s);
   /* 1.4: замість однієї знижки — список мереж. Стару переносимо, щоб
      розрахунок не змінився в того, хто вже її вписав. */
   if(!s.fuelKind)s.fuelKind='gas';
@@ -4493,6 +4516,7 @@ async function applyPayload(txt,quiet){
   data.fundOps=dropGone(p.fundOps,'f',g);
   data.refuels=dropGone(p.refuels,'r',g);
   /* відкриту зміну з чужої копії беремо лише якщо її не скасовували тут */
+  ensureHomeStations(data.settings);
   data.active=(p.active&&!g['e:'+p.active.id])?p.active:null;
   data.entries.forEach(en=>{
     if(!Array.isArray(en.orders))en.orders=[];
@@ -4743,6 +4767,7 @@ function grabIntro(){
     const c=num($('in-cons').value),pr=num($('in-price').value),tk=num($('in-tank').value);
     if(c>0)s.consumption=c; if(pr>0)s.fuelPrice=pr; if(tk>0)s.tankLiters=tk;
   }
+  if(sl.setup==='fuel')ensureHomeStations(s);
   if(sl.setup==='money'){
     const cu=$('in-cur');
     if(cu&&CURRENCIES[cu.value])s.currency=cu.value;
@@ -4960,6 +4985,7 @@ function renderCrown(){
 }
 $('btn-crown').addEventListener('click',()=>{tap('crown');openM('modal-crown');});
 $('crown-ok').addEventListener('click',()=>closeM('modal-crown'));
+$('crown-support').addEventListener('click',()=>{closeM('modal-crown');openSupport();});
 /* Оплата ще не відкрита. Поставиш true — кнопка знову почне працювати,
    більше нічого міняти не треба. */
 const PAY_OPEN=false;
@@ -4973,7 +4999,10 @@ const subPrice=b=>{
    людині нема як заплатити, тож і відмовляти їй у новій зміні нема за що.
    Це не залежить від прапорця beta в базі — щоб замок не міг увімкнутись
    сам собою, поки оплати не існує. */
-const subBeta=()=>!PAY_OPEN||!!(bill&&bill.beta);
+/* Дві різні речі: `beta` — позначка цієї людини (за нею корона),
+   `testing` — загальний прапорець «іде тестування» (за ним не замикаємо).
+   Старі бази ще не вміють `testing` — тоді працює як раніше. */
+const subBeta=()=>!PAY_OPEN||!!(bill&&(bill.testing!==undefined?bill.testing:bill.beta));
 const subActive=()=>!PAY_OPEN||!bill||subBeta()||bill.active!==false;
 const SUB_FEATURES=[
   ['Чистий заробіток, а не виручка','Комісія, еквайринг, пальне, оренда й відкладене віднімаються автоматично. Видно, скільки залишилось на руки'],
@@ -6366,7 +6395,55 @@ function rfStation(){return stationsOf().find(x=>x.id===rfStId)||null;}
    Це єдине місце, де ціну ПІДСТАВЛЯЄМО: вдома чека немає, тож правило
    «ціна лише з чека» тут не працює — але поле лишається редагованим,
    і вже вписану руками ціну не перетираємо. */
-const EV_HOME=[{name:'Дім · ніч',price:2.16},{name:'Дім · день',price:4.32}];
+/* Дім — теж «заправка», просто ціна відома наперед: це державний тариф,
+   і він майже не міняється. Тримаємо їх звичайними мережами, щоб не
+   заводити під електро окремий механізм — тоді все інше (заправки,
+   розрахунок, чеки) працює само собою. */
+const EV_HOME=[
+  {key:'night',name:'Дім · ніч',price:2.16,when:'з 23:00 до 07:00'},
+  {key:'day',  name:'Дім · день',price:4.32,when:'з 07:00 до 23:00'}
+];
+function ensureHomeStations(s){
+  s=s||data.settings;
+  if((s.fuelKind||'petrol')!=='ev')return false;
+  s.stations=s.stations||[];
+  let added=false;
+  EV_HOME.forEach((h,i)=>{
+    if(s.stations.some(x=>x.home===h.key))return;
+    s.stations.push({id:Date.now()+i,name:h.name,price:h.price,
+      mode:'uah',val:0,valGas:'',k:'ev',home:h.key});
+    added=true;
+  });
+  return added;
+}
+function homeStations(s){
+  s=s||data.settings;
+  return (s.stations||[]).filter(x=>x.home&&x.k==='ev');
+}
+function renderHomeCard(){
+  const card=$('home-card');if(!card)return;
+  const s=data.settings;
+  if((s.fuelKind||'petrol')!=='ev'){card.style.display='none';return;}
+  card.style.display='';
+  const l=homeStations(s),main=mainStation(s);
+  $('home-list').innerHTML=l.map(st=>{
+    const h=EV_HOME.find(x=>x.key===st.home)||{};
+    const on=!!main&&st.id===main.id;
+    return '<div class="st-row'+(on?' on':'')+'" data-home="'+st.id+'">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div class="d">'+esc(st.name)+(on?' <span class="approx">основна</span>':'')+'</div>'+
+        /* дві цифри після коми: тариф 2,16 — не «2,2» */
+      '<div class="s">'+esc(h.when||'')+' · '+(+st.price||0).toFixed(2).replace('.',',')+' '+UPR()+'</div>'+
+      '</div></div>';
+  }).join('');
+  $('home-note').textContent='Державний тариф, чинний до 31.10.2026. Уночі діє половина ціни. '+
+    'Дотик обирає, за яким тарифом рахувати заряд удома.';
+}
+$('home-list').addEventListener('click',async e=>{
+  const r=e.target.closest('[data-home]');if(!r)return;
+  data.settings.stationId=+r.dataset.home;
+  recalcAll();await persist();renderStations();renderHomeCard();renderAll();
+});
 function rfStList(){
   const kind=data.settings.fuelKind||'petrol';
   /* мережа показується лише у своєму виді пального: водієві на електро
@@ -6374,13 +6451,13 @@ function rfStList(){
      позначки (заведені до 1.58) вважаємо бензогазовими. */
   const own=stationsOf()
     .filter(st=>kind==='ev'?st.k==='ev':(st.k||'petrol')!=='ev')
-    .map(st=>({id:st.id,name:st.name,own:true}));
+    /* удома чека немає — це єдине місце, де ціну можна підставити */
+    .map(st=>({id:st.id,name:st.name,own:true,home:st.home?(+st.price||0):0}));
   const have=new Set(own.map(x=>x.name.toLowerCase()));
   const rest=stPresets().filter(p=>!have.has(String(p.n).toLowerCase()))
     .map(p=>({id:0,name:p.n,own:false}));
-  const home=kind==='ev'?EV_HOME.map(h=>({id:0,name:h.name,own:false,home:h.price})):[];
   /* остання кнопка — для заправки, якої в списку немає */
-  return home.concat(own,rest,[{id:0,name:'Інша',own:false}]);
+  return own.concat(rest,[{id:0,name:'Інша',own:false}]);
 }
 function renderRfStations(){
   const box=$('rf-st'),fb=$('rf-fuel');if(!box)return;
@@ -6393,7 +6470,7 @@ function renderRfStations(){
          а ціну водій усе одно вписує з чека — вгадана лише збивала б з пантелику. */
       const on=st.own?(st.id===rfStId):(!rfStId&&rfStName===st.name);
       return '<button class="wchip'+(on?' on':'')+'" data-sid="'+st.id+'" data-sname="'+esc(st.name)+'"'+
-        (st.home?' data-home="'+st.home+'"':'')+'>'+esc(st.name)+'</button>';
+        (st.home>0?' data-home="'+st.home+'"':'')+'>'+esc(st.name)+'</button>';
     }).join('');
   }
   const gs=gradesFor(data.settings.fuelKind);
@@ -6625,7 +6702,7 @@ function renderSettings(){
   renderCarMode();
   renderRentMode();
   renderFundMode();
-  renderFuelKind();renderStations();renderPlatform();renderAcc();paintSubEntry();
+  renderFuelKind();renderStations();renderHomeCard();renderPlatform();renderAcc();paintSubEntry();
   renderSupport();renderCloud();renderAdmin();
   renderCurrency();
   $('set-price').value=s.fuelPrice;$('set-cons').value=s.consumption;
@@ -6690,7 +6767,8 @@ $('fuel-grade').addEventListener('click',async e=>{
 });
 document.querySelectorAll('#fuel-kind .mode').forEach(b=>b.addEventListener('click',async()=>{
   data.settings.fuelKind=b.dataset.fk;
-  renderFuelKind();renderStations();recalcAll();await persist();renderAll();
+  ensureHomeStations();
+  renderFuelKind();renderStations();renderHomeCard();recalcAll();await persist();renderAll();
 }));
 
 /* ══ ЗНИЖКИ НА АЗС ══
@@ -6752,7 +6830,7 @@ function stationsOfKind(s){
 }
 function renderStations(){
   const box=$('st-list');if(!box)return;
-  const s=data.settings,l=stationsOfKind(s),main=mainStation(s);
+  const s=data.settings,l=stationsOfKind(s).filter(x=>!x.home),main=mainStation(s);
   if(!l.length){
     box.innerHTML='<div class="empty">'+(s.fuelKind==='ev'
       ?'Знижок на зарядки ще немає. Додайте свої мережі — FLASH, GO TO-U чи інші.'
