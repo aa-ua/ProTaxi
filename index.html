@@ -1472,7 +1472,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.76';
+const APP_VER='1.77';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5341,7 +5341,10 @@ function drawShare(){
   c.font='700 40px '+SHARE_FONT;c.fillStyle='#F5F6F8';
   c.fillText('Порахуйте свою зміну',P+38,fy+58);
   c.font='800 38px '+SHARE_FONT;c.fillStyle='#3BE0A6';
-  c.fillText('t.me/ProTaxiApp_Bot/app',P+38,fy+108);
+  /* Без «/app»: це коротке імʼя окремого Mini App, якого в нас немає, і
+     таке посилання може просто не відкритись. Мітка share — щоб у панелі
+     було видно, скільки людей приводять самі водії. */
+  c.fillText('t.me/'+SUPPORT_BOT+'?startapp=share',P+38,fy+108);
   return cv;
 }
 let shareBlob=null,shareUrl='';
@@ -5375,7 +5378,7 @@ $('share-go').addEventListener('click',async()=>{
   if(!shareBlob)return;
   try{
     const f=new File([shareBlob],'protaxi.jpg',{type:'image/jpeg'});
-    await navigator.share({files:[f],text:'Мій підсумок у ProTaxi · t.me/ProTaxiApp_Bot/app'});
+    await navigator.share({files:[f],text:'Мій підсумок у ProTaxi · t.me/'+SUPPORT_BOT+'?startapp=share'});
     tap('share.done');
     return;
   }catch(e){
@@ -5587,7 +5590,8 @@ function admSources(){
   if(!rows.length)return '<div class="card"><div class="card-title">Джерела трафіку</div>'+
     '<div class="empty">За цей період ніхто не приходив</div></div>';
   const top=Math.max(1,...rows.map(x=>+x.n||0));
-  const nice=k=>k==='direct'?'Без мітки':(k==='unknown'?'Були раніше':k);
+  const nice=k=>k==='direct'?'Без мітки':(k==='unknown'?'Були раніше':
+    (k==='share'?'Поділились підсумком':k));
   return '<div class="card"><div class="card-title">Джерела трафіку · '+
     (+d.total||0)+' за період</div>'+
     rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(nice(x.src))+'</span>'+
@@ -6148,7 +6152,7 @@ async function cloudCall(payload){
   return await r.json();
 }
 /* ══ ЗВІДКИ ПРИЙШЛА ЛЮДИНА ══
-   Посилання виду t.me/ProTaxiApp_Bot/app?startapp=tiktok відкриває застосунок
+   Посилання виду t.me/ProTaxiApp_Bot?startapp=tiktok відкриває застосунок
    одразу, а мітку Telegram кладе в start_param. Бот для цього не потрібен:
    параметр приходить прямо сюди. Немає мітки — це «direct».
    Записуємо ОДИН раз на людину: цінна саме перша точка входу, тому сервер
