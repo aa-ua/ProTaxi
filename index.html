@@ -485,6 +485,53 @@ html.in-tg .modal-bg.mid .modal{max-height:none}
 @keyframes slideup{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:14px}
 
+/* Кругла кнопка підтримки. Стоїть над нижньою панеллю праворуч: там
+   немає жодної іншої кнопки, і великий палець дістає її не відриваючи
+   руки. Ховається разом із панеллю під клавіатурою, у панелі власника
+   й на розгорнутій мапі — там їй не місце. */
+.fab{position:fixed;right:14px;bottom:88px;width:52px;height:52px;border-radius:50%;
+  display:none;align-items:center;justify-content:center;z-index:45;border:1px solid var(--line);
+  background:rgba(44,48,56,.96);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  color:var(--yellow);cursor:pointer;padding:0;
+  box-shadow:0 8px 24px rgba(0,0,0,.38);transition:transform .18s ease}
+.fab.on{display:flex}
+.fab svg{width:24px;height:24px}
+.fab:active{transform:scale(.94)}
+html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);pointer-events:none}
+/* Скільки відповідей водій ще не читав. Нуль не показуємо взагалі:
+   порожній кружечок питає більше, ніж відповідає. */
+.fab .n{position:absolute;top:-3px;right:-3px;min-width:20px;height:20px;padding:0 5px;
+  border-radius:10px;background:var(--red);color:#fff;font-size:11.5px;font-weight:800;
+  display:none;align-items:center;justify-content:center;border:2px solid var(--bg)}
+.fab.new .n{display:flex}
+
+/* Переписка */
+.chat{max-height:46vh;overflow-y:auto;margin:0 0 12px;display:flex;flex-direction:column;gap:8px;
+  -webkit-overflow-scrolling:touch}
+.cm{max-width:86%;padding:9px 12px 7px;border-radius:14px;font-size:14.5px;line-height:1.4}
+.cm.me{align-self:flex-end;background:rgba(59,224,166,.16);border:1px solid rgba(59,224,166,.28)}
+.cm.them{align-self:flex-start;background:var(--surface2);border:1px solid var(--border)}
+.cm .at{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+.cm .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.cm .ph img{width:88px;height:88px;object-fit:cover;border-radius:9px;display:block}
+.chat-empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
+/* Список переписок у панелі. Непрочитане — червоним кружечком праворуч:
+   у списку на два десятки рядків інакше не видно, кому ви ще не відповіли. */
+.adm-c{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);
+  cursor:pointer}
+.adm-c:last-child{border-bottom:0}
+.adm-c .w{flex:1;min-width:0}
+.adm-c b{display:block;font-size:14.5px;font-weight:700}
+.adm-c b span{color:var(--muted);font-weight:500}
+.adm-c i{display:block;font-style:normal;font-size:13px;color:var(--muted);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.adm-c .u{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--red);
+  color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.adm-c .d{font-size:12px;color:var(--muted);white-space:nowrap}
+#admin-tabs .chip .u{display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;margin-left:6px;border-radius:9px;
+  background:var(--red);color:#fff;font-size:11px;font-weight:800}
+
 .toast{position:fixed;left:14px;right:14px;transform:translateY(16px);bottom:104px;background:var(--yellow);color:#101010;font-weight:800;font-size:14.5px;padding:13px 16px;border-radius:14px;opacity:0;pointer-events:none;transition:.3s;z-index:1100;box-shadow:0 8px 30px rgba(0,0,0,.4);
   /* На всю ширину, а не по центру: раніше стояло left:50% з максимальною
      шириною, і повідомлення на кілька слів згорталось у вузький високий
@@ -995,7 +1042,7 @@ html.map-full .tabbar{display:none}
       <button class="chip" data-at="ana">Аналітика</button>
       <button class="chip" data-at="people">Люди</button>
       <button class="chip" data-at="pay">Підписки</button>
-      <button class="chip" data-at="talk">Відгуки</button>
+      <button class="chip" data-at="talk">Відгуки<span class="u" id="adm-talk-n" style="display:none">0</span></button>
     </div>
     <div id="admin-body"></div>
     <button class="btn btn-ghost btn-sm" id="admin-refresh">Оновити</button>
@@ -1204,6 +1251,27 @@ html.map-full .tabbar{display:none}
 </div>
 
 <!-- Модалка: написати в підтримку -->
+<button class="fab" id="fab-chat" type="button" aria-label="Підтримка">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 12.1c0 3.9-3.7 7-8.2 7-1 0-2-.15-2.9-.43L4 20.2l1.7-3.7A6.6 6.6 0 0 1 3.8 12c0-3.9 3.7-7 8.2-7s8.2 3.1 8.2 7z"/></svg>
+  <span class="n" id="fab-n">0</span>
+</button>
+
+<!-- Модалка: переписка з підтримкою -->
+<div class="modal-bg mid" id="modal-chat">
+  <div class="modal">
+    <h3>Підтримка</h3>
+    <p class="hint" id="chat-note" style="margin:0 0 10px">Пишіть — прочитаємо кожне повідомлення. Відповідь прийде сюди й у бот.</p>
+    <div class="chat" id="chat-list"></div>
+    <div class="field"><textarea id="chat-text" rows="3" placeholder="Напишіть повідомлення…"></textarea></div>
+    <input type="file" id="chat-file" accept="image/*" multiple hidden>
+    <button class="btn btn-ghost btn-sm" id="chat-pick" type="button">Додати знімок екрана</button>
+    <div class="shots" id="chat-shots"></div>
+    <div class="hint" id="chat-state" style="margin:0 0 4px"></div>
+    <button class="btn btn-primary" id="chat-send">Надіслати</button>
+    <button class="btn btn-ghost" id="chat-close">Назад</button>
+  </div>
+</div>
+
 <div class="modal-bg mid" id="modal-support">
   <div class="modal">
     <h3>Написати в підтримку</h3>
@@ -1215,6 +1283,22 @@ html.map-full .tabbar{display:none}
     <div class="hint" id="sup-state" style="margin:0 0 4px"></div>
     <button class="btn btn-primary" id="sup-send">Надіслати</button>
     <button class="btn btn-ghost" id="sup-cancel">Назад</button>
+  </div>
+</div>
+
+<!-- Модалка: переписка з водієм (адмінка) -->
+<div class="modal-bg mid" id="modal-athread">
+  <div class="modal">
+    <h3 id="at-who">Переписка</h3>
+    <p class="hint" style="margin:0 0 10px">Відповідь піде водієві в застосунок і в бот — від імені ProTaxi.</p>
+    <div class="chat" id="at-list"></div>
+    <div class="field"><textarea id="at-text" rows="3" placeholder="Ваша відповідь…"></textarea></div>
+    <input type="file" id="at-file" accept="image/*" multiple hidden>
+    <button class="btn btn-ghost btn-sm" id="at-pick" type="button">Додати знімок екрана</button>
+    <div class="shots" id="at-shots"></div>
+    <div class="hint" id="at-state" style="margin:0 0 4px"></div>
+    <button class="btn btn-primary" id="at-send">Надіслати</button>
+    <button class="btn btn-ghost" id="at-back">Назад</button>
   </div>
 </div>
 
@@ -1511,7 +1595,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.80';
+const APP_VER='1.81';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5078,8 +5162,9 @@ function supClearShots(){
   $('sup-file').value='';
   renderShots();
 }
+let shotsTo={box:'sup-shots',btn:'sup-pick'};
 function renderShots(){
-  const box=$('sup-shots');
+  const box=$(shotsTo.box);
   box.innerHTML='';
   supShots.forEach(function(s,i){
     const d=document.createElement('div');d.className='shot';
@@ -5091,28 +5176,30 @@ function renderShots(){
     });
     d.appendChild(im);d.appendChild(x);box.appendChild(d);
   });
-  $('sup-pick').textContent=supShots.length
+  $(shotsTo.btn).textContent=supShots.length
     ? 'Ще знімок · '+supShots.length+' з '+SUP_MAX_SHOTS
     : 'Додати знімок екрана';
-  $('sup-pick').disabled=supShots.length>=SUP_MAX_SHOTS;
+  $(shotsTo.btn).disabled=supShots.length>=SUP_MAX_SHOTS;
 }
 $('sup-pick').addEventListener('click',()=>$('sup-file').click());
-$('sup-file').addEventListener('change',async function(){
-  const files=[...(this.files||[])];
-  this.value='';
-  if(!files.length)return;
+async function addShots(files,stateId){
+  const list=[...(files||[])];
+  if(!list.length)return;
   let over=false;
-  for(const f of files){
+  for(const f of list){
     if(supShots.length>=SUP_MAX_SHOTS){over=true;break;}
     try{
       const b=await shrinkImage(f,1600,0.75);
       supShots.push({blob:b,url:URL.createObjectURL(b)});
     }catch(e){
-      $('sup-state').textContent='Один зі знімків прочитати не вдалося.';
+      $(stateId).textContent='Один зі знімків прочитати не вдалося.';
     }
   }
   renderShots();
-  if(over)$('sup-state').textContent='Більше '+SUP_MAX_SHOTS+' знімків за раз не надішлеш.';
+  if(over)$(stateId).textContent='Більше '+SUP_MAX_SHOTS+' знімків за раз не надішлеш.';
+}
+$('sup-file').addEventListener('change',function(){
+  const f=this.files;this.value='';addShots(f,'sup-state');
 });
 /* Кладемо знімок у сховище й повертаємо адресу, дійсну кілька хвилин */
 async function uploadShot(blob){
@@ -5196,7 +5283,118 @@ $('sup-send').addEventListener('click',async function(){
     this.disabled=false;this.textContent='Надіслати';
   }
 });
-$('btn-help').addEventListener('click',openSupport);
+/* ══ ЧАТ ПІДТРИМКИ ══
+   Відповідь має бути видно там само, де питали. Досі вона приходила
+   тільки в бот: людина писала із застосунку, а шукати відповідь мусила
+   в іншому місці — і половина її не знаходила.
+   Поки в базі немає функцій чату (файл «Чат підтримки» ще не виконано),
+   застосунок мовчки лишається на старому вікні звернення: кругла кнопка
+   не зʼявляється, і нічого не ламається. */
+let chatOn=null;          /* null — ще не знаємо, false — база стара */
+let chatMsgs=[];
+let chatUnread=0;
+let chatPulling=false, chatLast=0, chatTimer=0;
+const chatMissing=e=>/\b404\b|PGRST202|Could not find/i.test(String(e&&e.message||e));
+
+function paintFab(){
+  const f=$('fab-chat');if(!f)return;
+  f.classList.toggle('on',!!chatOn&&!!TG&&!!TG.initData);
+  f.classList.toggle('new',chatUnread>0);
+  $('fab-n').textContent=chatUnread>99?'99+':String(chatUnread);
+}
+async function chatPull(markSeen){
+  if(!TG||!TG.initData||chatOn===false||chatPulling)return;
+  chatPulling=true;
+  try{
+    const r=await sbRpc('chat_pull',{p_init_data:TG.initData,p_seen:!!markSeen});
+    chatOn=true;
+    chatMsgs=(r&&r.list)||[];
+    chatUnread=markSeen?0:(+((r&&r.unread)||0));
+    chatLast=Date.now();
+    if(data.settings.chatUnread!==chatUnread){data.settings.chatUnread=chatUnread;}
+    paintFab();
+    if($('modal-chat').classList.contains('open'))renderChat();
+  }catch(e){
+    if(chatMissing(e)){chatOn=false;paintFab();}
+  }
+  chatPulling=false;
+}
+function chatRow(m){
+  const mine=m.who==='d';
+  let ph='';
+  const list=Array.isArray(m.ph)?m.ph:[];
+  if(list.length)ph='<div class="ph">'+list.map(u=>'<img src="'+esc(u)+'" alt="">').join('')+'</div>';
+  return '<div class="cm '+(mine?'me':'them')+'">'+
+    (m.body?'<div class="t">'+esc(m.body).replace(/\n/g,'<br>')+'</div>':'')+ph+
+    '<span class="at">'+(mine?'Ви · ':'Підтримка · ')+esc(m.at||'')+'</span></div>';
+}
+function renderChat(){
+  const box=$('chat-list');if(!box)return;
+  box.innerHTML=chatMsgs.length?chatMsgs.map(chatRow).join('')
+    :'<div class="chat-empty">Тут поки порожньо. Напишіть — відповімо.</div>';
+  box.scrollTop=box.scrollHeight;
+}
+function openChat(){
+  if(!TG||!TG.initData||chatOn===false){openSupport();return;}
+  tap('chat');
+  shotsTo={box:'chat-shots',btn:'chat-pick'};
+  supClearShots();
+  $('chat-text').value='';
+  $('chat-state').textContent='';
+  const b=$('chat-send');b.disabled=false;b.textContent='Надіслати';
+  renderChat();
+  openM('modal-chat');
+  chatPull(true).then(renderChat);
+  clearInterval(chatTimer);
+  chatTimer=setInterval(()=>{if($('modal-chat').classList.contains('open'))chatPull(true);},60000);
+}
+function closeChat(){
+  clearInterval(chatTimer);chatTimer=0;
+  supClearShots();
+  shotsTo={box:'sup-shots',btn:'sup-pick'};
+  closeM('modal-chat');
+}
+$('fab-chat').addEventListener('click',openChat);
+$('chat-close').addEventListener('click',closeChat);
+$('chat-pick').addEventListener('click',()=>$('chat-file').click());
+$('chat-file').addEventListener('change',function(){
+  const f=this.files;this.value='';addShots(f,'chat-state');
+});
+$('chat-send').addEventListener('click',async function(){
+  const t=$('chat-text').value.trim();
+  if(t.length<1&&!supShots.length){toast('Напишіть кілька слів');return;}
+  this.disabled=true;this.textContent='Надсилаю…';
+  $('chat-state').textContent='';
+  try{
+    const urls=[];let lost='';
+    for(let i=0;i<supShots.length;i++){
+      this.textContent='Надсилаю знімок '+(i+1)+' з '+supShots.length+'…';
+      try{urls.push(await uploadShot(supShots[i].blob));}
+      catch(e){lost=String((e&&e.message)||e).slice(0,24);break;}
+    }
+    this.textContent='Надсилаю…';
+    if(lost&&t.length<1){
+      $('chat-state').textContent='Знімки поки не приймаються ('+lost+'). Опишіть словами — текст дійде.';
+      this.disabled=false;this.textContent='Надіслати';return;
+    }
+    await sbRpc('chat_send',{p_init_data:TG.initData,p_text:t.slice(0,2000),
+                             p_photos:urls.length?urls:null});
+    $('chat-text').value='';supClearShots();
+    await chatPull(true);renderChat();
+    $('chat-state').textContent=lost?'Текст надіслано. Знімки не пройшли ('+lost+')':'';
+  }catch(e){
+    $('chat-state').textContent=chatMissing(e)
+      ? 'Чат ще не увімкнено на сервері. Напишіть через «Ще» → «Підтримка».'
+      : 'Не вдалося надіслати. Перевірте зʼєднання.';
+  }
+  this.disabled=false;this.textContent='Надіслати';
+});
+/* Повернувся у застосунок — перевіряємо, чи є відповідь. Не частіше
+   ніж раз на хвилину: зайвих запитів тут ніхто не оцінить. */
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&Date.now()-chatLast>60000)chatPull(false);
+});
+$('btn-help').addEventListener('click',openChat);
 /* Кнопка мусить показувати, що вона щось зробила: без відповіді натискання
    виглядає як зламане, навіть коли дані просто не змінились. А відмову
    сервера інакше видно тільки в діагностиці. */
@@ -5829,6 +6027,30 @@ function admPeople(d){
 /* Звернення для адмінки беремо окремою функцією: у ній є номер звернення,
    без якого нема на що відповідати. Немає її в базі — лишається старий
    список із admin_stats, тільки без кнопки. */
+let admChats=null, admChatUnread=0;
+/* Переписки. Немає функції в базі (файл «Чат підтримки» ще не виконано) —
+   лишається старий список звернень, і нічого не ламається. */
+async function loadAdminChats(){
+  try{
+    const r=await sbRpc('admin_chat_list',{p_init_data:TG.initData,p_limit:60});
+    admChats=(r&&r.list)||[];
+    admChatUnread=+((r&&r.unread)||0);
+  }catch(e){admChats=null;admChatUnread=0;}
+  const n=$('adm-talk-n');
+  if(n){n.style.display=admChatUnread>0?'':'none';n.textContent=admChatUnread>99?'99+':admChatUnread;}
+}
+function admChatList(){
+  const c=admChats||[];
+  return '<div class="card"><div class="card-title">Переписки</div>'+
+    (c.length?c.map(x=>'<div class="adm-c" data-chat="'+x.tg+'">'+
+      '<div class="w"><b>'+esc(x.name||('ID '+x.tg))+
+        (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
+        '<i>'+(x.who==='a'?'Ви: ':'')+esc(x.last||'')+'</i></div>'+
+      (+x.unread>0?'<span class="u">'+(+x.unread)+'</span>':'')+
+      '<span class="d">'+esc(String(x.at||'').slice(5,16))+'</span></div>').join('')
+      :'<div class="empty">Повідомлень ще не було</div>')+
+    '<p class="hint">Натисніть на водія, щоб відкрити переписку. Відповідь піде і в застосунок, і в бот.</p></div>';
+}
 let admTicks=null;
 async function loadAdminTicks(){
   try{const r=await sbRpc('admin_tickets',{p_init_data:TG.initData,p_limit:40});
@@ -5861,15 +6083,85 @@ function admTalk(d){
     admTile('mail',d.tickets||0,'звернень усього','за добу '+(d.tickets_1d||0),true)+
     admTile('key',(d.started||0),'дійшли до замовлення','з '+(d.users||0)+' водіїв')+
     '</div>'+
+    (Array.isArray(admChats)?admChatList():'')+
+    (Array.isArray(admChats)?'':
     '<div class="card"><div class="card-title">Останні звернення</div>'+
     (t.length?t.map(card).join(''):'<div class="empty">Звернень ще не було</div>')+
     '<p class="hint">'+(own
       ? 'Відповідь іде водієві в бот від імені ProTaxi. Знімки екрана лишаються в боті.'
       : 'Повний текст зі знімками надходить у бот. Щоб відповідати звідси, виконайте крок 13 у Supabase.')+
-    '</p></div>';
+    '</p></div>');
 }
 
-/* ── відповідь на звернення ── */
+/* ── переписка з водієм ── */
+let atTg=0, atMsgs=[];
+function atRender(){
+  const box=$('at-list');if(!box)return;
+  box.innerHTML=atMsgs.length?atMsgs.map(m=>{
+    const mine=m.who==='a';
+    const list=Array.isArray(m.ph)?m.ph:[];
+    const ph=list.length?'<div class="ph">'+list.map(u=>'<img src="'+esc(u)+'" alt="">').join('')+'</div>':'';
+    return '<div class="cm '+(mine?'me':'them')+'">'+
+      (m.body?'<div class="t">'+esc(m.body).replace(/\n/g,'<br>')+'</div>':'')+ph+
+      '<span class="at">'+(mine?'Ви · ':'Водій · ')+esc(m.at||'')+'</span></div>';
+  }).join(''):'<div class="chat-empty">Порожньо</div>';
+  box.scrollTop=box.scrollHeight;
+}
+async function atOpen(tg,title){
+  atTg=+tg;atMsgs=[];
+  $('at-who').textContent=title||('Водій '+tg);
+  $('at-text').value='';$('at-state').textContent='';
+  shotsTo={box:'at-shots',btn:'at-pick'};
+  supClearShots();
+  atRender();openM('modal-athread');
+  try{
+    const r=await sbRpc('admin_chat',{p_init_data:TG.initData,p_tg_id:atTg,p_seen:true});
+    atMsgs=(r&&r.list)||[];atRender();
+    await loadAdminChats();admPaint();
+  }catch(e){$('at-state').textContent='Не вдалося відкрити переписку.';}
+}
+$('admin-body').addEventListener('click',e=>{
+  const row=e.target.closest('[data-chat]');if(!row)return;
+  const x=(admChats||[]).find(z=>String(z.tg)===row.dataset.chat);
+  atOpen(row.dataset.chat,x?((x.name||('ID '+x.tg))+(x.user?' @'+x.user:'')):'');
+});
+$('at-back').addEventListener('click',()=>{
+  supClearShots();shotsTo={box:'sup-shots',btn:'sup-pick'};closeM('modal-athread');
+});
+$('at-pick').addEventListener('click',()=>$('at-file').click());
+$('at-file').addEventListener('change',function(){
+  const f=this.files;this.value='';addShots(f,'at-state');
+});
+$('at-send').addEventListener('click',async function(){
+  const t=$('at-text').value.trim();
+  if(t.length<1&&!supShots.length){toast('Напишіть відповідь');return;}
+  this.disabled=true;const was=this.textContent;this.textContent='Надсилаю…';
+  $('at-state').textContent='';
+  try{
+    const urls=[];let lost='';
+    for(let i=0;i<supShots.length;i++){
+      this.textContent='Надсилаю знімок '+(i+1)+' з '+supShots.length+'…';
+      try{urls.push(await uploadShot(supShots[i].blob));}
+      catch(err){lost=String((err&&err.message)||err).slice(0,24);break;}
+    }
+    await sbRpc('admin_chat_send',{p_init_data:TG.initData,p_tg_id:atTg,
+      p_text:t.slice(0,2000),p_photos:urls.length?urls:null});
+    $('at-text').value='';supClearShots();
+    const r=await sbRpc('admin_chat',{p_init_data:TG.initData,p_tg_id:atTg,p_seen:true});
+    atMsgs=(r&&r.list)||[];atRender();
+    await loadAdminChats();admPaint();
+    $('at-state').textContent=lost?'Текст надіслано. Знімки не пройшли ('+lost+')':'';
+    toast('Надіслано');
+  }catch(err){
+    const m=String((err&&err.message)||err);
+    $('at-state').textContent=/404|PGRST202|Could not find/i.test(m)
+      ? 'Спершу виконайте файл «Чат підтримки» у Supabase.'
+      : 'Не вдалося надіслати.';
+  }
+  this.disabled=false;this.textContent=was;
+});
+
+/* ── відповідь на звернення (старий шлях, поки немає чату) ── */
 let arId=0;
 $('admin-body').addEventListener('click',e=>{
   const b=e.target.closest('[data-reply]');if(!b)return;
@@ -6065,7 +6357,7 @@ async function renderAdmin(){
     const st=await sbRpc('admin_stats',{p_init_data:TG.initData,p_period:admPeriod});
     if(!st){hideShield();admWhy='сервер віддав порожню відповідь';done();return;}
     admData=st;
-    await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminPulse(),loadAdminFolks()]);
+    await Promise.all([loadAdminBilling(),loadAdminTicks(),loadAdminChats(),loadAdminPulse(),loadAdminFolks()]);
     btn.style.display='';
     document.documentElement.classList.add('has-adm');
     admWhy='доступ є';
@@ -7546,6 +7838,12 @@ function renderAll(){paintCurrency();renderShift();setChips();renderStats();rend
      водія ще немає, сервер її не прийме, а другого разу мітки вже не буде */
   rememberSrc();
   cloudPull();
+  /* Лічильник показуємо одразу за минулим разом, а тоді уточнюємо
+     запитом: інакше кружечок зʼявляється лише через секунду після
+     старту, і його не помічають. */
+  chatUnread=+(data.settings.chatUnread||0)||0;
+  paintFab();
+  setTimeout(()=>chatPull(false),1800);
   setTimeout(loadBilling,1200);
   setTimeout(loadPrices,1500);
 })();
