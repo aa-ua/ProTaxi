@@ -1659,7 +1659,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.87';
+const APP_VER='1.88';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2291,7 +2291,10 @@ function recalcAll(){
     e.cardGross=cardGrossOf(e);
     e.ownGross=ownGrossOf(e);
     if(!e.manualTips&&tipsOf(e)>0)e.tips=tipsOf(e);
-    e.rentShifts=shiftsOnDay(e.date,false);
+    /* Відкрита зміна — теж зміна цього дня. Без неї добова оренда й
+       фіксований податок лягали на закриті зміни повністю, а відкрита
+       брала ще свою частку — і за день виходило півтори оренди. */
+    e.rentShifts=shiftsOnDay(e.date,true);
     e.gross=(e.orders&&e.orders.length)?e.orders.reduce((a,o)=>a+(+o.amount||0),0):(+e.gross||0);
     e.calc=calc(e,data.settings);
   });
@@ -2911,6 +2914,8 @@ function renderShift(){
       let st0=toMs(todayStr(),t);
       if(st0>Date.now()+60000)st0-=86400000;
       data.active={id:Date.now(),startT:st0,odoStart:num($('open-odo').value),orders:[],path:[]};
+      /* день став із двох змін — частки треба переділити одразу */
+      recalcAll();
       await persist();renderShift();startTrack();toast('Сесію розпочато о '+t);
     }
     return;
@@ -4149,7 +4154,9 @@ makeSwipe($('cm-cancelshift'),async function(){
   /* Позначка — щоб скасовану зміну не повернула ні резервна копія, ні
      хмара; відправка одразу — щоб хмара не лишилась зі старим станом. */
   markGone('e',data.active.id);
-  data.active=null;stopTrack();await persist(true);
+  data.active=null;stopTrack();
+  recalcAll();            /* день знову без цієї зміни */
+  await persist(true);
   closeM('modal-close');swpReset(el);renderShift();toast('Сесію скасовано');
 });
 /* Один-єдиний шлях закриття зміни — і руками, і автоматично. Дві копії
@@ -4187,7 +4194,12 @@ function closeShiftWith(o){
   });
   data.active=null;
   stopTrack();
-  return c;
+  /* Зміна перейшла з відкритої в запис — добову оренду й податок треба
+     переділити між усіма змінами дня, інакше та сама доба показувала б
+     різні суми залежно від порядку дій. */
+  recalcAll();
+  const saved=data.entries[data.entries.length-1];
+  return (saved&&saved.calc)||c;
 }
 makeSwipe($('cm-save'),async()=>{
   const el=$('cm-save');
@@ -4847,7 +4859,9 @@ function renderHistory(){
     const del=document.createElement('button');del.className='del';del.textContent='✕';
     del.addEventListener('click',()=>confirmDel(del,async()=>{
       markGone('e',e.id);
-      data.entries=data.entries.filter(x=>x.id!==e.id);await persist(true);renderAll();toast('Сесію видалено');
+      data.entries=data.entries.filter(x=>x.id!==e.id);
+      recalcAll();          /* решта змін дня забирає її частку добових витрат */
+      await persist(true);renderAll();toast('Сесію видалено');
     }));
     row.appendChild(main);row.appendChild(net);row.appendChild(del);box.appendChild(row);
   });
