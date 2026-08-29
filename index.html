@@ -4584,6 +4584,18 @@ function renderStats(){
    готовий текст у сам рядок — так пояснення завжди про те, що показано
    зараз, а не про перерахований пізніше стан. */
 const whyLine=(k,v,tot)=>'<div class="why-l'+(tot?' tot':'')+'"><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>';
+/* Звідки взялась ціна пального для цієї зміни. Відповідь мусить називати
+   джерело: «₴45» без пояснення виглядає вигаданим, навіть коли це ціна
+   з власного чека водія. */
+function priceWhy(e){
+  const rs=(data.refuels||[]).filter(r=>+r.price>0&&r.date)
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  let hit=null;
+  for(const r of rs){ if(String(r.date)<=String(e.date||todayStr()))hit=r; else break; }
+  if(!hit&&rs.length)hit=rs[0];
+  if(hit)return 'з чека заправки '+fmtDate(hit.date);
+  return 'з налаштувань — чеків заправок ще немає';
+}
 function insRow(label,value,cls,why){
   return '<div class="ins"'+(why?' data-why="'+esc(why)+'"':'')+'><span class="k">'+label+
     '</span><span class="v'+(cls?' '+cls:'')+'">'+value+'</span></div>';
@@ -4612,12 +4624,16 @@ function detailRows(e){
     whyLine('відсоток',(+S.acquiringPct||0)+' %')+
     whyLine('еквайринг',fmt(e.calc.acquiring),true));
   const r=rateFor(e);
+  /* Ціну показуємо фактичну — ту, за якою ця сума й порахована. День
+     складається із сесій з різними цінами, і «сьогоднішня» тут збрехала б. */
+  const pFact=(+e.liters>0&&+e.calc.fuel>0)?e.calc.fuel/e.liters:(+e.fuelPrice||r.price);
   h+=insRow('Пальне · '+fmt1(e.liters)+' '+FK().u,'−'+fmt(e.calc.fuel),'neg',
     'Пальне рахується з пробігу, а не з чека|'+
     whyLine('пробіг',fmt1(e.km)+' км')+
     whyLine('витрата',fmt1(r.cons)+' '+FK().p100)+
     whyLine('вийшло',fmt1(e.liters)+' '+FK().u)+
-    whyLine('ціна',fmt(+e.fuelPrice||r.price)+'/'+FK().u)+
+    whyLine('ціна',fmt1(pFact)+' '+FK().price.replace('{c}',CS())+(e.day?' · середня за день':''))+
+    whyLine('звідки ціна',e.day?'із сесій нижче':priceWhy(e))+
     whyLine('пальне',fmt(e.calc.fuel),true));
   if(+e.calc.rent>0)h+=insRow('Оренда авто','−'+fmt(e.calc.rent),'neg',
     'Добова оренда ділиться між змінами цього дня|'+
@@ -4663,7 +4679,8 @@ function detailRows(e){
 function sumDay(list){
   const S=k=>list.reduce((a,e)=>a+(+(e.calc||{})[k]||0),0);
   const N=k=>list.reduce((a,e)=>a+(+e[k]||0),0);
-  return {gross:N('gross'),tips:N('tips'),liters:N('liters'),km:N('km'),
+  return {day:true,date:list[0]&&list[0].date,
+    gross:N('gross'),tips:N('tips'),liters:N('liters'),km:N('km'),
     cardGross:N('cardGross'),hours:N('hours'),breakH:N('breakH'),
     oc:list.reduce((a,e)=>a+(e.oc||0),0),
     orders:list.reduce((a,e)=>a.concat(e.orders||[]),[]),
