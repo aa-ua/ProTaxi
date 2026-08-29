@@ -1659,7 +1659,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.89';
+const APP_VER='1.90';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2069,7 +2069,12 @@ function entryAfterRefuel(e,r){
   if(!r)return true;
   if(e.date>r.date)return true;
   if(e.date<r.date)return false;
-  if(+r.t>0&&+e.endT>0)return +e.endT>+r.t;
+  /* Час заправки може лежати у двох полях: у нових записах це t, у тих,
+     де обнуляли лічильник, — ще й resetAt. Без жодного з них зміна того
+     самого дня вважалась «до заправки», і екран «Бак» показував нуль
+     пробігу, поки статистика рахувала ті самі кілометри. */
+  const rt=+r.t||+r.resetAt||0;
+  if(rt>0&&+e.endT>0)return +e.endT>rt;
   if(+r.odo>0&&+e.odoEnd>0&&!r.reset)return +e.odoEnd>+r.odo;
   return false;
 }
@@ -2079,7 +2084,8 @@ function activeAfterRefuel(r){
   const d=dateOf(a.startT);
   if(d>r.date)return true;
   if(d<r.date)return false;
-  return !(+r.t>0)||a.startT>+r.t;
+  const rt=+r.t||+r.resetAt||0;
+  return !(rt>0)||a.startT>rt;
 }
 function lastRefuel(){
   const rs=[...(data.refuels||[])].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
@@ -7451,7 +7457,11 @@ function renderFunds(){
      позначки) і поповнення руками. Старі записи без `in` — це витрати. */
   const spent=data.fundOps.filter(o=>!o.in).reduce((a,o)=>a+(+o.amount||0),0);
   const added=data.fundOps.filter(o=>o.in).reduce((a,o)=>a+(+o.amount||0),0);
-  const earned=data.entries.reduce((a,e)=>a+e.calc.fund,0);
+  /* Відкрита зміна теж відкладає: на екрані зміни цифра вже стоїть, і
+     якщо тут її не врахувати, два екрани показують різні гроші за той
+     самий момент. Папка на пальне рахує так само. */
+  const ae=activeAsEntry();
+  const earned=data.entries.reduce((a,e)=>a+e.calc.fund,0)+((ae&&ae.calc&&+ae.calc.fund)||0);
   const bal=earned+added-spent;
   $('fund-name').textContent=fundLabel()+' · '+(data.settings.serviceName||'ціль');
   const tl=$('tab-fund-lbl');if(tl)tl.textContent=fundTab();
