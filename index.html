@@ -370,6 +370,10 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 @keyframes swpA{0%,100%{opacity:.25}50%{opacity:.9}}
 @media (prefers-reduced-motion:reduce){.swp-arr i{animation:none;opacity:.5}}
 .swp+.btn{margin-top:10px}
+/* Завершення зміни — помаранчева смуга: це інша за вагою дія, ніж
+   замовлення, і рука не має плутати їх на автоматі. Колір беремо --amber:
+   --yellow у цьому проєкті насправді зелений. */
+.swp-amber .swp-fill{background:var(--amber)}
 
 .chips{display:flex;gap:8px;margin-bottom:12px}
 /* Часті періоди — на видноті, решта в списку: інакше пів екрана займають
@@ -1333,7 +1337,7 @@ html.map-full .tabbar{display:none}
     </div>
     <div class="hint" id="cm-wnote" style="display:none;margin:-4px 0 10px;text-align:center"></div>
     <div class="hint" id="cm-preview" style="margin:0 0 12px;text-align:center"></div>
-    <button class="btn btn-primary" id="cm-save">Завершити й порахувати</button>
+    <div class="swp swp-amber" id="cm-save" role="button" tabindex="0"><div class="swp-fill"><div class="swp-in"><span>Проведіть, щоб завершити зміну</span></div></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб завершити зміну</div></div>
     <button class="btn btn-ghost" id="cm-back">Назад</button>
     <button class="btn btn-danger" id="cm-cancelshift">Скасувати сесію</button>
   </div>
@@ -1507,7 +1511,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.79';
+const APP_VER='1.80';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -3924,6 +3928,7 @@ function openCloseShift(){
   disarm($('cm-cancelshift'));
   $('cm-wnote').style.display='none';
   cmPreview();
+  swpReset($('cm-save'));
   openM('modal-close');
   detectWeather();
 }
@@ -3949,13 +3954,13 @@ function cmPreview(){
   p.push('на руки '+fmt(c.personal));
   $('cm-preview').textContent=p.join(' · ');
 }
-['cm-odo','cm-tips','cm-liters'].forEach(id=>$(id).addEventListener('input',cmPreview));
+['cm-odo','cm-tips','cm-liters'].forEach(id=>$(id).addEventListener('input',()=>{swpReset($('cm-save'));cmPreview();}));
 $('cm-weather').addEventListener('click',e=>{
   const b=e.target.closest('.wchip');if(!b)return;
   cmWeather=b.dataset.w;
   document.querySelectorAll('#cm-weather .wchip').forEach(x=>x.classList.toggle('on',x===b));
 });
-$('cm-back').addEventListener('click',()=>{disarm($('cm-cancelshift'));closeM('modal-close');});
+$('cm-back').addEventListener('click',()=>{swpReset($('cm-save'));disarm($('cm-cancelshift'));closeM('modal-close');});
 $('cm-cancelshift').addEventListener('click',function(){
   arm(this,'Точно скасувати?',async()=>{
     /* Позначка — щоб скасовану зміну не повернула ні резервна копія, ні
@@ -4001,20 +4006,21 @@ function closeShiftWith(o){
   stopTrack();
   return c;
 }
-$('cm-save').addEventListener('click',async()=>{
-  const a=data.active;if(!a)return;
+makeSwipe($('cm-save'),async()=>{
+  const el=$('cm-save');
+  const a=data.active;if(!a){swpReset(el);return;}
   /* Нічна зміна: почав о 22:00, закриває о 06:00 — це наступна доба,
      а не «раніше за початок». Переносимо на добу вперед, але тільки якщо
      цей час уже настав: інакше зміна закривалася б у майбутньому. */
   let endT=toMs(dateOf(a.startT),$('cm-end').value||nowHM());
   if(endT<=a.startT&&endT+86400000<=Date.now()+3600000)endT+=86400000;
-  if(endT<=a.startT){toast('Час закриття раніше початку');return;}
+  if(endT<=a.startT){toast('Час закриття раніше початку');swpReset(el);return;}
   const c=closeShiftWith({endT,odoEnd:num($('cm-odo').value),tips:num($('cm-tips').value),
                           liters:num($('cm-liters').value),weather:cmWeather});
-  if(!c)return;
+  if(!c){swpReset(el);return;}
   /* одразу в хмару: оновлення сторінки за секунду після закриття не має
      повертати зміну у відкритий стан */
-  await persist(true);closeM('modal-close');renderAll();
+  await persist(true);closeM('modal-close');swpReset(el);renderAll();
   tap('shift.close');
   toast('Сесію завершено: '+fmt(c.personal)+' на руки');
   if(gToken&&Date.now()<gExp)driveUp(true); /* тиха копія у Drive */
