@@ -1286,6 +1286,16 @@ html.map-full .tabbar{display:none}
   </div>
 </div>
 
+<!-- Модалка: список переписок (кругла кнопка у власника) -->
+<div class="modal-bg mid" id="modal-chats">
+  <div class="modal">
+    <h3>Переписки з водіями</h3>
+    <p class="hint" style="margin:0 0 10px">Натисніть на людину, щоб відкрити переписку й відповісти.</p>
+    <div id="chats-list"></div>
+    <button class="btn btn-ghost" id="chats-back">Назад</button>
+  </div>
+</div>
+
 <!-- Модалка: переписка з водієм (адмінка) -->
 <div class="modal-bg mid" id="modal-athread">
   <div class="modal">
@@ -1595,7 +1605,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.81';
+const APP_VER='1.82';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5298,13 +5308,23 @@ let chatUnread=0;
 let chatPulling=false, chatLast=0, chatTimer=0;
 const chatMissing=e=>/\b404\b|PGRST202|Could not find/i.test(String(e&&e.message||e));
 
+/* У власника застосунку та сама кругла кнопка веде не в чат із підтримкою,
+   а в список переписок: писати самому собі нема сенсу, а відповідати
+   людям — щодня. Ознака власника одна на весь застосунок: admData
+   зʼявляється, лише коли база впізнала його Telegram ID. */
+const chatOwner=()=>!!admData;
 function paintFab(){
   const f=$('fab-chat');if(!f)return;
-  f.classList.toggle('on',!!chatOn&&!!TG&&!!TG.initData);
-  f.classList.toggle('new',chatUnread>0);
-  $('fab-n').textContent=chatUnread>99?'99+':String(chatUnread);
+  const own=chatOwner();
+  const on=!!TG&&!!TG.initData&&(own?Array.isArray(admChats):chatOn===true);
+  const n=own?admChatUnread:chatUnread;
+  f.classList.toggle('on',on);
+  f.classList.toggle('new',n>0);
+  f.setAttribute('aria-label',own?'Переписки з водіями':'Підтримка');
+  $('fab-n').textContent=n>99?'99+':String(n);
 }
 async function chatPull(markSeen){
+  if(chatOwner()){paintFab();return;}   /* власник не пише сам собі */
   if(!TG||!TG.initData||chatOn===false||chatPulling)return;
   chatPulling=true;
   try{
@@ -5337,6 +5357,7 @@ function renderChat(){
   box.scrollTop=box.scrollHeight;
 }
 function openChat(){
+  if(chatOwner()){openChats();return;}
   if(!TG||!TG.initData||chatOn===false){openSupport();return;}
   tap('chat');
   shotsTo={box:'chat-shots',btn:'chat-pick'};
@@ -5356,6 +5377,21 @@ function closeChat(){
   shotsTo={box:'sup-shots',btn:'sup-pick'};
   closeM('modal-chat');
 }
+/* Список переписок як окреме вікно: власник відкриває його з будь-якого
+   екрана, не заходячи в панель. Ті самі рядки, що й у вкладці «Відгуки». */
+function paintChatsModal(){
+  const box=$('chats-list');if(!box)return;
+  box.innerHTML=Array.isArray(admChats)
+    ? admChatRows()
+    : '<div class="chat-empty">Спершу виконайте файл «Чат підтримки» у Supabase.</div>';
+}
+async function openChats(){
+  paintChatsModal();
+  openM('modal-chats');
+  await loadAdminChats();
+  paintChatsModal();
+}
+$('chats-back').addEventListener('click',()=>closeM('modal-chats'));
 $('fab-chat').addEventListener('click',openChat);
 $('chat-close').addEventListener('click',closeChat);
 $('chat-pick').addEventListener('click',()=>$('chat-file').click());
@@ -5394,7 +5430,9 @@ $('chat-send').addEventListener('click',async function(){
 /* Повернувся у застосунок — перевіряємо, чи є відповідь. Не частіше
    ніж раз на хвилину: зайвих запитів тут ніхто не оцінить. */
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&Date.now()-chatLast>60000)chatPull(false);
+  if(document.hidden)return;
+  if(chatOwner()){if(TG&&TG.initData)loadAdminChats();return;}
+  if(Date.now()-chatLast>60000)chatPull(false);
 });
 $('btn-help').addEventListener('click',openChat);
 /* Кнопка мусить показувати, що вона щось зробила: без відповіді натискання
@@ -6040,17 +6078,20 @@ async function loadAdminChats(){
   }catch(e){admChats=null;admChatUnread=0;}
   const n=$('adm-talk-n');
   if(n){n.style.display=admChatUnread>0?'':'none';n.textContent=admChatUnread>99?'99+':admChatUnread;}
+  paintFab();
 }
-function admChatList(){
+function admChatRows(){
   const c=admChats||[];
-  return '<div class="card"><div class="card-title">Переписки</div>'+
-    (c.length?c.map(x=>'<div class="adm-c" data-chat="'+x.tg+'">'+
+  return (c.length?c.map(x=>'<div class="adm-c" data-chat="'+x.tg+'">'+
       '<div class="w"><b>'+esc(x.name||('ID '+x.tg))+
         (x.user?' <span>@'+esc(x.user)+'</span>':'')+'</b>'+
         '<i>'+(x.who==='a'?'Ви: ':'')+esc(x.last||'')+'</i></div>'+
       (+x.unread>0?'<span class="u">'+(+x.unread)+'</span>':'')+
       '<span class="d">'+esc(String(x.at||'').slice(5,16))+'</span></div>').join('')
-      :'<div class="empty">Повідомлень ще не було</div>')+
+      :'<div class="empty">Повідомлень ще не було</div>');
+}
+function admChatList(){
+  return '<div class="card"><div class="card-title">Переписки</div>'+admChatRows()+
     '<p class="hint">Натисніть на водія, щоб відкрити переписку. Відповідь піде і в застосунок, і в бот.</p></div>';
 }
 let admTicks=null;
@@ -6122,13 +6163,18 @@ async function atOpen(tg,title){
     await loadAdminChats();admPaint();
   }catch(e){$('at-state').textContent='Не вдалося відкрити переписку.';}
 }
-$('admin-body').addEventListener('click',e=>{
+let atFrom='';
+document.addEventListener('click',e=>{
   const row=e.target.closest('[data-chat]');if(!row)return;
   const x=(admChats||[]).find(z=>String(z.tg)===row.dataset.chat);
+  atFrom=$('modal-chats').classList.contains('open')?'fab':'panel';
+  if(atFrom==='fab')closeM('modal-chats');
   atOpen(row.dataset.chat,x?((x.name||('ID '+x.tg))+(x.user?' @'+x.user:'')):'');
 });
 $('at-back').addEventListener('click',()=>{
   supClearShots();shotsTo={box:'sup-shots',btn:'sup-pick'};closeM('modal-athread');
+  /* прийшли з круглої кнопки — вертаємось у список, а не в порожнечу */
+  if(atFrom==='fab'){paintChatsModal();openM('modal-chats');}
 });
 $('at-pick').addEventListener('click',()=>$('at-file').click());
 $('at-file').addEventListener('change',function(){
