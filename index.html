@@ -538,6 +538,18 @@ html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);p
 .cm .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .cm .ph img{width:88px;height:88px;object-fit:cover;border-radius:9px;display:block}
 .chat-empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
+/* Картка водія над перепискою. Тільки те, що не є його грошима:
+   коли прийшов, звідки, скільки змін і замовлень. Сум і маршрутів тут
+   немає й не має зʼявитись — це його справа, і ми це людям обіцяли. */
+.who-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;
+  padding:12px 13px;margin:0 0 12px}
+.who-top{display:flex;align-items:center;gap:9px;margin-bottom:8px}
+.who-top b{font-size:15px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.who-top b span{color:var(--muted);font-weight:500}
+.who-g{display:flex;flex-wrap:wrap;gap:6px 14px}
+.who-g div{font-size:12.5px;color:var(--muted)}
+.who-g b{display:block;font-size:14px;color:var(--text);font-weight:700}
 /* Список переписок у панелі. Непрочитане — червоним кружечком праворуч:
    у списку на два десятки рядків інакше не видно, кому ви ще не відповіли. */
 .adm-c{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);
@@ -1333,6 +1345,7 @@ html.map-full .tabbar{display:none}
 <div class="modal-bg mid" id="modal-athread">
   <div class="modal">
     <h3 id="at-who">Переписка</h3>
+    <div id="at-who-card"></div>
     <p class="hint" style="margin:0 0 10px">Відповідь піде водієві в застосунок і в бот — від імені ProTaxi.</p>
     <div class="chat" id="at-list"></div>
     <div class="field"><textarea id="at-text" rows="3" placeholder="Ваша відповідь…"></textarea></div>
@@ -1641,7 +1654,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.85';
+const APP_VER='1.86';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5992,6 +6005,11 @@ function admCurrencies(){
 /* Звідки приходять люди. Список ніде не заданий — які мітки трапились,
    такі й показуємо. «direct» — зайшов без мітки, «unknown» — був у базі
    ще до того, як мітки зʼявились. */
+/* Назва мітки одна на весь застосунок: у списку джерел і в картці водія
+   вона мусить читатись однаково. */
+const srcName=k=>k==='direct'?'Без мітки':(k==='unknown'?'Були раніше':
+  (k==='share'?'Поділились підсумком':
+   ((SRC_LINKS.find(x=>x[0]===k)||[])[1]||String(k||''))));
 function admSources(){
   const d=admSrc;
   if(!d||!Array.isArray(d.rows))return '';
@@ -5999,8 +6017,7 @@ function admSources(){
   if(!rows.length)return '<div class="card"><div class="card-title">Джерела трафіку</div>'+
     '<div class="empty">За цей період ніхто не приходив</div></div>';
   const top=Math.max(1,...rows.map(x=>+x.n||0));
-  const nice=k=>k==='direct'?'Без мітки':(k==='unknown'?'Були раніше':
-    (k==='share'?'Поділились підсумком':k));
+  const nice=srcName;
   return '<div class="card"><div class="card-title">Джерела трафіку · '+
     (+d.total||0)+' за період</div>'+
     rows.map(x=>'<div class="fn"><div class="fn-t"><span>'+esc(nice(x.src))+'</span>'+
@@ -6202,7 +6219,34 @@ function admTalk(d){
 
 /* ── переписка з водієм ── */
 let atTg=0, atMsgs=[];
+/* Хто ця людина — коротко й лише те, що можна показувати. Беремо з тих
+   самих даних, що й вкладка «Люди»: сум і маршрутів там немає. */
+function atWhoCard(){
+  const tg=atTg;
+  const f=((admFolks&&admFolks.list)||[]).find(x=>+x.id===tg)||null;
+  const c=(admChats||[]).find(x=>+x.tg===tg)||null;
+  const name=(f&&f.name)||(c&&c.name)||('ID '+tg);
+  const user=(f&&f.user)||(c&&c.user)||'';
+  /* зміни й замовлення є лише в «Останніх водіях» — коли людина там є */
+  const r=((admData&&admData.recent)||[]).find(x=>
+    (x.name||'')===name&&String(x.user||'')===String(user||''));
+  const beta=!!(f&&f.beta);
+  const cell=(k,v)=>'<div>'+esc(k)+'<b>'+esc(String(v))+'</b></div>';
+  let g='';
+  if(f&&f.joined)g+=cell('З нами з',String(f.joined).slice(0,10));
+  if(f&&f.seen)g+=cell('Востаннє',admAgo(f.seen));
+  if(r)g+=cell('Змін',(+r.shifts||0))+cell('Замовлень',(+r.orders||0));
+  if(f&&f.src)g+=cell('Прийшов з',srcName(f.src));
+  g+=cell('Telegram ID',tg);
+  return '<div class="who-card"><div class="who-top">'+
+    '<b>'+esc(name)+(user?' <span>@'+esc(user)+'</span>':'')+'</b>'+
+    (f?'<button class="adm-crown'+(beta?' on':'')+'" data-beta="'+tg+
+       '" data-on="'+(beta?'0':'1')+'" aria-label="Спеціальний статус">'+admCrownSVG()+'</button>':'')+
+    '</div><div class="who-g">'+g+'</div></div>';
+}
 function atRender(){
+  const w=$('at-who-card');
+  if(w)w.innerHTML=atTg?atWhoCard():'';
   const box=$('at-list');if(!box)return;
   box.innerHTML=atMsgs.length?atMsgs.map(m=>{
     const mine=m.who==='a';
@@ -6222,7 +6266,7 @@ function atRender(){
 }
 async function atOpen(tg,title){
   atTg=+tg;atMsgs=[];
-  $('at-who').textContent=title||('Водій '+tg);
+  $('at-who').textContent='Переписка';
   $('at-text').value='';$('at-state').textContent='';
   shotsTo={box:'at-shots',btn:'at-pick'};
   supClearShots();
@@ -6393,6 +6437,8 @@ document.addEventListener('click',async function(e){
       await sbRpc('admin_beta',{p_init_data:TG.initData,p_tg_id:+c.dataset.beta,p_on:on});
       toast(on?'Спец-статус увімкнено':'Спец-статус знято');
       await loadAdminFolks();admPaint();
+      /* корону можна дати й з переписки — там та сама кнопка */
+      if($('modal-athread').classList.contains('open'))atRender();
     }catch(err){
       const m=String((err&&err.message)||err);
       toast(/404|PGRST202|Could not find/i.test(m)
