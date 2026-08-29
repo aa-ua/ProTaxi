@@ -336,6 +336,38 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
 .btn-danger.hot{background:rgba(255,95,87,.14);border-color:var(--red)}
 .btn+.btn{margin-top:10px}
 
+/* ── Свайп замість дотику ──
+   Прийняти й завершити замовлення водій тисне за кермом, часто наосліп.
+   Дотик там надто дешевий: випадковий тап приймає або завершує замовлення.
+   Підтвердження двома дотиками ми вже пробували — воно губилось між
+   дотиками, і люди лишались із відкритим замовленням, певні, що закрили
+   його. Тому як у водійських застосунках: провести пальцем зліва направо.
+   Випадково так не виходить, а свідомо — з першого разу.
+   touch-action:none — інакше палець гортає вікно замість проведення. */
+.swp{position:relative;width:100%;height:56px;margin-top:14px;border-radius:14px;
+  overflow:hidden;background:var(--surface2);border:1px solid var(--border);
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;cursor:grab;
+  display:flex;align-items:center;justify-content:center}
+.swp-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--yellow);
+  transition:width .22s cubic-bezier(.22,.61,.36,1)}
+.swp.drag{cursor:grabbing}
+.swp.drag .swp-fill{transition:none}
+.swp-label{position:relative;font-size:15px;font-weight:800;color:var(--text);
+  pointer-events:none;transition:color .15s}
+.swp.lit .swp-label{color:#101010}
+.swp-arr{position:absolute;left:15px;display:flex;gap:2px;pointer-events:none;
+  transition:opacity .2s}
+.swp.hot .swp-arr,.swp.done .swp-arr{opacity:0}
+.swp-arr i{width:7px;height:7px;border-right:2px solid var(--muted);
+  border-top:2px solid var(--muted);transform:rotate(45deg);
+  animation:swpA 1.6s infinite}
+.swp-arr i:nth-child(2){animation-delay:.18s}
+.swp-arr i:nth-child(3){animation-delay:.36s}
+@keyframes swpA{0%,100%{opacity:.25}50%{opacity:.9}}
+@media (prefers-reduced-motion:reduce){.swp-arr i{animation:none;opacity:.5}}
+.swp+.btn{margin-top:10px}
+
 .chips{display:flex;gap:8px;margin-bottom:12px}
 /* Часті періоди — на видноті, решта в списку: інакше пів екрана займають
    кнопки, а цифри доводиться шукати прокруткою. */
@@ -1226,8 +1258,8 @@ html.map-full .tabbar{display:none}
       </div>
       <span class="seg-note" id="om-src-note"></span>
     </div>
-    <div class="hint" id="om-hint" style="margin:0 0 12px"></div>
-    <button class="btn btn-primary" id="om-save">Прийняти</button>
+    <div class="hint" id="om-hint" style="margin:0"></div>
+    <div class="swp" id="om-save" role="button" tabindex="0"><div class="swp-fill"></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб прийняти</div></div>
     <button class="btn btn-ghost" id="om-cancel">Скасувати</button>
   </div>
 </div>
@@ -1263,7 +1295,7 @@ html.map-full .tabbar{display:none}
     </div>
     <div class="field" id="fin-cash-row"><label data-cur="Дав готівкою, {c}">Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
-    <button class="btn btn-primary" id="fin-save">Підтвердити завершення</button>
+    <div class="swp" id="fin-save" role="button" tabindex="0"><div class="swp-fill"></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб завершити</div></div>
     <button class="btn btn-ghost btn-sm" id="fin-more" type="button">Одометр на початку, чайові</button>
     <div id="fin-extra" style="display:none">
       <div class="grid2">
@@ -1472,7 +1504,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.78';
+const APP_VER='1.79';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -1704,7 +1736,7 @@ function setPay(box,v){document.querySelectorAll('#'+box+' .wchip').forEach(x=>x
   el.addEventListener('click',e=>{
     const b=e.target.closest('.wchip');if(!b)return;
     el.querySelectorAll('.wchip').forEach(x=>x.classList.toggle('on',x===b));
-    if(id==='fin-pay'){disarm($('fin-save'));finCalc();}
+    if(id==='fin-pay'){swpReset($('fin-save'));finCalc();}
   });
 });
 /* ── Наскільки вигідне замовлення проти твоєї ж статистики ──
@@ -2360,6 +2392,61 @@ function disarm(btn){
 }
 function confirmDel(btn,fn){arm(btn,'Точно?',fn);}
 
+/* Проведення пальцем замість дотику. Спрацьовує, лише коли смуга
+   заповнена майже до кінця; відпустив раніше — вона плавно вертається.
+   Просто дотик нічого не робить, але й не мовчить: підказує, що треба
+   провести, інакше кнопка виглядає зламаною. */
+const SWP_DONE=0.88;
+function swpLabel(el,t){
+  if(!el)return;
+  el.dataset.label=t;
+  const l=el.querySelector('.swp-label');if(l)l.textContent=t;
+}
+function swpReset(el){
+  if(!el||!el.classList.contains('swp'))return;
+  el.classList.remove('drag','lit','hot','done');
+  const f=el.querySelector('.swp-fill');if(f)f.style.width='0%';
+  const l=el.querySelector('.swp-label');
+  if(l&&el.dataset.label)l.textContent=el.dataset.label;
+  el.dataset.busy='';
+}
+function makeSwipe(el,fn){
+  if(!el)return;
+  const fill=el.querySelector('.swp-fill');
+  let x0=0,p=0,on=false,moved=0;
+  const span=()=>Math.max(1,el.getBoundingClientRect().width-6);
+  const set=v=>{
+    p=Math.max(0,Math.min(1,v));
+    fill.style.width=(p*100)+'%';
+    el.classList.toggle('lit',p>=0.4);
+    el.classList.toggle('hot',p>=SWP_DONE);
+  };
+  el.addEventListener('pointerdown',e=>{
+    if(el.dataset.busy==='1')return;
+    on=true;moved=0;x0=e.clientX;el.classList.add('drag');
+    try{el.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  el.addEventListener('pointermove',e=>{
+    if(!on)return;
+    const dx=e.clientX-x0;
+    if(Math.abs(dx)>moved)moved=Math.abs(dx);
+    set(dx/span());
+  });
+  const end=()=>{
+    if(!on)return;
+    on=false;el.classList.remove('drag');
+    if(p>=SWP_DONE){
+      el.dataset.busy='1';set(1);el.classList.add('done');
+      fn();
+      return;
+    }
+    set(0);
+    if(moved<8)toast('Проведіть пальцем зліва направо');
+  };
+  el.addEventListener('pointerup',end);
+  el.addEventListener('pointercancel',()=>{on=false;el.classList.remove('drag');set(0);});
+}
+
 /* ══ Свята України: фіксовані + плавучі (Великдень) ══ */
 const EASTER={2026:'04-12',2027:'05-02',2028:'04-16',2029:'04-08',2030:'04-28'};
 const FIXH=[
@@ -2845,6 +2932,7 @@ function openNewOrder(){
   $('om-time-box').style.display='none';
   omTimeLine();
   omHint();
+  swpReset($('om-save'));
   openM('modal-order');
   setTimeout(()=>$('om-amount').focus(),120);
 }
@@ -2874,17 +2962,18 @@ function omHint(){
   }
   $('om-hint').textContent=lo>0?'Попередній показник: '+fmt1(lo)+' км':'Вкажіть поточний показник добового одометра';
 }
-$('om-cancel').addEventListener('click',()=>closeM('modal-order'));
-$('om-save').addEventListener('click',async()=>{
-  const a=data.active;if(!a)return;
+$('om-cancel').addEventListener('click',()=>{swpReset($('om-save'));closeM('modal-order');});
+makeSwipe($('om-save'),async()=>{
+  const a=data.active;if(!a){swpReset($('om-save'));return;}
   const amount=num($('om-amount').value);
-  if(amount<=0){toast('Вкажіть суму замовлення');return;}
+  if(amount<=0){toast('Вкажіть суму замовлення');swpReset($('om-save'));return;}
   const odo=num($('om-odo').value);
   const t=toMs(dateOf(a.startT),$('om-time').value||nowHM());
   const o={id:Date.now(),t,endT:0,amount,odoStart:odo,odoEnd:0,pay:payOf('om-pay'),own:ownOf('om-src'),tip:0};
   a.orders.push(o);
   tap('order.new');
-  await persist();closeM('modal-order');renderShift();toast('Замовлення прийнято · '+fmt(amount));
+  await persist();closeM('modal-order');swpReset($('om-save'));renderShift();
+  toast('Замовлення прийнято · '+fmt(amount));
   captureOrderMeta(o.id); /* погода і геоточка допишуться самі, без блокування */
 });
 
@@ -2972,9 +3061,8 @@ function openFinish(id){
   $('fin-more').textContent='Одометр на початку, чайові';
   renderFinVerdict(o);
   const btn=$('fin-save');
-  disarm(btn);
-  btn.dataset.orig=open?'Підтвердити завершення':'Зберегти зміни';
-  btn.textContent=btn.dataset.orig;
+  swpLabel(btn,open?'Проведіть, щоб завершити':'Проведіть, щоб зберегти');
+  swpReset(btn);
   disarm($('fin-del'));
   finCalc();
   openM('modal-finish');
@@ -3017,8 +3105,8 @@ function finCalc(){
     }else{cb.style.display='none';cb.classList.remove('short');}
   }
 }
-['fin-amount','fin-odo-start','fin-odo-end','fin-start','fin-end','fin-tip','fin-cash'].forEach(id=>$(id).addEventListener('input',()=>{disarm($('fin-save'));finCalc();}));
-$('fin-now').addEventListener('click',()=>{$('fin-end').value=nowHM();disarm($('fin-save'));finCalc();});
+['fin-amount','fin-odo-start','fin-odo-end','fin-start','fin-end','fin-tip','fin-cash'].forEach(id=>$(id).addEventListener('input',()=>{swpReset($('fin-save'));finCalc();}));
+$('fin-now').addEventListener('click',()=>{$('fin-end').value=nowHM();swpReset($('fin-save'));finCalc();});
 $('fin-time-line').addEventListener('click',()=>{
   const box=$('fin-time-box');
   box.style.display=box.style.display==='none'?'':'none';
@@ -3028,15 +3116,19 @@ $('fin-more').addEventListener('click',function(){
   box.style.display=open?'':'none';
   this.textContent=open?'Згорнути':'Одометр на початку, чайові';
 });
-$('fin-cancel').addEventListener('click',()=>{disarm($('fin-save'));disarm($('fin-del'));closeM('modal-finish');});
-$('fin-save').addEventListener('click',function(){
-  const f=findOrder(finId);if(!f)return;
+$('fin-cancel').addEventListener('click',()=>{swpReset($('fin-save'));disarm($('fin-del'));closeM('modal-finish');});
+makeSwipe($('fin-save'),async function(){
+  const el=$('fin-save');
+  const f=findOrder(finId);if(!f){swpReset(el);return;}
   const o=f.o,open=isOpen(o);
   const amount=num($('fin-amount').value);
-  if(amount<=0){toast('Вкажіть суму');return;}
+  if(amount<=0){toast('Вкажіть суму');swpReset(el);return;}
   const os=num($('fin-odo-start').value), oe=num($('fin-odo-end').value);
-  if(oe>0&&os>0&&oe<os&&!resetValueFor(os,dateOf(o.t||Date.now()))){toast('Кінцевий одометр менший за початковий. Якщо лічильник обнулено — спершу додайте заправку з відповідною позначкою');return;}
-  arm(this,open?'Точно завершити?':'Точно зберегти?',async()=>{
+  if(oe>0&&os>0&&oe<os&&!resetValueFor(os,dateOf(o.t||Date.now()))){
+    toast('Кінцевий одометр менший за початковий. Якщо лічильник обнулено — спершу додайте заправку з відповідною позначкою');
+    swpReset(el);return;
+  }
+  {
     const ds=f.entry?f.entry.date:dateOf(data.active.startT);
     o.amount=amount;
     o.odoStart=os;o.odoEnd=oe;
@@ -3047,10 +3139,10 @@ $('fin-save').addEventListener('click',function(){
     o.endT=endT;
     o.km=oKm(o);
     if(f.entry)recalcEntry(f.entry);
-    await persist();closeM('modal-finish');renderAll();
+    await persist();closeM('modal-finish');swpReset(el);renderAll();
     if(open)captureFinishPoint(finId);
     toast(open?'Замовлення завершено':'Зміни збережено');
-  });
+  }
 });
 $('fin-del').addEventListener('click',function(){
   const f=findOrder(finId);if(!f)return;
