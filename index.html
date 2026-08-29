@@ -1658,7 +1658,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.92';
+const APP_VER='1.93';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2818,6 +2818,7 @@ function todayNet(){return todayTotals().net;}
    Рахуємо за твоєю ж історією цього самого дня тижня, а як її мало — за останніми змінами. */
 const DOW_IN=['у неділю','у понеділок','у вівторок','у середу','у четвер','у пʼятницю','у суботу'];
 const plOrder=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'замовлень':(b===1?'замовлення':((b>=2&&b<=4)?'замовлення':'замовлень'));};
+const plSess=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'сесій':(b===1?'сесія':((b>=2&&b<=4)?'сесії':'сесій'));};
 const plShift=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'змін':(b===1?'зміна':((b>=2&&b<=4)?'зміни':'змін'));};
 const plOrd=n=>{const a=n%100,b=n%10;return (a>=11&&a<=14)?'замовлень':((b>=2&&b<=4)?'замовлення':(b===1?'замовлення':'замовлень'));};
 function goalPace(){
@@ -4529,6 +4530,39 @@ function renderStats(){
   renderChart();renderInsights(es);renderHistory();
 }
 
+/* Ті самі рядки розбору для однієї сесії і для дня цілком. Одна функція,
+   бо дві копії з часом розійшлись би, і день показував би не те, що сесії. */
+function detailRows(e){
+  const ordKm=(e.orders||[]).reduce((a,o)=>a+oKm(o),0);
+  let h='<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(+e.gross||0)+'</span></div>';
+  if(+e.tips>0)h+='<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(+e.tips)+'</span></div>';
+  h+='<div class="ins"><span class="k">Платформі'+(platName()?' · '+esc(platName()):'')+'</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
+  if(+e.calc.acquiring>0)h+='<div class="ins"><span class="k">Еквайринг '+(+data.settings.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0)+'</span><span class="v neg">−'+fmt(e.calc.acquiring)+'</span></div>';
+  h+='<div class="ins"><span class="k">Пальне · '+fmt1(e.liters)+' '+FK().u+'</span><span class="v neg">−'+fmt(e.calc.fuel)+'</span></div>';
+  if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
+  if(+e.calc.tax>0)h+='<div class="ins"><span class="k">Податки</span><span class="v neg">−'+fmt(e.calc.tax)+'</span></div>';
+  h+='<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(e.calc.net)+'</span></div>';
+  h+='<div class="ins"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
+  h+='<div class="ins"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
+  h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
+  if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
+  if(+e.breakH>0.01)h+='<div class="ins"><span class="k">Перерва</span><span class="v">'+fmtHours(+e.breakH)+'</span></div>';
+  if(e.hours>=0.5)h+='<div class="ins"><span class="k">Ставка за годину</span><span class="v">'+fmt(e.calc.net/e.hours)+'/год</span></div>';
+  return h;
+}
+/* День як одна велика зміна: ті самі поля, тільки складені. Водій дивиться
+   не «скільки в другій сесії», а «скільки за день» — і має бачити це в
+   такому ж розборі, а не двома цифрами. */
+function sumDay(list){
+  const S=k=>list.reduce((a,e)=>a+(+(e.calc||{})[k]||0),0);
+  const N=k=>list.reduce((a,e)=>a+(+e[k]||0),0);
+  return {gross:N('gross'),tips:N('tips'),liters:N('liters'),km:N('km'),
+    cardGross:N('cardGross'),hours:N('hours'),breakH:N('breakH'),
+    oc:list.reduce((a,e)=>a+(e.oc||0),0),
+    orders:list.reduce((a,e)=>a.concat(e.orders||[]),[]),
+    calc:{commission:S('commission'),acquiring:S('acquiring'),fuel:S('fuel'),
+      rent:S('rent'),tax:S('tax'),net:S('net'),fund:S('fund'),personal:S('personal')}};
+}
 function renderDayDetail(){
   const box=$('day-detail');box.innerHTML='';
   if(period!=='today'&&period!=='yesterday'&&period!=='day')return;
@@ -4543,38 +4577,19 @@ function renderDayDetail(){
   }
   /* Зміна = календарний день. Якщо сесій кілька — спершу підсумок дня */
   if(list.length>1){
-    const S=k=>list.reduce((a,e)=>a+(e.calc[k]||0),0);
-    const gross=list.reduce((a,e)=>a+(+e.gross||0),0);
-    const tips=list.reduce((a,e)=>a+(+e.tips||0),0);
-    const hrs=list.reduce((a,e)=>a+(+e.hours||0),0);
-    const km=list.reduce((a,e)=>a+(+e.km||0),0);
-    const oc=list.reduce((a,e)=>a+(e.oc||0),0);
+    const d=sumDay(list);
     const sum=document.createElement('div');sum.className='card';
-    sum.innerHTML='<div class="card-title">Зміна за '+fmtDate(dsel)+' · '+list.length+' сесії(й)</div>'+
-      '<div class="ins"><span class="k"><b>На руки</b> · ваші гроші</span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(S('personal'))+'</span></div>'+
-      '<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(gross)+'</span></div>'+
-      (tips>0?'<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(tips)+'</span></div>':'')+
-      '<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(S('net'))+'</span></div>'+
-      '<div class="ins"><span class="k">Разом</span><span class="v">'+oc+' зам. · '+fmtHours(hrs)+(km>0?' · '+fmt1(km)+' км':'')+'</span></div>';
+    sum.innerHTML='<div class="card-title">Увесь день · '+fmtDate(dsel)+' · '+
+      list.length+' '+plSess(list.length)+'</div>'+
+      detailRows(d)+
+      '<div class="ins"><span class="k">Разом</span><span class="v">'+d.oc+' '+plOrder(d.oc)+
+        ' · '+fmtHours(d.hours)+'</span></div>';
     box.appendChild(sum);
   }
   list.forEach((e,ix)=>{
     const card=document.createElement('div');card.className='card';
-    const ordKm=(e.orders||[]).reduce((a,o)=>a+oKm(o),0);
     let h='<div class="card-title">'+(e.weather?WEMO[e.weather]+' ':'')+(list.length>1?'Сесія '+(ix+1)+' · ':fmtDate(e.date)+' · ')+(e.startT?hm(e.startT)+'–'+(e.open?'триває':hm(e.endT)):'')+' · '+fmtHours(e.hours)+'</div>';
-    h+='<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(+e.gross||0)+'</span></div>';
-    if(+e.tips>0)h+='<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(+e.tips)+'</span></div>';
-    h+='<div class="ins"><span class="k">Платформі'+(platName()?' · '+esc(platName()):'')+'</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
-    if(+e.calc.acquiring>0)h+='<div class="ins"><span class="k">Еквайринг '+(+data.settings.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0)+'</span><span class="v neg">−'+fmt(e.calc.acquiring)+'</span></div>';
-    h+='<div class="ins"><span class="k">Пальне · '+fmt1(e.liters)+' л</span><span class="v neg">−'+fmt(e.calc.fuel)+'</span></div>';
-    if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
-    h+='<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(e.calc.net)+'</span></div>';
-    h+='<div class="ins"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
-    h+='<div class="ins"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
-    h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
-    if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
-    if(+e.breakH>0.01)h+='<div class="ins"><span class="k">Перерва</span><span class="v">'+fmtHours(+e.breakH)+'</span></div>';
-    if(e.hours>=0.5)h+='<div class="ins"><span class="k">Ставка за зміну</span><span class="v">'+fmt(e.calc.net/e.hours)+'/год</span></div>';
+    h+=detailRows(e);
     card.innerHTML=h;
     if(!(e.orders||[]).length&&(+e.oc>0)){
       const w=document.createElement('div');
