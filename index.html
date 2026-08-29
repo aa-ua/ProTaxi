@@ -5215,7 +5215,9 @@ async function uploadShot(blob){
   const sg=await fetch(SB_URL+'/storage/v1/object/sign/support/'+path,{
     method:'POST',
     headers:{apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},
-    body:JSON.stringify({expiresIn:600})
+    /* У чаті знімок мусить відкриватись і через тиждень, а не лише
+       поки летить у бот, — тому підпис довгий, а не на десять хвилин. */
+    body:JSON.stringify({expiresIn:31536000})
   });
   if(!sg.ok)throw new Error('sign '+sg.status);
   const j=await sg.json();
