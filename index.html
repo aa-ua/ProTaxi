@@ -83,6 +83,20 @@ html.in-tg .only-web{display:none}
 .adm-crown.on{color:var(--amber);background:rgba(255,176,32,.14)}
 /* Картка про незаповнені цифри: жовтий кант, бо це не помилка, а попередження */
 .setup-gap{border:1px solid rgba(255,176,32,.34)}
+/* Пауза мусить бути помітною: поки вона триває, цифри зміни не ростуть,
+   і водій має бачити це з першого погляду, а не здогадуватись. Тому
+   картка паузи стоїть посеред екрана — ціль над нею, підсумок під нею —
+   а сам підсумок гасне до сірого. */
+.pause-card{border:1px solid rgba(255,176,32,.45);
+  background-image:linear-gradient(160deg,rgba(255,176,32,.10),rgba(255,176,32,0) 60%)}
+.pause-card .card-title{color:var(--amber)}
+.pause-head{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.pause-head svg{width:20px;height:20px;color:var(--amber);flex-shrink:0}
+.pause-head b{font-size:16px;font-weight:800}
+.shift-hero.dim .hero-big,.shift-hero.dim .hero-sub,
+.shift-hero.dim .metric .v,.shift-hero.dim .odo-note{color:var(--muted)}
+.shift-hero.dim .metric .v.neg{color:var(--muted)}
+.shift-hero.dim .live-dot{background:var(--muted);animation:none}
 .setup-gap .card-title{color:var(--amber)}
 .adm-crown:disabled{opacity:.5}
 .logo-sub span{color:var(--muted);font-weight:600}
@@ -1256,6 +1270,16 @@ html.map-full .tabbar{display:none}
   <span class="n" id="fab-n">0</span>
 </button>
 
+<!-- Модалка: спроба прийняти замовлення на паузі -->
+<div class="modal-bg" id="modal-paused">
+  <div class="modal">
+    <h3>Зміна на паузі</h3>
+    <p class="hint" style="margin:0 0 14px">Щоб прийняти замовлення, спершу продовжте зміну.</p>
+    <button class="btn btn-primary" id="pz-resume">Продовжити зміну</button>
+    <button class="btn btn-ghost" id="pz-back">Назад</button>
+  </div>
+</div>
+
 <!-- Модалка: переписка з підтримкою -->
 <div class="modal-bg mid" id="modal-chat">
   <div class="modal">
@@ -1605,7 +1629,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.82';
+const APP_VER='1.83';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2878,15 +2902,23 @@ function renderShift(){
 
   const stale=dateOf(a.startT)!==todayStr();
   const paused=+a.pausedAt||0;
-  let html=
-    (paused?'<div class="card setup-gap"><div class="card-title">Зміну поставлено на паузу</div>'+
-      '<p class="hint" style="margin:0 0 10px">Від останнього замовлення о '+hm(paused)+
-      ' минуло понад '+PAUSE_H+' год, і застосунок поставив зміну на паузу. '+
-      'Повертаєтесь на лінію — продовжуйте; закінчили — завершуйте, і час закриття візьметься за тим замовленням.</p>'+
+  /* На паузі порядок інший: ціль угорі, картка паузи посеред екрана,
+     підсумок під нею й сірий. Так видно, що зміна стоїть, і кнопка
+     «Продовжити» опиняється під великим пальцем. */
+  const pauseCard=paused
+    ? '<div class="card pause-card"><div class="pause-head">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9.5 5.5v13M14.5 5.5v13"/></svg>'+
+      '<b>Зміна на паузі</b></div>'+
+      '<p class="hint" style="margin:0 0 12px">Пауза з '+hm(paused)+
+      '. Поки вона триває, замовлення не приймаються, а час перерви не йде в години на лінії.</p>'+
       '<button class="btn btn-primary" id="btn-resume">Продовжити зміну</button>'+
-      '<button class="btn btn-ghost" id="btn-finish-paused">Завершити зміну</button></div>':'')+
-    '<div class="card"><div class="shift-hero">'+
-    '<div class="live-line"><span class="live-dot"></span>Сесія триває · з '+hm(a.startT)+'</div>'+
+      '<button class="btn btn-ghost" id="btn-finish-paused" style="margin-top:10px">Завершити зміну</button></div>'
+    : '';
+  let html=
+    (paused?goalCardHTML()+pauseCard:'')+
+    '<div class="card"><div class="shift-hero'+(paused?' dim':'')+'">'+
+    '<div class="live-line"><span class="live-dot"></span>'+
+      (paused?'Зміна на паузі · з '+hm(a.startT):'Сесія триває · з '+hm(a.startT))+'</div>'+
     '<div class="hero-big">'+(approx&&estKm>0?'≈':'')+fmt(c.personal)+'</div>'+
     '<div class="hero-sub">на руки · виручка '+fmt(gross)+' · на лінії <span id="t-elapsed">—</span>'+
       (breakMs(a)>60000?' · перерва '+fmtHours(breakMs(a)/3600000):'')+'</div>'+
@@ -2899,7 +2931,7 @@ function renderShift(){
     '<div class="metric split"><div class="v neg">−'+fmt(c.commission)+'</div><div class="k">платформі</div></div>'+
     (c.rent>0?'<div class="metric split"><div class="v neg">−'+fmt(c.rent)+'</div><div class="k">оренда</div></div>':'')+
     '<div class="metric split"><div class="v neg">−'+fmt(c.fuel)+'</div><div class="k">пальне '+fmt1(liters)+' л</div></div>'+
-    '<div class="metric split"><div class="v" style="color:var(--yellow)">'+fmt(c.fund)+'</div><div class="k">'+esc(fundTab())+'</div></div>'+
+    '<div class="metric split"><div class="v"'+(paused?'':' style="color:var(--yellow)"')+'>'+fmt(c.fund)+'</div><div class="k">'+esc(fundTab())+'</div></div>'+
     '</div>'+
     '<div class="odo-note">'+fundLabel()+': '+fundBoth(c.fund,estKm,c.net,s)+'</div>'+
     (approx&&ordKm>0?'<div class="odo-note">Пробіг оцінено з коефіцієнтом ×'+fmt1(k)+'. Завершуйте замовлення з одометром — і цифри стануть точними.</div>':'')+
@@ -2916,7 +2948,7 @@ function renderShift(){
   if(!paused)html+='<button class="btn btn-ghost" id="btn-pause" style="margin-top:10px">Взяти паузу</button>';
   html+='<button class="btn btn-ghost" id="btn-close-open" style="margin-top:10px">Завершити сесію</button></div>';
 
-  html+=goalCardHTML()+boostCardHTML();
+  html+=(paused?'':goalCardHTML())+boostCardHTML();
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
   if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийміть перше</div>';
   html+='</div><p class="hint">Дотик до замовлення завершує або відкриває його для редагування</p></div>';
@@ -3025,6 +3057,9 @@ function lastOdometer(){
   return v;
 }
 function openNewOrder(){
+  /* На паузі зміна стоїть: години на лінії не йдуть, і замовлення, прийняте
+     в цей час, зіпсувало б і темп, і ₴/год. Тому спершу продовжити. */
+  if(data.active&&data.active.pausedAt){openM('modal-paused');return;}
   $('om-time').value=nowHM();
   $('om-amount').value='';
   const lo=lastOdometer();
@@ -3066,6 +3101,13 @@ function omHint(){
   $('om-hint').textContent=lo>0?'Попередній показник: '+fmt1(lo)+' км':'Вкажіть поточний показник добового одометра';
 }
 $('om-cancel').addEventListener('click',()=>{swpReset($('om-save'));closeM('modal-order');});
+$('pz-back').addEventListener('click',()=>closeM('modal-paused'));
+$('pz-resume').addEventListener('click',async()=>{
+  tap('shift.resume');resumeShift();await persist();
+  closeM('modal-paused');renderAll();
+  toast('Зміну продовжено');
+  openNewOrder();
+});
 makeSwipe($('om-save'),async()=>{
   const a=data.active;if(!a){swpReset($('om-save'));return;}
   const amount=num($('om-amount').value);
