@@ -350,12 +350,15 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
   -webkit-tap-highlight-color:transparent;cursor:grab;
   display:flex;align-items:center;justify-content:center}
 .swp-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--yellow);
-  transition:width .22s cubic-bezier(.22,.61,.36,1)}
+  overflow:hidden;z-index:2;transition:width .22s cubic-bezier(.22,.61,.36,1)}
+.swp-in{position:absolute;left:0;top:0;height:100%;display:flex;align-items:center;
+  justify-content:center}
+.swp-in span{font-size:15px;font-weight:800;color:#101010;white-space:nowrap}
 .swp.drag{cursor:grabbing}
 .swp.drag .swp-fill{transition:none}
-.swp-label{position:relative;font-size:15px;font-weight:800;color:var(--text);
-  pointer-events:none;transition:color .15s}
-.swp.lit .swp-label{color:#101010}
+.swp-label{position:relative;z-index:1;font-size:15px;font-weight:800;color:var(--text);
+  pointer-events:none}
+
 .swp-arr{position:absolute;left:15px;display:flex;gap:2px;pointer-events:none;
   transition:opacity .2s}
 .swp.hot .swp-arr,.swp.done .swp-arr{opacity:0}
@@ -1259,7 +1262,7 @@ html.map-full .tabbar{display:none}
       <span class="seg-note" id="om-src-note"></span>
     </div>
     <div class="hint" id="om-hint" style="margin:0"></div>
-    <div class="swp" id="om-save" role="button" tabindex="0"><div class="swp-fill"></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб прийняти</div></div>
+    <div class="swp" id="om-save" role="button" tabindex="0"><div class="swp-fill"><div class="swp-in"><span>Проведіть, щоб прийняти</span></div></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб прийняти</div></div>
     <button class="btn btn-ghost" id="om-cancel">Скасувати</button>
   </div>
 </div>
@@ -1295,7 +1298,7 @@ html.map-full .tabbar{display:none}
     </div>
     <div class="field" id="fin-cash-row"><label data-cur="Дав готівкою, {c}">Дав готівкою, ₴</label><input type="number" inputmode="decimal" id="fin-cash" placeholder="для здачі"></div>
     <div id="fin-change" style="display:none"></div>
-    <div class="swp" id="fin-save" role="button" tabindex="0"><div class="swp-fill"></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб завершити</div></div>
+    <div class="swp" id="fin-save" role="button" tabindex="0"><div class="swp-fill"><div class="swp-in"><span>Проведіть, щоб завершити</span></div></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб завершити</div></div>
     <button class="btn btn-ghost btn-sm" id="fin-more" type="button">Одометр на початку, чайові</button>
     <div id="fin-extra" style="display:none">
       <div class="grid2">
@@ -2400,25 +2403,27 @@ const SWP_DONE=0.88;
 function swpLabel(el,t){
   if(!el)return;
   el.dataset.label=t;
-  const l=el.querySelector('.swp-label');if(l)l.textContent=t;
+  el.querySelectorAll('.swp-label,.swp-in span').forEach(l=>l.textContent=t);
 }
 function swpReset(el){
   if(!el||!el.classList.contains('swp'))return;
-  el.classList.remove('drag','lit','hot','done');
+  el.classList.remove('drag','hot','done');
   const f=el.querySelector('.swp-fill');if(f)f.style.width='0%';
-  const l=el.querySelector('.swp-label');
-  if(l&&el.dataset.label)l.textContent=el.dataset.label;
+  if(el.dataset.label)el.querySelectorAll('.swp-label,.swp-in span').forEach(l=>l.textContent=el.dataset.label);
   el.dataset.busy='';
 }
 function makeSwipe(el,fn){
   if(!el)return;
   const fill=el.querySelector('.swp-fill');
+  const inner=el.querySelector('.swp-in');
   let x0=0,p=0,on=false,moved=0;
   const span=()=>Math.max(1,el.getBoundingClientRect().width-6);
   const set=v=>{
     p=Math.max(0,Math.min(1,v));
     fill.style.width=(p*100)+'%';
-    el.classList.toggle('lit',p>=0.4);
+    /* внутрішній напис стоїть на всю ширину смуги, а видно рівно стільки,
+       скільки залито — тому літери не розриваються між двома кольорами */
+    if(inner)inner.style.width=el.getBoundingClientRect().width+'px';
     el.classList.toggle('hot',p>=SWP_DONE);
   };
   el.addEventListener('pointerdown',e=>{
