@@ -1472,7 +1472,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.77';
+const APP_VER='1.78';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2339,14 +2339,18 @@ function closeM(id){$(id).classList.remove('open');}
 });
 
 /* Подвійне підтвердження на кнопці */
+/* Підтвердження двома дотиками БЕЗ часової межі. Раніше запит згасав за три
+   секунди: водій тиснув «Підтвердити завершення», дивився на дорогу, тиснув
+   ще раз — і другий дотик лише перепитував наново. Замовлення лишалось
+   відкритим, а людина була певна, що закрила його. За кермом три секунди —
+   це нічого. Тепер запит тримається, поки на нього не дадуть відповідь;
+   скидає його disarm() — при відкритті й закритті вікна та при правці полів. */
 function arm(btn,label,fn){
   if(btn.dataset.armed==='1'){
     btn.dataset.armed='0';btn.textContent=btn.dataset.orig;fn();return;
   }
   btn.dataset.orig=btn.dataset.orig||btn.textContent;
   btn.dataset.armed='1';btn.textContent=label;
-  clearTimeout(+btn.dataset.tid||0);
-  btn.dataset.tid=setTimeout(()=>{btn.dataset.armed='0';btn.textContent=btn.dataset.orig;},3000);
 }
 function disarm(btn){
   if(!btn)return;
