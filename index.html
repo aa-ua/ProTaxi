@@ -543,6 +543,18 @@ html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);p
   border-radius:9px;background:rgba(255,255,255,.05);border:1px dashed var(--border);
   font-size:11px;color:var(--muted);text-align:center;padding:6px}
 .chat-empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
+/* Рядок, за яким стоїть пояснення. Крапкова риска під назвою — єдина
+   ознака, що сюди можна натиснути: стрілки й іконки в списку з десяти
+   рядків перетворюють його на ялинку. */
+.ins[data-why]{cursor:pointer}
+.ins[data-why] .k{border-bottom:1px dashed rgba(255,255,255,.22);padding-bottom:1px}
+.ins[data-why]:active{opacity:.6}
+.why-l{display:flex;justify-content:space-between;gap:12px;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:14.5px}
+.why-l:last-of-type{border-bottom:0}
+.why-l span:first-child{color:var(--muted)}
+.why-l b{font-weight:800;white-space:nowrap}
+.why-l.tot b{color:var(--yellow)}
 /* Картка водія над перепискою. Тільки те, що не є його грошима:
    коли прийшов, звідки, скільки змін і замовлень. Сум і маршрутів тут
    немає й не має зʼявитись — це його справа, і ми це людям обіцяли. */
@@ -893,31 +905,45 @@ html.map-full .tabbar{display:none}
       <div id="mileage-box"></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Коли краще працювати</div>
-      <div class="chart" id="hour-chart"></div>
-      <div class="hint" id="hour-top" style="margin-top:10px"></div>
+    <!-- Розділи, у які водій заглядає раз на тиждень, згорнуті: інакше
+         екран статистики — це п'ять хвилин прокрутки, а щоденні цифри
+         тонуть десь усередині. Стан кожного памʼятається. -->
+    <div class="acc" data-acc="st-when">
+      <button class="acc-h" type="button"><span class="t">Коли працювати<span class="s">години, дні тижня, погода, свята</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
+        <div class="card">
+          <div class="card-title">Коли краще працювати</div>
+          <div class="chart" id="hour-chart"></div>
+          <div class="hint" id="hour-top" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Найприбутковіші дні тижня</div>
+          <div class="chart" id="wd-chart"></div>
+          <div class="hint" id="wd-top" style="margin-top:10px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Погода і заробіток</div>
+          <div id="weather-box"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Свята і заробіток</div>
+          <div id="holiday-box"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Найприбутковіші дні тижня</div>
-      <div class="chart" id="wd-chart"></div>
-      <div class="hint" id="wd-top" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Погода і заробіток</div>
-      <div id="weather-box"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Свята і заробіток</div>
-      <div id="holiday-box"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Які замовлення брати</div>
-      <div id="quality-box"></div>
+    <div class="acc" data-acc="st-tips">
+      <button class="acc-h" type="button"><span class="t">Поради за вашими цифрами<span class="s">які замовлення брати, спостереження</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
+        <div class="card">
+          <div class="card-title">Які замовлення брати</div>
+          <div id="quality-box"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Спостереження</div>
+          <div id="ins-list"></div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -931,10 +957,6 @@ html.map-full .tabbar{display:none}
       <div class="chart" id="chart"></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Інсайти</div>
-      <div id="ins-list"></div>
-    </div>
 
     <div class="card">
       <div class="card-title">Останні сесії</div>
@@ -1295,6 +1317,15 @@ html.map-full .tabbar{display:none}
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 12.1c0 3.9-3.7 7-8.2 7-1 0-2-.15-2.9-.43L4 20.2l1.7-3.7A6.6 6.6 0 0 1 3.8 12c0-3.9 3.7-7 8.2-7s8.2 3.1 8.2 7z"/></svg>
   <span class="n" id="fab-n">0</span>
 </button>
+
+<!-- Модалка: звідки взялась цифра -->
+<div class="modal-bg" id="modal-why">
+  <div class="modal">
+    <h3 id="why-t">Звідки ця цифра</h3>
+    <div id="why-b"></div>
+    <button class="btn btn-ghost" id="why-close">Зрозуміло</button>
+  </div>
+</div>
 
 <!-- Модалка: спроба прийняти замовлення на паузі -->
 <div class="modal-bg" id="modal-paused">
@@ -1658,7 +1689,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.93';
+const APP_VER='1.94';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4515,6 +4546,23 @@ function renderOrdersAnalysis(){
   h+='</div>';
   box.innerHTML=h;
 }
+/* Пояснення відкривається дотиком по будь-якому рядку з data-why.
+   Формат простий: «заголовок|рядки» — так текст лежить у самому рядку
+   і завжди стосується того, що показано зараз. */
+document.addEventListener('click',e=>{
+  const row=e.target.closest('.ins[data-why]');
+  if(!row)return;
+  const raw=row.dataset.why||'';
+  const ix=raw.indexOf('|');
+  const head=ix>0?raw.slice(0,ix):'';
+  const body=ix>0?raw.slice(ix+1):raw;
+  $('why-t').textContent=(row.querySelector('.k')||{}).textContent||'Звідки ця цифра';
+  $('why-b').innerHTML=(head?'<p class="hint" style="margin:0 0 10px">'+esc(head)+'</p>':'')+body;
+  tap('why');
+  openM('modal-why');
+});
+$('why-close').addEventListener('click',()=>closeM('modal-why'));
+
 function renderStats(){
   const es=data.entries.filter(e=>inPeriod(e.date));
   /* Відкриту сесію показуємо нарівні із закритими: водій дивиться
@@ -4532,22 +4580,81 @@ function renderStats(){
 
 /* Ті самі рядки розбору для однієї сесії і для дня цілком. Одна функція,
    бо дві копії з часом розійшлись би, і день показував би не те, що сесії. */
+/* Пояснення до цифри: не формула, а ті самі числа по кроках. Кладемо
+   готовий текст у сам рядок — так пояснення завжди про те, що показано
+   зараз, а не про перерахований пізніше стан. */
+const whyLine=(k,v,tot)=>'<div class="why-l'+(tot?' tot':'')+'"><span>'+esc(k)+'</span><b>'+esc(v)+'</b></div>';
+function insRow(label,value,cls,why){
+  return '<div class="ins"'+(why?' data-why="'+esc(why)+'"':'')+'><span class="k">'+label+
+    '</span><span class="v'+(cls?' '+cls:'')+'">'+value+'</span></div>';
+}
 function detailRows(e){
   const ordKm=(e.orders||[]).reduce((a,o)=>a+oKm(o),0);
-  let h='<div class="ins"><span class="k">Виручка</span><span class="v">'+fmt(+e.gross||0)+'</span></div>';
-  if(+e.tips>0)h+='<div class="ins"><span class="k">Чайові</span><span class="v pos">'+fmt(+e.tips)+'</span></div>';
-  h+='<div class="ins"><span class="k">Платформі'+(platName()?' · '+esc(platName()):'')+'</span><span class="v neg">−'+fmt(e.calc.commission)+'</span></div>';
-  if(+e.calc.acquiring>0)h+='<div class="ins"><span class="k">Еквайринг '+(+data.settings.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0)+'</span><span class="v neg">−'+fmt(e.calc.acquiring)+'</span></div>';
-  h+='<div class="ins"><span class="k">Пальне · '+fmt1(e.liters)+' '+FK().u+'</span><span class="v neg">−'+fmt(e.calc.fuel)+'</span></div>';
-  if(+e.calc.rent>0)h+='<div class="ins"><span class="k">Оренда авто</span><span class="v neg">−'+fmt(e.calc.rent)+'</span></div>';
-  if(+e.calc.tax>0)h+='<div class="ins"><span class="k">Податки</span><span class="v neg">−'+fmt(e.calc.tax)+'</span></div>';
-  h+='<div class="ins"><span class="k">Чистими</span><span class="v pos">'+fmt(e.calc.net)+'</span></div>';
-  h+='<div class="ins"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
-  h+='<div class="ins"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
-  h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
-  if(+e.km>0)h+='<div class="ins"><span class="k">Пробіг</span><span class="v">'+fmt1(e.km)+' км'+(ordKm>0?' · з пасажиром '+Math.round(ordKm/e.km*100)+'%':'')+'</span></div>';
-  if(+e.breakH>0.01)h+='<div class="ins"><span class="k">Перерва</span><span class="v">'+fmtHours(+e.breakH)+'</span></div>';
-  if(e.hours>=0.5)h+='<div class="ins"><span class="k">Ставка за годину</span><span class="v">'+fmt(e.calc.net/e.hours)+'/год</span></div>';
+  const S=data.settings;
+  const gross=+e.gross||0, n=(e.orders||[]).length;
+  const W=[];  /* по одному поясненню на рядок */
+  let h=insRow('Виручка',fmt(gross),'',
+    n?('Сума всіх замовлень|'+whyLine(n+' '+plOrder(n),fmt(gross),true)+
+       (n>1?whyLine('найбільше',fmt(Math.max(...e.orders.map(o=>+o.amount||0))))+
+            whyLine('найменше',fmt(Math.min(...e.orders.map(o=>+o.amount||0)))):'')):'');
+  if(+e.tips>0)h+=insRow('Чайові',fmt(+e.tips),'pos','');
+  const ownG=+e.ownGross||0;
+  h+=insRow('Платформі'+(platName()?' · '+esc(platName()):''),'−'+fmt(e.calc.commission),'neg',
+    'Комісія береться лише з того, що пройшло через платформу|'+
+    whyLine('виручка',fmt(gross))+
+    (ownG>0?whyLine('свої клієнти — без комісії','−'+fmt(ownG)):'')+
+    whyLine('відсоток платформи',(+S.commissionPct||0)+' %')+
+    whyLine('комісія',fmt(e.calc.commission),true));
+  if(+e.calc.acquiring>0)h+=insRow('Еквайринг '+(+S.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0),
+    '−'+fmt(e.calc.acquiring),'neg',
+    'Знімається лише з того, що заплатили карткою|'+
+    whyLine('карткою',fmt(+e.cardGross||0))+
+    whyLine('відсоток',(+S.acquiringPct||0)+' %')+
+    whyLine('еквайринг',fmt(e.calc.acquiring),true));
+  const r=rateFor(e);
+  h+=insRow('Пальне · '+fmt1(e.liters)+' '+FK().u,'−'+fmt(e.calc.fuel),'neg',
+    'Пальне рахується з пробігу, а не з чека|'+
+    whyLine('пробіг',fmt1(e.km)+' км')+
+    whyLine('витрата',fmt1(r.cons)+' '+FK().p100)+
+    whyLine('вийшло',fmt1(e.liters)+' '+FK().u)+
+    whyLine('ціна',fmt(+e.fuelPrice||r.price)+'/'+FK().u)+
+    whyLine('пальне',fmt(e.calc.fuel),true));
+  if(+e.calc.rent>0)h+=insRow('Оренда авто','−'+fmt(e.calc.rent),'neg',
+    'Добова оренда ділиться між змінами цього дня|'+
+    whyLine('змін того дня',String(+e.rentShifts||1))+
+    whyLine('на цю зміну',fmt(e.calc.rent),true));
+  if(+e.calc.tax>0)h+=insRow('Податки','−'+fmt(e.calc.tax),'neg','');
+  h+=insRow('Чистими',fmt(e.calc.net),'pos',
+    'Що лишилось після платформи й дороги|'+
+    whyLine('виручка',fmt(gross))+
+    whyLine('комісія','−'+fmt(e.calc.commission))+
+    (+e.calc.acquiring>0?whyLine('еквайринг','−'+fmt(e.calc.acquiring)):'')+
+    whyLine('пальне','−'+fmt(e.calc.fuel))+
+    (+e.calc.rent>0?whyLine('оренда','−'+fmt(e.calc.rent)):'')+
+    whyLine('чистими',fmt(e.calc.net),true));
+  h+='<div class="ins" data-why="'+esc(fundLabel()+' — це не витрата, гроші лишаються ваші|'+
+      whyLine('чистими',fmt(e.calc.net))+
+      whyLine('відкладається',(S.fundMode==='km'?fmt(+S.fundPerKm||0)+' за км':(+S.fundPct||0)+' %'))+
+      whyLine('відкладено',fmt(e.calc.fund),true))+
+    '"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
+  h+='<div class="ins" data-why="'+esc('Це можна забирати|'+
+      whyLine('чистими',fmt(e.calc.net))+
+      whyLine(fundLabel(),'−'+fmt(e.calc.fund))+
+      (+e.calc.tax>0?whyLine('податки','−'+fmt(e.calc.tax)):'')+
+      whyLine('на руки',fmt(e.calc.personal),true))+
+    '"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
+  if(+e.km>0)h+=insRow('Пробіг',fmt1(e.km)+' км'+(ordKm>0?' <span style="color:var(--muted)">(з пасажиром '+fmt1(ordKm)+' км)</span>':''),'',
+    'Скільки накатали за цей час|'+
+    whyLine('усього',fmt1(e.km)+' км')+
+    (ordKm>0?whyLine('з пасажиром',fmt1(ordKm)+' км'):'')+
+    (ordKm>0?whyLine('порожняком',fmt1(Math.max(0,e.km-ordKm))+' км'):'')+
+    (ordKm>0?whyLine('частка з пасажиром',Math.round(ordKm/e.km*100)+' %',true):''));
+  if(+e.breakH>0.01)h+=insRow('Перерва',fmtHours(+e.breakH),'','');
+  if(e.hours>=0.5)h+=insRow('Ставка за годину',fmt(e.calc.net/e.hours)+'/год','',
+    'Скільки чистими приносить година на лінії|'+
+    whyLine('чистими',fmt(e.calc.net))+
+    whyLine('на лінії',fmtHours(e.hours))+
+    whyLine('за годину',fmt(e.calc.net/e.hours),true));
   return h;
 }
 /* День як одна велика зміна: ті самі поля, тільки складені. Водій дивиться
@@ -7901,12 +8008,12 @@ const platLabel=()=>{const l=platList();
 /* Який розділ налаштувань відкритий — памʼятаємо, щоб не шукати щоразу */
 function renderAcc(){
   const open=new Set(Array.isArray(data.settings.accOpen)?data.settings.accOpen:[]);
-  document.querySelectorAll('#screen-settings .acc').forEach(a=>{
+  document.querySelectorAll('.acc[data-acc]').forEach(a=>{
     a.dataset.open=open.has(a.dataset.acc)?'1':'0';
   });
 }
 document.addEventListener('click',async e=>{
-  const h=e.target.closest('#screen-settings .acc-h');if(!h)return;
+  const h=e.target.closest('.acc[data-acc] .acc-h');if(!h)return;
   const a=h.closest('.acc'),was=a.dataset.open==='1';
   a.dataset.open=was?'0':'1';
   const set=new Set(Array.isArray(data.settings.accOpen)?data.settings.accOpen:[]);
@@ -8073,7 +8180,7 @@ $('geo-tgl').addEventListener('click',async e=>{
   toast(data.settings.geoOn?'Геолокацію увімкнено':'Геолокацію вимкнено');
 });
 
-function renderAll(){paintCurrency();renderShift();setChips();renderStats();renderTank();renderFunds();if($('diag-list'))renderDiag();syncGeoTgl();}
+function renderAll(){paintCurrency();renderShift();setChips();renderStats();renderAcc();renderTank();renderFunds();if($('diag-list'))renderDiag();syncGeoTgl();}
 
 (async function init(){
   await store.init();
