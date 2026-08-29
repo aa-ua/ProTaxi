@@ -388,6 +388,11 @@ html.in-admin .topbar,html.in-admin .app>.checker{display:none}
    замовлення, і рука не має плутати їх на автоматі. Колір беремо --amber:
    --yellow у цьому проєкті насправді зелений. */
 .swp-amber .swp-fill{background:var(--amber)}
+/* Скасування зміни — червона: тут нічого не рахується, запис просто
+   зникає, і колір мусить це сказати ще до того, як палець рушив. */
+.swp-red{border-color:rgba(255,95,87,.45)}
+.swp-red .swp-fill{background:var(--red)}
+.swp-red .swp-in span{color:#fff}
 
 .chips{display:flex;gap:8px;margin-bottom:12px}
 /* Часті періоди — на видноті, решта в списку: інакше пів екрана займають
@@ -526,6 +531,10 @@ html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);p
 .cm.me{align-self:flex-end;background:rgba(59,224,166,.16);border:1px solid rgba(59,224,166,.28)}
 .cm.them{align-self:flex-start;background:var(--surface2);border:1px solid var(--border)}
 .cm .at{display:block;margin-top:3px;font-size:11px;color:var(--muted)}
+/* Дві галочки — прочитано, одна — надіслано. Червоний рядок — Telegram
+   відмовив: без нього можна тиждень писати людині, яка вас не бачить. */
+.cm .tick{color:var(--yellow);font-weight:800;margin-left:4px}
+.cm .fail{display:block;margin-top:3px;font-size:11px;color:var(--red)}
 .cm .ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .cm .ph img{width:88px;height:88px;object-fit:cover;border-radius:9px;display:block}
 .chat-empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
@@ -1457,7 +1466,10 @@ html.map-full .tabbar{display:none}
     <div class="hint" id="cm-preview" style="margin:0 0 12px;text-align:center"></div>
     <div class="swp swp-amber" id="cm-save" role="button" tabindex="0"><div class="swp-fill"><div class="swp-in"><span>Проведіть, щоб завершити зміну</span></div></div><div class="swp-arr"><i></i><i></i><i></i></div><div class="swp-label">Проведіть, щоб завершити зміну</div></div>
     <button class="btn btn-ghost" id="cm-back">Назад</button>
-    <button class="btn btn-danger" id="cm-cancelshift">Скасувати сесію</button>
+    <div class="swp swp-red" id="cm-cancelshift" role="button" tabindex="0">
+      <div class="swp-fill"><div class="swp-in"><span>Проведіть, щоб скасувати сесію</span></div></div>
+      <div class="swp-arr"><i></i><i></i><i></i></div>
+      <div class="swp-label">Проведіть, щоб скасувати сесію</div></div>
   </div>
 </div>
 
@@ -1629,7 +1641,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.83';
+const APP_VER='1.85';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2521,7 +2533,10 @@ function confirmDel(btn,fn){arm(btn,'Точно?',fn);}
    заповнена майже до кінця; відпустив раніше — вона плавно вертається.
    Просто дотик нічого не робить, але й не мовчить: підказує, що треба
    провести, інакше кнопка виглядає зламаною. */
-const SWP_DONE=0.88;
+/* Половини достатньо. Раніше смугу треба було дотягнути майже до краю
+   екрана — палець туди не дістає, якщо взявся не з самого початку, і
+   доводилось вести двічі. Тепер від середини вона докочується сама. */
+const SWP_DONE=0.5;
 function swpLabel(el,t){
   if(!el)return;
   el.dataset.label=t;
@@ -2551,6 +2566,10 @@ function makeSwipe(el,fn){
   el.addEventListener('pointerdown',e=>{
     if(el.dataset.busy==='1')return;
     on=true;moved=0;x0=e.clientX;el.classList.add('drag');
+    /* Обнуляти обовʼязково: без цього після доведеної смуги в памʼяті
+       лишалась одиниця, і наступний простий дотик спрацьовував як
+       повне проведення — тобто саме те, від чого ми йшли. */
+    set(0);
     try{el.setPointerCapture(e.pointerId);}catch(_){}
   });
   el.addEventListener('pointermove',e=>{
@@ -2563,8 +2582,9 @@ function makeSwipe(el,fn){
     if(!on)return;
     on=false;el.classList.remove('drag');
     if(p>=SWP_DONE){
-      el.dataset.busy='1';set(1);el.classList.add('done');
-      fn();
+      /* далі вона їде сама: заливка докочується до краю, і аж тоді дія */
+      el.dataset.busy='1';el.classList.add('done');set(1);
+      setTimeout(fn,140);
       return;
     }
     set(0);
@@ -4061,7 +4081,7 @@ function openCloseShift(){
   $('cm-odo').value=lo>0?fmt1(lo).replace(',','.'):'';
   cmWeather='';
   document.querySelectorAll('#cm-weather .wchip').forEach(x=>x.classList.remove('on'));
-  disarm($('cm-cancelshift'));
+  swpReset($('cm-cancelshift'));
   $('cm-wnote').style.display='none';
   cmPreview();
   swpReset($('cm-save'));
@@ -4096,14 +4116,15 @@ $('cm-weather').addEventListener('click',e=>{
   cmWeather=b.dataset.w;
   document.querySelectorAll('#cm-weather .wchip').forEach(x=>x.classList.toggle('on',x===b));
 });
-$('cm-back').addEventListener('click',()=>{swpReset($('cm-save'));disarm($('cm-cancelshift'));closeM('modal-close');});
-$('cm-cancelshift').addEventListener('click',function(){
-  arm(this,'Точно скасувати?',async()=>{
-    /* Позначка — щоб скасовану зміну не повернула ні резервна копія, ні
-       хмара; відправка одразу — щоб хмара не лишилась зі старим станом. */
-    if(data.active)markGone('e',data.active.id);
-    data.active=null;stopTrack();await persist(true);closeM('modal-close');renderShift();toast('Сесію скасовано');
-  });
+$('cm-back').addEventListener('click',()=>{swpReset($('cm-save'));swpReset($('cm-cancelshift'));closeM('modal-close');});
+makeSwipe($('cm-cancelshift'),async function(){
+  const el=$('cm-cancelshift');
+  if(!data.active){swpReset(el);return;}
+  /* Позначка — щоб скасовану зміну не повернула ні резервна копія, ні
+     хмара; відправка одразу — щоб хмара не лишилась зі старим станом. */
+  markGone('e',data.active.id);
+  data.active=null;stopTrack();await persist(true);
+  closeM('modal-close');swpReset(el);renderShift();toast('Сесію скасовано');
 });
 /* Один-єдиний шлях закриття зміни — і руками, і автоматично. Дві копії
    цього підрахунку колись розійшлись би, і водій отримав би дві різні
@@ -5388,9 +5409,10 @@ function chatRow(m){
   let ph='';
   const list=Array.isArray(m.ph)?m.ph:[];
   if(list.length)ph='<div class="ph">'+list.map(u=>'<img src="'+esc(u)+'" alt="">').join('')+'</div>';
+  const tick=mine?'<span class="tick">'+(m.seen?'✓✓':'✓')+'</span>':'';
   return '<div class="cm '+(mine?'me':'them')+'">'+
     (m.body?'<div class="t">'+esc(m.body).replace(/\n/g,'<br>')+'</div>':'')+ph+
-    '<span class="at">'+(mine?'Ви · ':'Підтримка · ')+esc(m.at||'')+'</span></div>';
+    '<span class="at">'+(mine?'Ви · ':'Підтримка · ')+esc(m.at||'')+tick+'</span></div>';
 }
 function renderChat(){
   const box=$('chat-list');if(!box)return;
@@ -6186,9 +6208,15 @@ function atRender(){
     const mine=m.who==='a';
     const list=Array.isArray(m.ph)?m.ph:[];
     const ph=list.length?'<div class="ph">'+list.map(u=>'<img src="'+esc(u)+'" alt="">').join('')+'</div>':'';
+    /* ok приходить лише з новішої бази; поки її немає — просто без позначки */
+    const tick=mine?'<span class="tick">'+(m.seen?'✓✓':'✓')+'</span>':'';
+    const bot=(mine&&m.ok===false)
+      ? '<span class="fail">У бот не дійшло: '+esc(m.why||'причина невідома')+'</span>'
+      : (mine&&m.ok===true?'':'');
     return '<div class="cm '+(mine?'me':'them')+'">'+
       (m.body?'<div class="t">'+esc(m.body).replace(/\n/g,'<br>')+'</div>':'')+ph+
-      '<span class="at">'+(mine?'Ви · ':'Водій · ')+esc(m.at||'')+'</span></div>';
+      '<span class="at">'+(mine?'Ви · ':'Водій · ')+esc(m.at||'')+
+      (mine&&m.ok===true?' · доставлено в бот':'')+tick+'</span>'+bot+'</div>';
   }).join(''):'<div class="chat-empty">Порожньо</div>';
   box.scrollTop=box.scrollHeight;
 }
