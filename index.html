@@ -1495,7 +1495,7 @@ html.map-full .tabbar{display:none}
   <div class="modal">
     <h3 id="rf-title">Заправка</h3>
     <div class="grid2">
-      <div class="field"><label id="lab-rf-liters">Літрів (з чека)</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="0,00"></div>
+      <div class="field"><label id="lab-rf-liters">Літрів або сума</label><input type="number" inputmode="decimal" id="rf-liters" step="0.01" placeholder="27 або 900"></div>
       <div class="field"><label id="lab-rf-price">Ціна за літр, ₴</label><input type="number" inputmode="decimal" id="rf-price" step="0.01" placeholder="0,00"></div>
       <div class="field"><label id="lab-rf-odo">Одометр, км</label><input type="number" inputmode="decimal" id="rf-odo" step="0.1"></div>
       <div class="field"><label>Дата</label><input type="date" id="rf-date"></div>
@@ -1658,7 +1658,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.91';
+const APP_VER='1.92';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2090,15 +2090,59 @@ function lastRefuel(){
   const rs=[...(data.refuels||[])].sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
   return rs.length?rs[rs.length-1]:null;
 }
+/* Показник одометра «зараз» — найбільше відоме число після останнього
+   обнулення: з відкритої зміни, із закритих записів і з самої заправки.
+   Водій звіряє його з приладовою панеллю, тому вигадувати нічого не можна. */
+function curOdo(){
+  const cut=(data.refuels||[]).reduce((m,rf)=>
+    (rf.reset&&(+rf.resetAt||0)>m)?(+rf.resetAt||0):m,0);
+  let v=lastOdometer();
+  (data.entries||[]).forEach(e=>{
+    const t=+e.endT||+e.startT||0;
+    if(cut&&t<cut)return;
+    v=Math.max(v,+e.odoEnd||0);
+    (e.orders||[]).forEach(o=>{
+      const ot=+o.endT||+o.t||0;
+      if(cut&&ot<cut)return;
+      v=Math.max(v,+o.odoStart||0,+o.odoEnd||0);
+    });
+  });
+  (data.refuels||[]).forEach(r=>{
+    const t=+r.t||+r.resetAt||0;
+    if(cut&&t<cut)return;
+    if(!r.reset)v=Math.max(v,+r.odo||0);
+  });
+  return v;
+}
+/* Заправка — це межа: усе, що було до неї, до цього бака не належить.
+   Тому замовлення рахуємо поштучно за їхнім власним часом, а не цілими
+   змінами: зміна може починатись до заправки й тривати після неї, і
+   тоді «3 замовлення» замість одного — саме те, що бачив водій.
+   Відкрита зміна теж рахується: вона така сама частина цього бака. */
 function daysSinceRefuel(){
   const last=lastRefuel();
   if(!last)return null;
+  const rt=+last.t||+last.resetAt||0;
   const es=(data.entries||[]).filter(e=>entryAfterRefuel(e,last));
   const days=Math.round((new Date(todayStr()+'T12:00:00')-new Date(last.date+'T12:00:00'))/86400000);
   let km=es.reduce((a,e)=>a+(+e.km||0),0);
   if(activeAfterRefuel(last))km+=activeKmEst();
-  return{from:last.date,days,dates:[...new Set(es.map(e=>e.date))].sort(),
-    km,oc:es.reduce((a,e)=>a+(e.oc||0),0)};
+  const after=o=>{
+    const ot=+o.endT||+o.t||0;
+    return rt>0?ot>rt:true;
+  };
+  let oc=0;
+  (data.entries||[]).forEach(e=>{
+    if(!entryAfterRefuel(e,last)&&!(rt>0))return;
+    (e.orders||[]).forEach(o=>{if(after(o))oc++;});
+  });
+  if(data.active)((data.active.orders)||[]).forEach(o=>{if(after(o))oc++;});
+  const dates=[...new Set(es.map(e=>e.date))].sort();
+  if(data.active&&activeAfterRefuel(last)){
+    const d=dateOf(data.active.startT);
+    if(!dates.includes(d))dates.push(d);
+  }
+  return{from:last.date,days,dates:dates.sort(),km,oc};
 }
 function tankPeriods(){
   /* Порядок хронологічний, а НЕ за одометром: після обнулення лічильника
@@ -2176,19 +2220,19 @@ const FUEL_KINDS={
     cons:'Витрата, л/100 км',priceLab:'Ціна, {c}/л',tank:'Обʼєм бака, л',
     tankShort:'Обʼєм бака',tankNom:'бак',tankGen:'бака',fullAcc:'повний бак',
     unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
-    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, {c}',go:'на заправку',
+    rf:'Літрів або сума',rfPrice:'Ціна за літр, {c}',go:'на заправку',
     note:'Якщо їздите на газу — оберіть «Газ»: витрата на ньому зазвичай на 15–20% вища за бензинову.'},
   gas:{u:'л',p100:'л/100',per:'л/100 км',price:'{c}/л',
     cons:'Витрата, л/100 км',priceLab:'Ціна, {c}/л',tank:'Обʼєм балона, л',
     tankShort:'Обʼєм балона',tankNom:'балон',tankGen:'балона',fullAcc:'повний балон',
     unitGen:'літра',many:'літри',cut:'з літра',dyn:'Ціна літра · динаміка',
-    rf:'Літрів (з чека)',rfPrice:'Ціна за літр, {c}',go:'на заправку',
+    rf:'Літрів або сума',rfPrice:'Ціна за літр, {c}',go:'на заправку',
     note:'Ставте свою реальну витрату на газу — вона зазвичай на 15–20% вища за бензинову.'},
   ev:{u:'кВт·год',p100:'кВт·год/100',per:'кВт·год/100 км',price:'{c}/кВт·год',
     cons:'Витрата, кВт·год/100 км',priceLab:'Ціна, {c}/кВт·год',tank:'Ємність батареї, кВт·год',
     tankShort:'Ємність батареї',tankNom:'заряд',tankGen:'батареї',fullAcc:'повний заряд',
     unitGen:'кіловат-години',many:'кіловат-години',cut:'з кВт·год',dyn:'Ціна кВт·год · динаміка',
-    rf:'кВт·год (з чека)',rfPrice:'Ціна за кВт·год, {c}',go:'на зарядку',
+    rf:'кВт·год або сума',rfPrice:'Ціна за кВт·год, {c}',go:'на зарядку',
     note:'Рахунок іде в кіловат-годинах: витрата на 100 км, ціна за кВт·год і ємність батареї.'}
 };
 /* Значок валюти в підписах стоїть як {c} — підставляємо на місці, щоб
@@ -7054,6 +7098,8 @@ function renderGauge(){
     '<div class="gauge-row"><span>Витрата</span><span class="v">'+consLine()+'</span></div>'+
     '<div class="gauge-row"><span>Остання заправка</span><span class="v">'+
       (lr?lr.when+(lr.km>0?' · '+fmt1(lr.km)+' км тому':''):'ще не було')+'</span></div>'+
+    (curOdo()>0?'<div class="gauge-row"><span>Одометр зараз</span><span class="v">'+
+      fmt1(curOdo())+' км</span></div>':'')+
     savingHTML();
 
   if(!t){
@@ -7367,10 +7413,23 @@ function rfOdoLabel(){
   const l=$('lab-rf-odo');if(!l)return;
   l.textContent=rfReset()?'Одометр перед обнуленням, км':'Одометр, км';
 }
+/* Чека часто немає: водій дивиться на табло або просто дає гроші в руку.
+   Тому в поле літрів можна вписати й суму — застосунок сам зрозуміє.
+   Межа не вигадана й не однакова для всіх: беремо бак самого водія з
+   півторакратним запасом. Немає бака в налаштуваннях — беремо 100:
+   стільки за раз не заливає ніхто з легкових. */
+function rfLiters(){
+  const v=num($('rf-liters').value), pr=num($('rf-price').value);
+  const cap=Math.max(12,((+data.settings.tankLiters||0)*1.5)||100);
+  if(v>cap&&pr>0)return{l:v/pr, money:v, guess:true};
+  return{l:v, money:v*pr, guess:false};
+}
 function rfCalc(){
-  const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
+  const g=rfLiters();
+  const l=g.l, pr=num($('rf-price').value), odo=num($('rf-odo').value);
   const p=[];
-  if(l>0&&pr>0)p.push('Чек: '+fmt(l*pr));
+  if(g.guess)p.push(fmt(g.money)+' → '+fmt1(l)+' '+FK().u);
+  else if(l>0&&pr>0)p.push('Чек: '+fmt(l*pr));
   const rsAll=[...data.refuels].filter(x=>x.id!==rfId&&+x.odo>0)
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
   const prev=rsAll.length?rsAll[rsAll.length-1]:null;
@@ -7378,7 +7437,9 @@ function rfCalc(){
     const km=prev.reset?odo:(odo-prev.odo);
     if(km>0)p.push('за '+fmt1(km)+' км → '+fmt1(l/km*100)+' '+U100());
   }
-  $('rf-calc').textContent=p.join(' · ')||'Вкажіть '+FK().many+' з копійками та показник одометра';
+  const od=curOdo();
+  if(od>0)p.push('одометр зараз '+fmt1(od)+' км');
+  $('rf-calc').textContent=p.join(' · ')||'Вкажіть '+FK().many+' або суму та показник одометра';
   const db=$('rf-days');
   if(db){
     const d=daysSinceRefuel();
@@ -7386,7 +7447,8 @@ function rfCalc(){
       db.style.display='block';
       const dd=d.days<=0?'сьогодні':d.days===1?'1 день':d.days+' дн.';
       db.innerHTML='На цьому баку: <b>'+dd+'</b>'+
-        (d.km>0?' · <b>'+fmt1(d.km)+' км</b>':'')+(d.oc>0?' · '+d.oc+' замовл.':'');
+        (d.km>0?' · <b>'+fmt1(d.km)+' км</b>':'')+
+        (d.oc>0?' · '+d.oc+' '+plOrder(d.oc):'');
     }else db.style.display='none';
   }
 }
@@ -7404,8 +7466,9 @@ $('rf-reset').addEventListener('click',e=>{
 $('btn-refuel').addEventListener('click',()=>{tap('refuel.open');openRefuel(null);});
 $('rf-cancel').addEventListener('click',()=>{disarm($('rf-save'));closeM('modal-refuel');});
 $('rf-save').addEventListener('click',function(){
-  const l=num($('rf-liters').value),pr=num($('rf-price').value),odo=num($('rf-odo').value);
-  if(l<=0){toast('Вкажіть '+FK().many+' з чека');return;}
+  const g=rfLiters();
+  const l=+g.l.toFixed(2), pr=num($('rf-price').value), odo=num($('rf-odo').value);
+  if(l<=0){toast('Вкажіть '+FK().many+' або суму');return;}
   if(pr<=0){toast('Вкажіть ціну — '+FK().price);return;}
   /* Захист від подвійного натискання — лише коли одометр справді вписано:
      дві різні заправки дня без показника обидві мають 0 і не є повтором. */
