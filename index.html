@@ -1714,7 +1714,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.97';
+const APP_VER='1.98';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2099,12 +2099,26 @@ function tankSaving(){
   const target=cap*price;
   const rs=[...(data.refuels||[])].filter(r=>+r.liters>0)
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||(+a.id||0)-(+b.id||0));
+  /* Скарбничка. Раніше рахунок обнулявся на кожній заправці, і якщо
+     відкладено було більше за чек — залишок мовчки зникав з екрана.
+     Тепер він переноситься на наступний бак. Рахуємо наскрізь з історії,
+     нічого не зберігаючи: пройшли всі заправки, до кожної додали
+     відкладене за її відрізок і відняли чек. Нижче нуля скарбничка не
+     опускається: перша заправка в історії — це не борг, а просто
+     початок обліку. */
+  let carry=0;
+  for(let i=0;i<rs.length;i++){
+    const prev=i>0?rs[i-1]:null;
+    const seg=(data.entries||[]).filter(e=>(!prev||entryAfterRefuel(e,prev))&&!entryAfterRefuel(e,rs[i]))
+      .reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
+    carry=Math.max(0,carry+seg-((+rs[i].liters||0)*(+rs[i].price||0)));
+  }
   const base=rs.length?rs[rs.length-1]:null;
-  let saved=(data.entries||[]).filter(e=>!base||entryAfterRefuel(e,base))
+  let saved=carry+(data.entries||[]).filter(e=>!base||entryAfterRefuel(e,base))
     .reduce((a,e)=>a+((e.calc&&+e.calc.fuel)||0),0);
   if(data.active&&(!base||activeAfterRefuel(base)))
     saved+=litersFor(activeKmEst(),s)*price;
-  return{target,saved,price,pct:target>0?saved/target:0,extra:Math.max(0,saved-target),
+  return{target,saved,carry,price,pct:target>0?saved/target:0,extra:Math.max(0,saved-target),
     from:base?base.date:null};
 }
 
@@ -7427,9 +7441,10 @@ function savingHTML(){
       '<b class="'+(done?'ok':'')+'">'+fmt(g.saved)+'</b></div>'+
     '<div class="progress"><div class="fill'+(done?' done':'')+'" style="width:'+Math.max(2,pc)+'%"></div></div>'+
     '<div class="progress-text"><span>'+(done?'вистачає на '+FK().fullAcc:'з '+fmt(g.target)+' за '+FK().tankNom)+'</span><span>'+pc+'%</span></div>'+
+    (g.carry>=1?'<div class="gauge-row"><span>З минулого '+FK().tankGen+' перенесено</span><b class="ok">+'+fmt(g.carry)+'</b></div>':'')+
     (done
       ? '<p class="hint" style="margin-top:8px"><b>Накопичено на '+FK().fullAcc+'.</b> Поки їдете на старому пальному, зайві <b>'+fmt(g.extra)+'</b> — ваші, можна забирати.</p>'
-      : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Рахунок пішов від останньої заправки й обнулиться на наступній.</p>');
+      : '<p class="hint" style="margin-top:8px">Лишилось відкласти <b>'+fmt(g.target-g.saved)+'</b>. Залишок минулого '+FK().tankGen+' не згорає — переноситься сюди.</p>');
 }
 function bindGauge(){
   const i=$('g-tankl'),b=$('g-tankl-btn');if(!i)return;
@@ -7784,7 +7799,9 @@ $('rf-save').addEventListener('click',function(){
     const diff=fuelPurse().should-wasShould;
     tap('refuel.save');
     await persist();closeM('modal-refuel');renderAll();
-    if(Math.abs(diff)>=1)toast(diff>0
+    const carryNow=tankSaving().carry||0;
+    if(carryNow>=1)toast('Заправку збережено · '+fmt(carryNow)+' з відкладеного лишилось — переносимо на наступний '+FK().tankNom);
+    else if(Math.abs(diff)>=1)toast(diff>0
       ? 'Перерахунок: доклади '+fmt(diff)+' у папку на пальне'
       : 'Перерахунок: можеш забрати '+fmt(-diff)+' з папки на пальне');
     else toast('Заправку збережено');
