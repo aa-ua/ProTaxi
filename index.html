@@ -555,6 +555,12 @@ html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);p
 .why-l span:first-child{color:var(--muted)}
 .why-l b{font-weight:800;white-space:nowrap}
 .why-l.tot b{color:var(--yellow)}
+/* Жива арифметика — саме дія, а не розповідь про неї. Табличні цифри, щоб
+   знаки «−» і «=» не стрибали, і перенос, бо день із чотирьох відʼємників
+   в один рядок не вміщається. */
+.why-math{background:var(--surface2);border:1px solid var(--border);border-radius:11px;
+  padding:10px 12px;margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.55;
+  font-variant-numeric:tabular-nums;word-break:break-word}
 /* Картка водія над перепискою. Тільки те, що не є його грошима:
    коли прийшов, звідки, скільки змін і замовлень. Сум і маршрутів тут
    немає й не має зʼявитись — це його справа, і ми це людям обіцяли. */
@@ -888,8 +894,8 @@ html.map-full .tabbar{display:none}
       <div class="stat hours-tile"><div class="v" id="s-hours">0 хв</div><div class="k">На лінії</div></div>
     </div>
 
-    <div id="orders-analysis"></div>
     <div id="day-detail"></div>
+    <div id="orders-analysis"></div>
 
     <div class="card">
       <div class="card-title">Куди йдуть гроші</div>
@@ -1689,7 +1695,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.94';
+const APP_VER='1.95';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -4600,76 +4606,107 @@ function insRow(label,value,cls,why){
   return '<div class="ins"'+(why?' data-why="'+esc(why)+'"':'')+'><span class="k">'+label+
     '</span><span class="v'+(cls?' '+cls:'')+'">'+value+'</span></div>';
 }
-function detailRows(e){
+function detailRows(e,showRate){
   const ordKm=(e.orders||[]).reduce((a,o)=>a+oKm(o),0);
   const S=data.settings;
-  const gross=+e.gross||0, n=(e.orders||[]).length;
-  const W=[];  /* по одному поясненню на рядок */
+  const gross=+e.gross||0, tips=+e.tips||0, n=(e.orders||[]).length;
+  const pct=v=>String(+(+v||0).toFixed(2)).replace('.',',')+' %';
+  /* Жива арифметика вгорі пояснення: ті самі числа зі знаками «−», «×»
+     та «=». Водій бачить не розповідь про формулу, а саму дію. */
+  const M=t=>'<div class="why-math">'+t+'</div>';
+
   let h=insRow('Виручка',fmt(gross),'',
-    n?('Сума всіх замовлень|'+whyLine(n+' '+plOrder(n),fmt(gross),true)+
+    n?('Сума всіх замовлень|'+
+       (n<=5?M(e.orders.map(o=>fmt(+o.amount||0)).join(' + ')+' = '+fmt(gross)):'')+
+       whyLine(n+' '+plOrder(n),fmt(gross),true)+
        (n>1?whyLine('найбільше',fmt(Math.max(...e.orders.map(o=>+o.amount||0))))+
             whyLine('найменше',fmt(Math.min(...e.orders.map(o=>+o.amount||0)))):'')):'');
-  if(+e.tips>0)h+=insRow('Чайові',fmt(+e.tips),'pos','');
-  const ownG=+e.ownGross||0;
+  if(tips>0)h+=insRow('Чайові',fmt(tips),'pos','');
+
+  const ownG=Math.min(gross,Math.max(0,+e.ownGross||0));
   h+=insRow('Платформі'+(platName()?' · '+esc(platName()):''),'−'+fmt(e.calc.commission),'neg',
     'Комісія береться лише з того, що пройшло через платформу|'+
+    M((ownG>0?'('+fmt(gross)+' − '+fmt(ownG)+')':fmt(gross))+' × '+pct(S.commissionPct)+' = '+fmt(e.calc.commission))+
     whyLine('виручка',fmt(gross))+
     (ownG>0?whyLine('свої клієнти — без комісії','−'+fmt(ownG)):'')+
-    whyLine('відсоток платформи',(+S.commissionPct||0)+' %')+
+    whyLine('відсоток платформи',pct(S.commissionPct))+
     whyLine('комісія',fmt(e.calc.commission),true));
+
   if(+e.calc.acquiring>0)h+=insRow('Еквайринг '+(+S.acquiringPct||0)+'% · картка '+fmt(+e.cardGross||0),
     '−'+fmt(e.calc.acquiring),'neg',
     'Знімається лише з того, що заплатили карткою|'+
+    M(fmt(+e.cardGross||0)+' × '+pct(S.acquiringPct)+' = '+fmt(e.calc.acquiring))+
     whyLine('карткою',fmt(+e.cardGross||0))+
-    whyLine('відсоток',(+S.acquiringPct||0)+' %')+
     whyLine('еквайринг',fmt(e.calc.acquiring),true));
+
   const r=rateFor(e);
   /* Ціну показуємо фактичну — ту, за якою ця сума й порахована. День
      складається із сесій з різними цінами, і «сьогоднішня» тут збрехала б. */
   const pFact=(+e.liters>0&&+e.calc.fuel>0)?e.calc.fuel/e.liters:(+e.fuelPrice||r.price);
   h+=insRow('Пальне · '+fmt1(e.liters)+' '+FK().u,'−'+fmt(e.calc.fuel),'neg',
     'Пальне рахується з пробігу, а не з чека|'+
-    whyLine('пробіг',fmt1(e.km)+' км')+
-    whyLine('витрата',fmt1(r.cons)+' '+FK().p100)+
-    whyLine('вийшло',fmt1(e.liters)+' '+FK().u)+
+    M(fmt1(e.km)+' км × '+fmt1(r.cons)+' '+FK().p100+' = '+fmt1(e.liters)+' '+FK().u)+
+    M(fmt1(e.liters)+' '+FK().u+' × '+fmt1(pFact)+' '+CS()+' = '+fmt(e.calc.fuel))+
     whyLine('ціна',fmt1(pFact)+' '+FK().price.replace('{c}',CS())+(e.day?' · середня за день':''))+
     whyLine('звідки ціна',e.day?'із сесій нижче':priceWhy(e))+
     whyLine('пальне',fmt(e.calc.fuel),true));
-  if(+e.calc.rent>0)h+=insRow('Оренда авто','−'+fmt(e.calc.rent),'neg',
-    'Добова оренда ділиться між змінами цього дня|'+
-    whyLine('змін того дня',String(+e.rentShifts||1))+
-    whyLine('на цю зміну',fmt(e.calc.rent),true));
-  if(+e.calc.tax>0)h+=insRow('Податки','−'+fmt(e.calc.tax),'neg','');
+
+  if(+e.calc.rent>0){
+    const nsh=Math.max(1,+e.rentShifts||1);
+    h+=insRow('Оренда авто','−'+fmt(e.calc.rent),'neg',
+      'Добова оренда ділиться між змінами цього дня|'+
+      (S.rentMode==='pct'
+        ?M(fmt(gross-e.calc.commission-e.calc.acquiring-e.calc.fuel+tips)+' × '+pct(S.rentPct)+' = '+fmt(e.calc.rent))
+        :(nsh>1&&!e.day?M(fmt(e.calc.rent*nsh)+' за добу ÷ '+nsh+' '+plShift(nsh)+' = '+fmt(e.calc.rent)):''))+
+      whyLine('змін того дня',String(nsh))+
+      whyLine('на цю зміну',fmt(e.calc.rent),true));
+  }
+
+  if(+e.calc.tax>0){
+    const pctPart=(gross+tips)*(+S.taxPct||0)/100;
+    const fixPart=Math.max(0,e.calc.tax-pctPart);
+    h+=insRow('Податки','−'+fmt(e.calc.tax),'neg',
+      'Відсоток ФОП з виручки, фіксовані платежі — часткою за день|'+
+      (pctPart>0.01?M(fmt(gross+tips)+' × '+pct(S.taxPct)+' = '+fmt(pctPart)):'')+
+      (fixPart>0.01?whyLine('частка фіксованих за цю зміну',fmt(fixPart)):'')+
+      whyLine('податки',fmt(e.calc.tax),true));
+  }
+
   h+=insRow('Чистими',fmt(e.calc.net),'pos',
     'Що лишилось після платформи й дороги|'+
-    whyLine('виручка',fmt(gross))+
-    whyLine('комісія','−'+fmt(e.calc.commission))+
-    (+e.calc.acquiring>0?whyLine('еквайринг','−'+fmt(e.calc.acquiring)):'')+
-    whyLine('пальне','−'+fmt(e.calc.fuel))+
-    (+e.calc.rent>0?whyLine('оренда','−'+fmt(e.calc.rent)):'')+
+    M(fmt(gross)+(tips>0?' + '+fmt(tips):'')+' − '+fmt(e.calc.commission)+
+      (+e.calc.acquiring>0?' − '+fmt(e.calc.acquiring):'')+' − '+fmt(e.calc.fuel)+
+      (+e.calc.rent>0?' − '+fmt(e.calc.rent):'')+' = '+fmt(e.calc.net))+
     whyLine('чистими',fmt(e.calc.net),true));
+
+  const fundRaw=S.fundMode==='km'?(+e.km||0)*(+S.fundPerKm||0):e.calc.net*(+S.fundPct||0)/100;
+  const fundCapped=Math.abs(fundRaw-e.calc.fund)>0.5;
   h+='<div class="ins" data-why="'+esc(fundLabel()+' — це не витрата, гроші лишаються ваші|'+
-      whyLine('чистими',fmt(e.calc.net))+
-      whyLine('відкладається',(S.fundMode==='km'?fmt(+S.fundPerKm||0)+' за км':(+S.fundPct||0)+' %'))+
+      (fundCapped
+        ?(e.calc.net<=0
+          ?whyLine('чистими вийшло '+fmt(e.calc.net)+' — цього разу не відкладається','')
+          :whyLine('за правилом вийшло б '+fmt(fundRaw)+', але більше за чисте не відкладається',''))
+        :(S.fundMode==='km'
+          ?M(fmt1(e.km)+' км × '+fmt(+S.fundPerKm||0)+' = '+fmt(e.calc.fund))
+          :M(fmt(e.calc.net)+' × '+pct(S.fundPct)+' = '+fmt(e.calc.fund))))+
       whyLine('відкладено',fmt(e.calc.fund),true))+
     '"><span class="k">'+fundLabel()+'</span><span class="v" style="color:var(--yellow)">'+fmt(e.calc.fund)+'</span></div>';
+
   h+='<div class="ins" data-why="'+esc('Це можна забирати|'+
-      whyLine('чистими',fmt(e.calc.net))+
-      whyLine(fundLabel(),'−'+fmt(e.calc.fund))+
-      (+e.calc.tax>0?whyLine('податки','−'+fmt(e.calc.tax)):'')+
+      M(fmt(e.calc.net)+' − '+fmt(e.calc.fund)+(+e.calc.tax>0?' − '+fmt(e.calc.tax):'')+' = '+fmt(e.calc.personal))+
       whyLine('на руки',fmt(e.calc.personal),true))+
     '"><span class="k"><b>На руки</b></span><span class="v" style="color:var(--yellow);font-weight:800">'+fmt(e.calc.personal)+'</span></div>';
+  h+='<p class="hint" style="margin:2px 0 0">Це те, що лишається після платформи, пального й відкладеного на авто — можна забирати.</p>';
+
   if(+e.km>0)h+=insRow('Пробіг',fmt1(e.km)+' км'+(ordKm>0?' <span style="color:var(--muted)">(з пасажиром '+fmt1(ordKm)+' км)</span>':''),'',
     'Скільки накатали за цей час|'+
+    (ordKm>0?M(fmt1(ordKm)+' з пасажиром + '+fmt1(Math.max(0,e.km-ordKm))+' порожняком = '+fmt1(e.km)+' км'):'')+
     whyLine('усього',fmt1(e.km)+' км')+
-    (ordKm>0?whyLine('з пасажиром',fmt1(ordKm)+' км'):'')+
-    (ordKm>0?whyLine('порожняком',fmt1(Math.max(0,e.km-ordKm))+' км'):'')+
     (ordKm>0?whyLine('частка з пасажиром',Math.round(ordKm/e.km*100)+' %',true):''));
   if(+e.breakH>0.01)h+=insRow('Перерва',fmtHours(+e.breakH),'','');
-  if(e.hours>=0.5)h+=insRow('Ставка за годину',fmt(e.calc.net/e.hours)+'/год','',
+  if(showRate&&e.hours>=0.5)h+=insRow('Ставка за годину',fmt(e.calc.net/e.hours)+'/год','',
     'Скільки чистими приносить година на лінії|'+
-    whyLine('чистими',fmt(e.calc.net))+
-    whyLine('на лінії',fmtHours(e.hours))+
+    M(fmt(e.calc.net)+' ÷ '+fmt1(e.hours)+' год = '+fmt(e.calc.net/e.hours)+'/год')+
     whyLine('за годину',fmt(e.calc.net/e.hours),true));
   return h;
 }
@@ -4681,7 +4718,7 @@ function sumDay(list){
   const N=k=>list.reduce((a,e)=>a+(+e[k]||0),0);
   return {day:true,date:list[0]&&list[0].date,
     gross:N('gross'),tips:N('tips'),liters:N('liters'),km:N('km'),
-    cardGross:N('cardGross'),hours:N('hours'),breakH:N('breakH'),
+    cardGross:N('cardGross'),ownGross:N('ownGross'),hours:N('hours'),breakH:N('breakH'),
     oc:list.reduce((a,e)=>a+(e.oc||0),0),
     orders:list.reduce((a,e)=>a.concat(e.orders||[]),[]),
     calc:{commission:S('commission'),acquiring:S('acquiring'),fuel:S('fuel'),
@@ -4705,15 +4742,29 @@ function renderDayDetail(){
     const sum=document.createElement('div');sum.className='card';
     sum.innerHTML='<div class="card-title">Увесь день · '+fmtDate(dsel)+' · '+
       list.length+' '+plSess(list.length)+'</div>'+
-      detailRows(d)+
+      detailRows(d,true)+
       '<div class="ins"><span class="k">Разом</span><span class="v">'+d.oc+' '+plOrder(d.oc)+
         ' · '+fmtHours(d.hours)+'</span></div>';
     box.appendChild(sum);
   }
+  /* Кілька сесій ховаємо під розділ: головна відповідь — день, а окремі
+     сесії потрібні тоді, коли щось у дні виглядає не так. */
+  let sessBox=box;
+  if(list.length>1){
+    const acc=document.createElement('div');acc.className='acc';acc.dataset.acc='st-sess';
+    const opn=new Set(Array.isArray(data.settings.accOpen)?data.settings.accOpen:[]);
+    acc.dataset.open=opn.has('st-sess')?'1':'0';
+    acc.innerHTML='<button class="acc-h" type="button"><span class="t">Сесії окремо · '+list.length+
+      '<span class="s">кожна сесія дня з власним розбором</span></span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>'+
+      '<div class="acc-b"></div>';
+    box.appendChild(acc);
+    sessBox=acc.querySelector('.acc-b');
+  }
   list.forEach((e,ix)=>{
     const card=document.createElement('div');card.className='card';
     let h='<div class="card-title">'+(e.weather?WEMO[e.weather]+' ':'')+(list.length>1?'Сесія '+(ix+1)+' · ':fmtDate(e.date)+' · ')+(e.startT?hm(e.startT)+'–'+(e.open?'триває':hm(e.endT)):'')+' · '+fmtHours(e.hours)+'</div>';
-    h+=detailRows(e);
+    h+=detailRows(e,list.length===1);
     card.innerHTML=h;
     if(!(e.orders||[]).length&&(+e.oc>0)){
       const w=document.createElement('div');
@@ -4734,7 +4785,7 @@ function renderDayDetail(){
       const hint=document.createElement('p');hint.className='hint';hint.textContent='Дотик до замовлення відкриває його для редагування';
       card.appendChild(hint);
     }
-    box.appendChild(card);
+    sessBox.appendChild(card);
   });
   /* порівняння з попереднім днем — другорядне, тому в самому низу */
   const cmp=renderDayCompare(dsel);
@@ -4801,6 +4852,14 @@ function renderMileage(es){
      а не множимо літри на сьогоднішній цінник. */
   const fuelUah=withOdo.reduce((a,e)=>a+Math.max(0,(e.calc&&+e.calc.fuel)||0),0);
   if(liters>0)add('Пальне за період',fmt1(liters)+' '+FK().u+' · '+fmt(fuelUah));
+  /* Простій за часом каже водієві більше, ніж порожні кілометри:
+     стояти можна й не рухаючись. Час на лінії мінус час у замовленнях. */
+  const lineH=es.reduce((a,e)=>a+Math.max(0,(+e.hours||0)),0);
+  const busyH=es.reduce((a,e)=>a+(e.orders||[]).reduce((x,o)=>x+oMin(o),0),0)/60;
+  if(lineH>0.2&&busyH>0){
+    const wait=Math.max(0,lineH-busyH);
+    add('Без замовлення',fmtHours(wait)+' · '+Math.round(wait/lineH*100)+'% часу на лінії');
+  }
   if(ord>0){
     const note=document.createElement('div');note.className='hint';note.style.marginTop='8px';
     note.textContent='На кожні 100 км з пасажиром припадає '+Math.round(idle/ord*100)+' км порожнього пробігу.';
