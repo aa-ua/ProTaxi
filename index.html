@@ -952,14 +952,14 @@ html.map-full .tabbar{display:none}
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="goal-card">
       <div class="card-title">Ціль на сьогодні</div>
       <div class="progress"><div class="fill" id="goal-fill"></div></div>
       <div class="progress-text"><span id="goal-text">₴0 з ₴0</span><span id="goal-pct">0%</span></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Чистий заробіток · останні 14 днів</div>
+    <div class="card" id="chart-card">
+      <div class="card-title" id="chart-title">Чистий заробіток</div>
       <div class="chart" id="chart"></div>
     </div>
 
@@ -1695,7 +1695,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.95';
+const APP_VER='1.96';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -5036,6 +5036,12 @@ function renderQuality(es){
 }
 
 function renderGoal(){
+  /* Ціль — про сьогоднішній день. На місяці чи році вона показувала б
+     той самий сьогоднішній прогрес поруч із чужими цифрами й читалась
+     би як прогрес періоду. */
+  const card=$('goal-card');
+  if(card)card.style.display=period==='today'?'':'none';
+  if(period!=='today')return;
   const g=data.settings.dailyGoal||0;
   /* Ціль вписується «на руки» — і рахувати треба на руки, як у картці на
      екрані зміни. Раніше тут стояло чисте, тому дві смужки за той самий
@@ -5048,12 +5054,35 @@ function renderGoal(){
 }
 
 function renderChart(){
-  const box=$('chart');box.innerHTML='';
+  const box=$('chart');if(!box)return;box.innerHTML='';
+  const card=$('chart-card'),tt=$('chart-title');
+  /* Графік мусить жити в тому періоді, який обрано. Раніше він завжди
+     показував 14 днів — і на екрані місяця читався як графік місяця.
+     На денних періодах його немає: день уже розібраний вище детально. */
+  if(period==='today'||period==='yesterday'||period==='day'){
+    if(card)card.style.display='none';return;
+  }
+  if(card)card.style.display='';
+  const dayNet=key=>data.entries.filter(e=>e.date===key).reduce((a,e)=>a+e.calc.net,0);
   const days=[];
-  for(let i=13;i>=0;i--){
-    const d=new Date();d.setDate(d.getDate()-i);
-    const key=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-    days.push({lbl:d.getDate(),net:data.entries.filter(e=>e.date===key).reduce((a,e)=>a+e.calc.net,0)});
+  if(period==='week'||period==='month'){
+    const n=period==='week'?7:30;
+    if(tt)tt.textContent='Чистий заробіток · останні '+n+' днів';
+    for(let i=n-1;i>=0;i--){
+      const d=new Date();d.setDate(d.getDate()-i);
+      const key=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+      /* на 30 стовпчиках підписуємо кожен пʼятий день, інакше цифри злипаються */
+      days.push({lbl:(n<=7||d.getDate()%5===0)?d.getDate():'',net:dayNet(key),key:key});
+    }
+  }else{
+    if(tt)tt.textContent='Чистий заробіток · за місяцями';
+    const MN=['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+    for(let i=11;i>=0;i--){
+      const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+      const mk=d.getFullYear()+'-'+pad(d.getMonth()+1);
+      days.push({lbl:MN[d.getMonth()],
+        net:data.entries.filter(e=>String(e.date).slice(0,7)===mk).reduce((a,e)=>a+e.calc.net,0)});
+    }
   }
   const max=Math.max(...days.map(d=>d.net),1);
   days.forEach(d=>{
@@ -5062,7 +5091,17 @@ function renderChart(){
     b.style.height=(d.net>0?Math.max(4,Math.round(d.net/max*100)):3)+'px';
     b.title=fmt(d.net);
     const l=document.createElement('div');l.className='bar-lbl';l.textContent=d.lbl;
-    w.appendChild(b);w.appendChild(l);box.appendChild(w);
+    w.appendChild(b);w.appendChild(l);
+    /* стовпчик дня — це двері в той день: тап відкриває його розбір */
+    if(d.key&&d.net>0){
+      w.style.cursor='pointer';
+      w.addEventListener('click',()=>{
+        dayCursor=d.key;period='day';
+        const pd=$('pick-day');if(pd)pd.value=d.key;
+        setChips();renderStats();window.scrollTo(0,0);
+      });
+    }
+    box.appendChild(w);
   });
 }
 
