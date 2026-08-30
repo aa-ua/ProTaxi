@@ -558,6 +558,25 @@ html.kbd .fab,html.in-admin .fab,html.map-full .fab{transform:translateY(180%);p
 /* Жива арифметика — саме дія, а не розповідь про неї. Табличні цифри, щоб
    знаки «−» і «=» не стрибали, і перенос, бо день із чотирьох відʼємників
    в один рядок не вміщається. */
+/* Мініціль над зміною. Скляна смуга: зверху світлий кант, зелений глоу
+   і блик, що пробігає раз на кілька секунд, — заповнена частина виглядає
+   рідиною, а не заливкою. Дотик розгортає повну картку цілі. */
+.goal-mini{padding:13px 16px 9px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.gm-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.gm-now{font-size:14.5px;font-weight:800}
+.gm-goal{font-size:12.5px;color:var(--muted);font-weight:600}
+.gm-bar{height:12px;border-radius:999px;background:var(--surface2);overflow:hidden;position:relative;
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.gm-fill{position:relative;height:100%;border-radius:999px;overflow:hidden;transition:width .4s ease;
+  background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 45%),var(--yellow);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 0 14px rgba(59,224,166,.45)}
+.gm-fill::after{content:'';position:absolute;top:0;bottom:0;left:-45%;width:38%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);
+  animation:gmShine 6s ease-in-out infinite}
+@keyframes gmShine{0%,72%{left:-45%}88%,100%{left:110%}}
+@media (prefers-reduced-motion:reduce){.gm-fill::after{animation:none;display:none}}
+.gm-pct{text-align:right;font-size:11px;color:var(--muted);font-weight:700;margin-top:4px}
+
 .why-math{background:var(--surface2);border:1px solid var(--border);border-radius:11px;
   padding:10px 12px;margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.55;
   font-variant-numeric:tabular-nums;word-break:break-word}
@@ -1695,7 +1714,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.96';
+const APP_VER='1.97';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -2907,6 +2926,22 @@ function setupGapHTML(){
 }
 
 /* Картка «Ціль дня» для екрана зміни */
+/* Згорнута ціль: угорі ліворуч — скільки вже є, праворуч — уся ціль,
+   смуга, під нею відсоток. Розгорнута — та сама повна картка. */
+function goalMiniHTML(){
+  const g=data.settings.dailyGoal||0;if(g<=0)return '';
+  const tn=todayTotals().personal;
+  const pct=Math.min(100,Math.max(0,Math.round(tn/g*100)));
+  return '<div class="card goal-mini" id="goal-mini" role="button" aria-label="Ціль дня">'+
+    '<div class="gm-top"><span class="gm-now">'+fmt(tn)+' на руки</span>'+
+    '<span class="gm-goal">Ціль '+fmt(g)+'</span></div>'+
+    '<div class="gm-bar"><div class="gm-fill" style="width:'+pct+'%"></div></div>'+
+    '<div class="gm-pct">'+pct+'%</div></div>';
+}
+function goalTopHTML(){
+  const g=data.settings.dailyGoal||0;if(g<=0)return '';
+  return data.settings.goalOpen?'<div id="goal-full">'+goalCardHTML()+'</div>':goalMiniHTML();
+}
 function goalCardHTML(){
   const g=data.settings.dailyGoal||0;
   if(g<=0)return '';
@@ -3053,7 +3088,8 @@ function renderShift(){
       '<button class="btn btn-ghost" id="btn-finish-paused" style="margin-top:10px">Завершити зміну</button></div>'
     : '';
   let html=
-    (paused?goalCardHTML()+pauseCard:'')+
+    goalTopHTML()+
+    (paused?pauseCard:'')+
     '<div class="card"><div class="shift-hero'+(paused?' dim':'')+'">'+
     '<div class="live-line"><span class="live-dot"></span>'+
       (paused?'Зміна на паузі · з '+hm(a.startT):'Сесія триває · з '+hm(a.startT))+'</div>'+
@@ -3086,7 +3122,7 @@ function renderShift(){
   if(!paused)html+='<button class="btn btn-ghost" id="btn-pause" style="margin-top:10px">Взяти паузу</button>';
   html+='<button class="btn btn-ghost" id="btn-close-open" style="margin-top:10px">Завершити сесію</button></div>';
 
-  html+=(paused?'':goalCardHTML())+boostCardHTML();
+  html+=boostCardHTML();
   html+='<div class="card"><div class="card-title">Замовлення цієї сесії</div><div id="active-orders">';
   if(!a.orders.length)html+='<div class="empty">Ще немає замовлень. Прийміть перше</div>';
   html+='</div><p class="hint">Дотик до замовлення завершує або відкриває його для редагування</p></div>';
@@ -3102,6 +3138,17 @@ function renderShift(){
     box.appendChild(row);
   });
 
+  const gm=$('goal-mini');
+  if(gm)gm.addEventListener('click',async()=>{
+    tap('goal.open');data.settings.goalOpen=1;await persist();renderShift();
+  });
+  const gf=document.querySelector('#goal-full .card-title');
+  if(gf){
+    gf.style.cursor='pointer';
+    gf.addEventListener('click',async()=>{
+      data.settings.goalOpen=0;await persist();renderShift();
+    });
+  }
   if(live)$('btn-finish-live').addEventListener('click',()=>openFinish(live.id));
   $('btn-order').addEventListener('click',openNewOrder);
   $('btn-close-open').addEventListener('click',openCloseShift);
