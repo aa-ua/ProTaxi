@@ -1085,6 +1085,15 @@ html.map-full .tabbar{display:none}
       </div>
       <p class="hint" id="fund-hint"></p>
     </div>
+    <div class="acc" data-acc="fund-days">
+      <button class="acc-h" type="button"><span class="t">Скільки закидати по днях<span class="s">звірка з конвертом чи банкою</span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg></button>
+      <div class="acc-b">
+        <div class="card">
+          <div id="fund-days-list"></div>
+          <p class="hint" id="fund-days-hint" style="margin-top:8px"></p>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <div class="card-title" id="fundops-title">Витрати й поповнення</div>
       <div id="fundops-list"></div>
@@ -1714,7 +1723,7 @@ html.map-full .tabbar{display:none}
 </nav>
 
 <script>
-const APP_VER='1.98';
+const APP_VER='1.99';
 /* Заставку прибираємо з DOM після показу — щоб напевно не перехоплювала дотики,
    навіть якщо анімація чомусь не відпрацювала. */
 setTimeout(function(){var s=document.getElementById('splash');if(s&&s.parentNode)s.parentNode.removeChild(s);},1800);
@@ -7836,6 +7845,31 @@ function renderFunds(){
   $('fund-fill').style.width=p+'%';
   $('fund-target-text').textContent='ціль '+fmt(t);
   $('fund-pct').textContent=p+'%';
+  /* По днях: скільки цього дня мало піти у відкладене й скільки разом
+     мало б лежати на кінець дня. Це звірка з конвертом чи банкою: водій
+     кладе гроші фізично, і пропущений день інакше не знайти — загальна
+     сума нічого не каже про те, КОЛИ збилося. */
+  const daysBox=$('fund-days-list');
+  if(daysBox){
+    const byDate={};
+    data.entries.forEach(e=>{const f=(e.calc&&+e.calc.fund)||0;if(f>0.5)byDate[e.date]=(byDate[e.date]||0)+f;});
+    const aeF=(ae&&ae.calc&&+ae.calc.fund)||0;
+    if(ae&&aeF>0.5)byDate[ae.date]=(byDate[ae.date]||0)+aeF;
+    const dates=Object.keys(byDate).sort();
+    let cum=0;
+    const rows=dates.map(d=>{cum+=byDate[d];return{d,v:byDate[d],cum};});
+    const shown=rows.slice(-60).reverse();
+    daysBox.innerHTML=shown.length?shown.map(r=>
+      '<div class="ins"><span class="k">'+fmtDate(r.d)+
+      (r.d===todayStr()&&ae?' <span style="color:var(--muted)">· ще триває</span>':'')+
+      '</span><span class="v">'+fmt(r.v)+
+      ' <span style="color:var(--muted);font-weight:500">· разом '+fmt(r.cum)+'</span></span></div>').join('')
+      :'<div class="empty">Ще не було змін із відкладенням</div>';
+    const dh=$('fund-days-hint');
+    if(dh)dh.textContent=shown.length
+      ?'Праворуч — скільки того дня мало піти у відкладене, і скільки разом мало б лежати на кінець дня. Витрати й поповнення руками сюди не входять — вони в списку нижче.'
+      :'';
+  }
   const box=$('fundops-list');box.innerHTML='';
   if(!data.fundOps.length)box.innerHTML='<div class="empty">Записів ще не було</div>';
   [...data.fundOps].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).forEach(o=>{
